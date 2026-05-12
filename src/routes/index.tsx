@@ -74,13 +74,7 @@ function HeroPreview() {
           transformStyle: "preserve-3d",
         }}
       >
-        <img
-          src={heroPreview}
-          alt="A Flowform conversational form asking one question at a time"
-          width={1536}
-          height={1024}
-          className="h-auto w-full"
-        />
+        <AnimatedFormMock />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 transition-opacity duration-300"
