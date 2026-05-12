@@ -1,11 +1,16 @@
 ## Goal
 
-Match the logo tile background to the testimonial card background.
+Drop the logo tile from each testimonial card. Keep only the name and role, both left-aligned beneath the quote.
 
-## Change
+## Changes in `src/routes/index.tsx`
 
-In `src/routes/index.tsx`, on the testimonial logo tile: swap `bg-slate-50` for `bg-white` so the circle blends with the card surface and only the green logo mark reads.
+- Remove the round logo tile `<div>` (and its `<img>`) from each testimonial card.
+- Replace the wrapping `flex items-start gap-3` row with a plain `mt-8` block containing only name + role, left-aligned (default flow).
+- Remove the unused `logo` and `company` fields from the `testimonials` array.
+- Remove the three logo PNG imports (`logoNorthwind`, `logoLumen`, `logoAxiom`).
+
+The logo PNG files in `src/assets/` are left on disk in case they're reused later.
 
 ## Out of scope
 
-- No other style or layout changes.
+- No copy changes, no card border/shadow/quote styling changes, no other layout changes.
