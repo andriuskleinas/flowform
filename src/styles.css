@@ -162,3 +162,21 @@
   from { opacity: 0; transform: translateY(24px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+@keyframes aurora-drift-a {
+  0%   { transform: translate(-10%, -10%) scale(1); }
+  33%  { transform: translate(15%, 5%) scale(1.15); }
+  66%  { transform: translate(-5%, 15%) scale(0.95); }
+  100% { transform: translate(-10%, -10%) scale(1); }
+}
+
+@keyframes aurora-drift-b {
+  0%   { transform: translate(15%, 10%) scale(1); }
+  50%  { transform: translate(-15%, -5%) scale(1.2); }
+  100% { transform: translate(15%, 10%) scale(1); }
+}
+
+@keyframes aurora-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%      { opacity: 0.8; transform: scale(1.05); }
+}

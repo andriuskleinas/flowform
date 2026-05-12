@@ -69,9 +69,19 @@ function HeroPreview() {
     >
       <div
         aria-hidden
-        className="absolute -inset-6 rounded-[40px] bg-gradient-to-b from-brand/15 to-transparent blur-2xl transition-opacity duration-500"
-        style={{ opacity: "calc(0.6 + 0.4 * var(--glow, 0))" }}
-      />
+        className="pointer-events-none absolute -inset-10 overflow-hidden rounded-[48px] transition-opacity duration-500"
+        style={{ opacity: "calc(0.75 + 0.35 * var(--glow, 0))" }}
+      >
+        <div
+          className="absolute left-1/2 top-1/2 size-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/40 blur-3xl will-change-transform motion-safe:animate-[aurora-drift-a_14s_ease-in-out_infinite]"
+          style={{ mixBlendMode: "screen" }}
+        />
+        <div
+          className="absolute left-1/2 top-1/2 size-[55%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-300/40 blur-3xl will-change-transform motion-safe:animate-[aurora-drift-b_18s_ease-in-out_infinite]"
+          style={{ mixBlendMode: "screen" }}
+        />
+        <div className="absolute inset-6 rounded-[40px] border border-brand/20 motion-safe:animate-[aurora-pulse_6s_ease-in-out_infinite]" />
+      </div>
       <div
         ref={ref}
         onPointerMove={handleMove}
