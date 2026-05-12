@@ -282,8 +282,8 @@ function Index() {
                   "translate3d(calc(var(--px, 0) * -0.025px), calc(var(--py, 0) * -0.025px), 0)",
               }}
             >
-              Forms, finally{" "}
-              <span className="text-brand">worth finishing.</span>
+              Forms people{" "}
+              <span className="text-brand">actually finish.</span>
             </h1>
             <p
               className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 transition-transform duration-200 ease-out md:mt-8 md:text-xl"
