@@ -156,7 +156,7 @@ function Index() {
                     &ldquo;{t.quote}&rdquo;
                   </p>
                   <div className="mt-8 flex items-start gap-3">
-                    <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-brand/10 p-1.5">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-full text-center bg-slate-50 p-1.5">
                       <img
                         src={t.logo}
                         alt={`${t.company} logo`}
