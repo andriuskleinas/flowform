@@ -86,6 +86,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Flowform — Forms that feel like a conversation" },
+      { name: "description", content: "Form Creator Hub is a powerful, intuitive form builder for creating beautiful, interactive surveys and forms." },
+      { property: "og:description", content: "Form Creator Hub is a powerful, intuitive form builder for creating beautiful, interactive surveys and forms." },
+      { name: "twitter:description", content: "Form Creator Hub is a powerful, intuitive form builder for creating beautiful, interactive surveys and forms." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/waerhwQzcCMyhgXa2ZHKevKeZJv2/social-images/social-1778580486196-Screenshot_2026-05-12_at_13.07.54.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/waerhwQzcCMyhgXa2ZHKevKeZJv2/social-images/social-1778580486196-Screenshot_2026-05-12_at_13.07.54.webp" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
