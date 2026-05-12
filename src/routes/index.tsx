@@ -1,7 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import heroPreview from "@/assets/hero-preview.jpg";
+import logoNorthwind from "@/assets/logo-northwind.png";
+import logoLumen from "@/assets/logo-lumen.png";
+import logoAxiom from "@/assets/logo-axiom.png";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "@/components/ui/carousel";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -92,21 +104,103 @@ const testimonials = [
     quote:
       "We replaced three survey tools with one Flowform. Response rates doubled in a week.",
     name: "Maya Chen",
-    role: "Head of Research @ Northwind",
+    role: "Head of Research",
+    company: "Northwind",
+    logo: logoNorthwind,
   },
   {
     quote:
       "It finally looks like our brand. Customers actually finish the form.",
     name: "Daniel Ortiz",
-    role: "Design Lead @ Lumen",
+    role: "Design Lead",
+    company: "Lumen",
+    logo: logoLumen,
   },
   {
     quote:
       "The drop-off insights are surgical. We rewrote our onboarding in an afternoon.",
     name: "Priya Raman",
-    role: "Growth @ Axiom",
+    role: "Growth",
+    company: "Axiom",
+    logo: logoAxiom,
   },
 ];
+
+function TestimonialsCarousel() {
+  const [api, setApi] = useState<CarouselApi>();
+  const [selected, setSelected] = useState(0);
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!api) return;
+    setCount(api.scrollSnapList().length);
+    setSelected(api.selectedScrollSnap());
+    api.on("select", () => setSelected(api.selectedScrollSnap()));
+  }, [api]);
+
+  useEffect(() => {
+    if (!api) return;
+    const id = setInterval(() => api.scrollNext(), 6000);
+    return () => clearInterval(id);
+  }, [api]);
+
+  return (
+    <Carousel
+      setApi={setApi}
+      opts={{ loop: true, align: "start" }}
+      className="mx-auto w-full max-w-6xl"
+    >
+      <CarouselContent className="-ml-6">
+        {testimonials.map((t) => (
+          <CarouselItem
+            key={t.name}
+            className="pl-6 md:basis-1/2 lg:basis-1/3"
+          >
+            <article className="flex h-full flex-col rounded-2xl border border-ink/5 bg-white p-8 shadow-sm">
+              <div className="flex items-center gap-3 pb-5">
+                <img
+                  src={t.logo}
+                  alt={`${t.company} logo`}
+                  width={32}
+                  height={32}
+                  loading="lazy"
+                  className="size-8 object-contain"
+                />
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/50">
+                  {t.company}
+                </span>
+              </div>
+              <div className="border-t border-ink/5" />
+              <p className="mt-6 min-h-[7rem] text-lg leading-relaxed text-ink/80 md:min-h-[8rem]">
+                &ldquo;{t.quote}&rdquo;
+              </p>
+              <div className="mt-8 text-sm">
+                <div className="font-semibold text-ink">{t.name}</div>
+                <div className="text-ink/50">{t.role}</div>
+              </div>
+            </article>
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+      <CarouselPrevious className="hidden md:-left-12 md:flex" />
+      <CarouselNext className="hidden md:-right-12 md:flex" />
+
+      <div className="mt-8 flex justify-center gap-2">
+        {Array.from({ length: count }).map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            aria-label={`Go to testimonial ${i + 1}`}
+            onClick={() => api?.scrollTo(i)}
+            className={`h-1.5 rounded-full transition-all ${
+              i === selected ? "w-8 bg-brand" : "w-2 bg-ink/15 hover:bg-ink/30"
+            }`}
+          />
+        ))}
+      </div>
+    </Carousel>
+  );
+}
 
 const features = [
   {
