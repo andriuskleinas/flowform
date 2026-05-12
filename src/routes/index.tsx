@@ -146,21 +146,9 @@ function Index() {
                   <p className="min-h-[7rem] text-lg leading-relaxed text-ink/80 md:min-h-[8rem]">
                     &ldquo;{t.quote}&rdquo;
                   </p>
-                  <div className="mt-8 flex items-start gap-3">
-                    <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white">
-                      <img
-                        src={t.logo}
-                        alt={`${t.company} logo`}
-                        width={512}
-                        height={512}
-                        loading="lazy"
-                        className="size-full object-contain"
-                      />
-                    </div>
-                    <div className="text-sm">
-                      <div className="font-semibold text-ink">{t.name}</div>
-                      <div className="text-ink/50">{t.role}</div>
-                    </div>
+                  <div className="mt-8 text-sm">
+                    <div className="font-semibold text-ink">{t.name}</div>
+                    <div className="text-ink/50">{t.role}</div>
                   </div>
                 </li>
               ))}
