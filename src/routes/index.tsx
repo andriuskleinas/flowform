@@ -393,6 +393,12 @@ function Index() {
             >
               Features
             </a>
+            <Link
+              to="/dashboard"
+              className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
+            >
+              Dashboard
+            </Link>
             <PrimaryCTA>Get started</PrimaryCTA>
           </div>
         </nav>
