@@ -393,6 +393,12 @@ function Index() {
             >
               Features
             </a>
+            <Link
+              to="/dashboard"
+              className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
+            >
+              Dashboard
+            </Link>
             <PrimaryCTA>Get started</PrimaryCTA>
           </div>
         </nav>
@@ -452,8 +458,15 @@ function Index() {
               Craft beautifully simple, one-question-at-a-time experiences that
               feel less like a survey and more like a conversation worth having.
             </p>
-            <div className="mt-10 flex justify-center md:mt-12">
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-4 md:mt-12">
               <PrimaryCTA size="lg">Start building</PrimaryCTA>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-ink/70 transition-colors hover:text-ink"
+              >
+                Go to dashboard
+                <ArrowRight className="size-4" />
+              </Link>
             </div>
 
             {/* Preview */}
