@@ -1,51 +1,37 @@
+# Dashboard + Forms Database
+
 ## Goal
+Make the form builder functional: a `/dashboard` page where anyone can create a form (title + optional description) and see all saved forms, newest first. Add navigation from the landing page.
 
-Swap the static `hero-preview.jpg` for a live, animated mock of a Flowform question card — same brand feel, but it moves. No WebGL, no extra dependencies.
+## Backend (Lovable Cloud)
+Enable Lovable Cloud and create one table:
 
-## What the user will see
+`forms`
+- `id` uuid pk default `gen_random_uuid()`
+- `title` text not null
+- `description` text nullable
+- `created_at` timestamptz default `now()`
 
-A glassy white form card sitting where the screenshot used to be, with:
+RLS: enabled, with permissive policies for now (anyone can SELECT and INSERT) since there is no auth yet. No UPDATE/DELETE policies — read/create only. A note will go in the security memory so the scanner doesn't flag the public-write policy as an oversight.
 
-- An auto-advancing carousel of 3 questions (text input → multi-choice → rating), cycling every ~3.5s with a soft cross-fade + subtle slide.
-- A typewriter effect on each question headline.
-- An animated purple progress bar that grows with each step (33% → 66% → 100%, then resets).
-- A pulsing "Continue" button that subtly breathes.
-- Floating ambient shards (small purple + gold rounded rects) drifting behind the card with parallax — they react to pointer position, just like the existing hero glow does.
-- The existing 3D tilt-on-mousemove and aurora glow stay exactly as they are. The card replaces only the `<img>` inside `HeroPreview`.
+## New route: `src/routes/dashboard.tsx`
+- Own `head()` metadata (title "Dashboard — Flowform", matching description, og tags).
+- Visible H1: "Your forms".
+- Form card at top with:
+  - Title input (required, max 120 chars)
+  - Description textarea (optional, max 500 chars)
+  - "Save form" button (disabled while submitting / when title empty)
+- Below it, a list of all forms ordered by `created_at desc`, showing title, description, and a relative timestamp. Empty state: "No forms yet — create your first one above."
+- Uses TanStack Query for fetching/invalidating the list. Data access via the browser Supabase client (`@/integrations/supabase/client`) since the table is intentionally public for now — no server function needed.
+- Layout/styling matches the landing page: `bg-surface`, `text-ink`, `bg-brand` for the primary button, `border-ink/5` cards, same typography scale. Reuse shadcn `Input`, `Textarea`, and the existing brand button styling pattern from `PrimaryCTA`.
+- Lightweight toast on success/error via existing `sonner` setup.
 
-## Scope
-
-**Edit only** `src/routes/index.tsx`:
-
-- Replace the `<img src={heroPreview} ... />` inside `HeroPreview` with a new `<AnimatedFormMock />` component defined in the same file.
-- Remove the `heroPreview` import (asset file stays on disk, untouched, in case we want to revert).
-- Keep the outer card chrome (rounded corners, shadow, tilt transform, soft-light gloss overlay) identical so the surrounding layout, aurora, and float animation are unchanged.
-
-**Add CSS** in `src/styles.css`:
-
-- One `@keyframes` for the typewriter caret blink.
-- One `@keyframes` for the button breathing pulse.
-- One `@keyframes` for the floating shards drift (slow, looped, randomised per shard via inline `animation-delay`).
-
-No new packages. No route changes. No copy changes elsewhere.
+## Landing page changes (`src/routes/index.tsx`)
+- Top nav: add `<Link to="/dashboard">Dashboard</Link>` next to the existing "Features" link, same muted style.
+- Hero: keep the primary "Start building" CTA, add a secondary ghost-style link "Go to dashboard →" right next to it that routes to `/dashboard`. Subtle styling so it doesn't compete with the brand CTA.
 
 ## Out of scope
-
-- Logo, testimonials, features, CTAs — untouched.
-- Dark mode tweaks — current tokens already cover it.
-- Replacing the OG/social image — `hero-preview.jpg` stays on disk.
-
-## Technical notes
-
-- Cycling state lives in a single `useState<number>` driven by `setInterval` inside `useEffect`, cleared on unmount.
-- Typewriter is derived from the active question + a frame counter (also `useEffect` + `setInterval`, ~30ms per char), so no animation libraries needed.
-- All colours via existing tokens (`bg-brand`, `text-ink`, `border-ink/5`, etc.) — no hex values in components.
-- Card has a fixed aspect ratio (`aspect-[3/2]`) so the hero doesn't reflow when content swaps.
-- `motion-safe:` prefix on every animation; users with `prefers-reduced-motion` see a single static question with no cycling/typewriter/pulse.
-
-## Acceptance check
-
-- Hero card visibly cycles through 3 questions on load.
-- Pointer movement still tilts the card and shifts the aurora.
-- No layout shift vs. the current static image.
-- No console warnings, no new dependencies.
+- Auth / user accounts (explicitly deferred).
+- Editing or deleting forms.
+- Building/answering forms from the dashboard (only create + list).
+- Dark mode, OG image regeneration, copy changes elsewhere on the landing page.
