@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
 import heroPreview from "@/assets/hero-preview.jpg";
+import logoNorthwind from "@/assets/logo-northwind.png";
+import logoLumen from "@/assets/logo-lumen.png";
+import logoAxiom from "@/assets/logo-axiom.png";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -39,21 +42,24 @@ const testimonials = [
   {
     quote:
       "We replaced three survey tools with one Flowform. Response rates doubled in a week.",
-    initials: "MC",
+    logo: logoNorthwind,
+    company: "Northwind",
     name: "Maya Chen",
     role: "Head of Research @ Northwind",
   },
   {
     quote:
       "It finally looks like our brand. Customers actually finish the form.",
-    initials: "DO",
+    logo: logoLumen,
+    company: "Lumen",
     name: "Daniel Ortiz",
     role: "Design Lead @ Lumen",
   },
   {
     quote:
       "The drop-off insights are surgical. We rewrote our onboarding in an afternoon.",
-    initials: "PR",
+    logo: logoAxiom,
+    company: "Axiom",
     name: "Priya Raman",
     role: "Growth @ Axiom",
   },
