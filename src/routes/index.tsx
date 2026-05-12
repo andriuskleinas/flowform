@@ -276,60 +276,20 @@ function Index() {
           />
           <div className="relative mx-auto max-w-4xl text-center">
             <h1
-              className="motion-safe:animate-[hero-rise_0.8s_ease-out_both] text-5xl font-extrabold leading-[1.05] tracking-tight text-balance transition-transform duration-300 ease-out md:text-7xl"
+              className="text-5xl font-extrabold leading-[1.05] tracking-tight text-balance transition-transform duration-200 ease-out md:text-7xl"
               style={{
                 transform:
-                  "translate3d(calc(var(--px, 0) * -0.04px), calc(var(--py, 0) * -0.04px), 0)",
+                  "translate3d(calc(var(--px, 0) * -0.025px), calc(var(--py, 0) * -0.025px), 0)",
               }}
             >
-              {"Forms, finally ".split("").map((ch, i) => (
-                <span
-                  key={`a-${i}`}
-                  className="inline-block motion-safe:animate-[letter-in_0.6s_cubic-bezier(0.22,1,0.36,1)_both] transition-transform duration-300 ease-out"
-                  style={{
-                    animationDelay: `${i * 30}ms`,
-                    transform:
-                      "translate3d(calc(var(--px, 0) * " +
-                      (-0.02 - i * 0.003).toFixed(3) +
-                      "px), calc(var(--py, 0) * -0.02px), 0)",
-                    whiteSpace: ch === " " ? "pre" : undefined,
-                  }}
-                >
-                  {ch}
-                </span>
-              ))}
-              <span
-                className="relative inline-block bg-clip-text text-transparent transition-[background-position] duration-200 ease-out"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(110deg, var(--brand) 0%, color-mix(in oklch, var(--brand) 60%, var(--gold)) 50%, var(--brand) 100%)",
-                  backgroundSize: "200% 100%",
-                  backgroundPosition: "calc(var(--sx, 0.5) * 100%) 50%",
-                }}
-              >
-                {"worth finishing.".split("").map((ch, i) => (
-                  <span
-                    key={`b-${i}`}
-                    className="inline-block motion-safe:animate-[letter-in_0.6s_cubic-bezier(0.22,1,0.36,1)_both] transition-transform duration-300 ease-out"
-                    style={{
-                      animationDelay: `${(i + 16) * 30}ms`,
-                      transform:
-                        "translate3d(calc(var(--px, 0) * " +
-                        (0.02 + i * 0.004).toFixed(3) +
-                        "px), calc(var(--py, 0) * -0.03px), 0)",
-                      whiteSpace: ch === " " ? "pre" : undefined,
-                    }}
-                  >
-                    {ch}
-                  </span>
-                ))}
-              </span>
+              Forms, finally{" "}
+              <span className="text-brand">worth finishing.</span>
             </h1>
             <p
-              className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 transition-transform duration-300 ease-out md:mt-8 md:text-xl motion-safe:animate-[hero-rise_0.9s_ease-out_0.2s_both]"
+              className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 transition-transform duration-200 ease-out md:mt-8 md:text-xl"
               style={{
                 transform:
-                  "translate3d(calc(var(--px, 0) * -0.02px), calc(var(--py, 0) * -0.02px), 0)",
+                  "translate3d(calc(var(--px, 0) * -0.015px), calc(var(--py, 0) * -0.015px), 0)",
               }}
             >
               Craft beautifully simple, one-question-at-a-time experiences that
