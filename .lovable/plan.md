@@ -1,30 +1,27 @@
 ## Goal
 
-Make the hero product preview image feel alive and premium with three coordinated motion layers, no new dependencies.
+Turn the static brand glow behind the hero preview into a living aurora — a slow, premium light show that feels alive without distracting from the product image.
 
 ## What you'll see
 
-1. **Entrance reveal** — On mount, the image card fades up with a soft scale (from `opacity-0 translate-y-6 scale-[0.98]` to neutral) over ~700ms with an ease-out curve. The brand glow behind it fades in slightly later for a layered feel.
-2. **Continuous float** — The image card gently bobs up/down (~6px) on a ~6s ease-in-out infinite loop. Subtle, almost subliminal — premium, not cartoonish.
-3. **Mouse-tracking 3D tilt + spotlight** — On pointer move over the card, it tilts on X/Y axes up to ~6° following the cursor (CSS `transform: perspective(1200px) rotateX() rotateY()`), with a soft radial highlight (`bg-white/30` blurred blob) following the cursor inside the card. On pointer leave, everything springs back to rest with a 400ms ease.
+Three layered light sources behind the preview card, each on its own independent timeline:
 
-The brand glow behind the card slightly intensifies on hover (opacity 15% → 25%) to reinforce focus.
+1. **Primary brand orb** — large soft `bg-brand/30` blurred blob, slowly drifts in a figure-8 pattern over ~14s and gently breathes (scale 1 → 1.1 → 1) over ~10s.
+2. **Secondary cool orb** — smaller `bg-emerald-300/25` blob drifting on a different ~18s loop in the opposite direction, slightly offset.
+3. **Pulse halo** — a thin outer ring that fades opacity 0.4 → 0.8 → 0.4 on a ~6s loop for a heartbeat feel.
 
-## Implementation in `src/routes/index.tsx`
+On hover, all three intensify (existing `--glow` var already in place from the tilt component) and the drift speeds up slightly via a CSS class swap. The whole stack respects `prefers-reduced-motion`.
 
-- Extract the hero preview block (~lines 122–138) into a small inline component `HeroPreview` defined in the same file (keeps the route file self-contained, no new files).
-- Use a single `useRef` on the wrapper and an `onPointerMove` / `onPointerLeave` handler that writes `--rx`, `--ry`, `--mx`, `--my` CSS custom properties on the wrapper. The transform and spotlight read those vars — zero re-renders, GPU-only.
-- Use Tailwind utilities for the float (`animate-[float_6s_ease-in-out_infinite]`) and entrance (`animate-[fade-in_0.7s_ease-out_both]`). Add a `@keyframes float` block in `src/styles.css` (other keyframes like `fade-in` already exist per project animation utilities).
-- Respect `prefers-reduced-motion`: wrap the float and entrance animations in `motion-safe:` variants so users who opt out get a static image.
+## Implementation
 
-## Design notes
-
-- Tilt max 6° (not 15° — premium products use restraint).
-- Spotlight is a 60% radius radial-gradient mask, very soft, sits above the image with `mix-blend-mode: soft-light` and ~30% opacity so it reads as light, not a sticker.
-- All transitions use `transition-transform duration-300 ease-out` on tilt reset; the live cursor movement updates instantly via CSS vars.
+- Replace the single glow `<div>` inside `HeroPreview` (in `src/routes/index.tsx`) with a stacked container holding three absolutely-positioned blurred divs, each with `motion-safe:animate-[name_duration_ease_infinite]`.
+- Add three new keyframes to `src/styles.css`: `aurora-drift-a`, `aurora-drift-b`, `aurora-pulse`. Each translates and scales — pure GPU transform, no layout cost.
+- Keep the wrapper sized via the existing `-inset-6 rounded-[40px]` so positioning is unchanged.
+- Each orb uses `will-change: transform` and `mix-blend-mode: screen` so they layer like light, not paint.
+- Glow intensity still keys off `--glow` (set by the existing pointer handler) for hover boost.
 
 ## Out of scope
 
-- No new npm packages (no Framer Motion, no GSAP — pure CSS + 1 pointer handler).
-- No changes to copy, layout, or other sections.
-- No changes to the underlying image asset.
+- No new dependencies (no Framer Motion, no canvas).
+- No changes to hero copy, image, layout, or other sections.
+- No change to the existing tilt + float + spotlight motion on the card itself — this only enhances the glow behind it.
