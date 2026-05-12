@@ -61,6 +61,8 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
   --color-surface: var(--surface);
   --color-ink: var(--ink);
   --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
@@ -68,8 +70,10 @@
 
 :root {
   --radius: 0.625rem;
-  --brand: oklch(0.6 0.13 160);
+  --brand: oklch(0.55 0.22 295);
   --brand-foreground: oklch(0.985 0 0);
+  --gold: oklch(0.82 0.16 90);
+  --gold-foreground: oklch(0.2 0.04 90);
   --surface: oklch(0.985 0.002 90);
   --ink: oklch(0.18 0.03 260);
   --background: oklch(1 0 0);
@@ -139,6 +143,10 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+  --brand: oklch(0.7 0.2 295);
+  --brand-foreground: oklch(0.12 0.03 295);
+  --gold: oklch(0.85 0.16 90);
+  --gold-foreground: oklch(0.18 0.04 90);
 }
 
 @layer base {
