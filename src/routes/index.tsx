@@ -138,6 +138,47 @@ function Index() {
           </div>
         </section>
 
+        {/* Social proof */}
+        <section className="px-6 pb-24 md:px-8 md:pb-32">
+          <div className="mx-auto max-w-7xl">
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-ink/40">
+              Trusted by teams shipping serious work
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 md:gap-x-16">
+              {logos.map((logo) => (
+                <span
+                  key={logo}
+                  className="text-sm font-bold tracking-[0.25em] text-ink/40 md:text-base"
+                >
+                  {logo}
+                </span>
+              ))}
+            </div>
+
+            <ul className="mt-16 grid gap-6 md:mt-20 md:grid-cols-3">
+              {testimonials.map((t) => (
+                <li
+                  key={t.name}
+                  className="flex flex-col justify-between rounded-2xl border border-ink/5 bg-white p-8 shadow-sm"
+                >
+                  <p className="text-lg leading-relaxed text-ink/80">
+                    &ldquo;{t.quote}&rdquo;
+                  </p>
+                  <div className="mt-8 flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-brand">
+                      {t.initials}
+                    </div>
+                    <div className="text-sm">
+                      <div className="font-semibold text-ink">{t.name}</div>
+                      <div className="text-ink/50">{t.role}</div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
         {/* Features */}
         <section id="features" className="border-y border-ink/5 bg-white px-6 py-24 md:px-8 md:py-32">
           <div className="mx-auto max-w-7xl">
