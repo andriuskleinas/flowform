@@ -152,13 +152,55 @@ function Index() {
 
       <main>
         {/* Hero */}
-        <section className="px-6 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32">
-          <div className="mx-auto max-w-4xl text-center">
-            <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-7xl">
+        <section
+          className="relative overflow-hidden px-6 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32"
+          onPointerMove={(e) => {
+            const el = e.currentTarget;
+            const r = el.getBoundingClientRect();
+            const sx = (e.clientX - r.left) / r.width;
+            const sy = (e.clientY - r.top) / r.height;
+            el.style.setProperty("--sx", `${sx}`);
+            el.style.setProperty("--sy", `${sy}`);
+            el.style.setProperty("--px", `${(sx - 0.5) * r.width}`);
+            el.style.setProperty("--py", `${(sy - 0.5) * r.height}`);
+            el.style.setProperty("--active", "1");
+          }}
+          onPointerLeave={(e) => {
+            const el = e.currentTarget;
+            el.style.setProperty("--sx", "0.5");
+            el.style.setProperty("--sy", "0.5");
+            el.style.setProperty("--px", "0");
+            el.style.setProperty("--py", "0");
+            el.style.setProperty("--active", "0");
+          }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 transition-opacity duration-500"
+            style={{
+              background:
+                "radial-gradient(circle 600px at calc(var(--sx, 0.5) * 100%) calc(var(--sy, 0.5) * 100%), color-mix(in oklch, var(--brand) 18%, transparent), transparent 70%)",
+              opacity: "var(--active, 0)",
+            }}
+          />
+          <div className="relative mx-auto max-w-4xl text-center">
+            <h1
+              className="text-5xl font-extrabold leading-[1.05] tracking-tight text-balance transition-transform duration-200 ease-out md:text-7xl"
+              style={{
+                transform:
+                  "translate3d(calc(var(--px, 0) * -0.025px), calc(var(--py, 0) * -0.025px), 0)",
+              }}
+            >
               Forms, finally{" "}
               <span className="text-brand">worth finishing.</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 md:mt-8 md:text-xl">
+            <p
+              className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 transition-transform duration-200 ease-out md:mt-8 md:text-xl"
+              style={{
+                transform:
+                  "translate3d(calc(var(--px, 0) * -0.015px), calc(var(--py, 0) * -0.015px), 0)",
+              }}
+            >
               Craft beautifully simple, one-question-at-a-time experiences that
               feel less like a survey and more like a conversation worth having.
             </p>
