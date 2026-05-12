@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -34,17 +34,14 @@ function PrimaryCTA({
       ? "bg-brand text-brand-foreground hover:shadow-lg hover:shadow-brand/25"
       : "bg-white text-ink hover:scale-[1.02]";
   return (
-    <button
-      type="button"
+    <Link
+      to="/demo"
       data-cta="demo"
-      onClick={() => {
-        // wired to the demo form in a later step
-      }}
       className={`inline-flex items-center gap-2 rounded-full font-semibold transition-all ${sizing} ${variantClass}`}
     >
       {children}
       <ArrowRight className="size-4" />
-    </button>
+    </Link>
   );
 }
 
