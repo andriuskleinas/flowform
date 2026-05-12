@@ -156,8 +156,15 @@ function Index() {
                     &ldquo;{t.quote}&rdquo;
                   </p>
                   <div className="mt-8 flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-brand">
-                      {t.initials}
+                    <div className="flex size-10 items-center justify-center rounded-full bg-brand/10 p-1.5">
+                      <img
+                        src={t.logo}
+                        alt={`${t.company} logo`}
+                        width={512}
+                        height={512}
+                        loading="lazy"
+                        className="size-full object-contain"
+                      />
                     </div>
                     <div className="text-sm">
                       <div className="font-semibold text-ink">{t.name}</div>
