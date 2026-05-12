@@ -35,8 +35,6 @@ function PrimaryCTA({
   );
 }
 
-const logos = ["NORTHWIND", "LUMEN", "AXIOM", "FIELDNOTES", "KORU"];
-
 const testimonials = [
   {
     quote:
@@ -141,21 +139,8 @@ function Index() {
         {/* Social proof */}
         <section className="px-6 pb-24 md:px-8 md:pb-32">
           <div className="mx-auto max-w-7xl">
-            <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-ink/40">
-              Trusted by teams shipping serious work
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 md:gap-x-16">
-              {logos.map((logo) => (
-                <span
-                  key={logo}
-                  className="text-sm font-bold tracking-[0.25em] text-ink/40 md:text-base"
-                >
-                  {logo}
-                </span>
-              ))}
-            </div>
+            <ul className="grid gap-6 md:grid-cols-3">
 
-            <ul className="mt-16 grid gap-6 md:mt-20 md:grid-cols-3">
               {testimonials.map((t) => (
                 <li
                   key={t.name}
