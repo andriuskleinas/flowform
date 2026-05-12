@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
+import { useRef } from "react";
 import heroPreview from "@/assets/hero-preview.jpg";
 
 export const Route = createFileRoute("/")({
@@ -115,21 +116,7 @@ function Index() {
             </div>
 
             {/* Preview */}
-            <div className="relative mt-16 md:mt-20">
-              <div
-                aria-hidden
-                className="absolute -inset-6 rounded-[40px] bg-gradient-to-b from-brand/15 to-transparent blur-2xl"
-              />
-              <div className="relative overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-2xl">
-                <img
-                  src={heroPreview}
-                  alt="A Flowform conversational form asking one question at a time"
-                  width={1536}
-                  height={1024}
-                  className="h-auto w-full"
-                />
-              </div>
-            </div>
+            <HeroPreview />
           </div>
         </section>
 
