@@ -38,18 +38,18 @@ function PrimaryCTA({
 const features = [
   {
     icon: GitBranch,
-    title: "Step-by-step logic",
-    body: "Create personalized paths for every respondent. Ask the right follow-up questions based on previous answers — automatically.",
+    title: "Logic that adapts.",
+    body: "Branch, skip, and personalize in real time. Every respondent gets a path built just for them — no spreadsheets required.",
   },
   {
     icon: Palette,
-    title: "Beautiful themes",
-    body: "Make it your own with custom fonts, colors, and backgrounds. Your brand shouldn't stop at the form header.",
+    title: "Design that owns the room.",
+    body: "Pixel-perfect themes, your typography, your palette. A form that looks like it belongs on your homepage.",
   },
   {
     icon: BarChart3,
-    title: "Deep analytics",
-    body: "See exactly where people drop off. Get real-time insights into response times and completion rates.",
+    title: "Insight, not just data.",
+    body: "Drop-off heatmaps, completion velocity, and live response streams — the signal behind every answer.",
   },
 ];
 
@@ -82,16 +82,15 @@ function Index() {
         <section className="px-6 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32">
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-7xl">
-              Forms that feel like a{" "}
-              <span className="text-brand">conversation.</span>
+              Forms, finally{" "}
+              <span className="text-brand">worth finishing.</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 md:mt-8 md:text-xl">
-              Stop sending boring spreadsheets. Flowform helps you build
-              engaging, one-question-at-a-time experiences that people actually
-              enjoy filling out.
+              Craft beautifully simple, one-question-at-a-time experiences that
+              feel less like a survey and more like a conversation worth having.
             </p>
             <div className="mt-10 flex justify-center md:mt-12">
-              <PrimaryCTA size="lg">Create your first form</PrimaryCTA>
+              <PrimaryCTA size="lg">Start building</PrimaryCTA>
             </div>
 
             {/* Preview */}
@@ -118,11 +117,11 @@ function Index() {
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-extrabold tracking-tight text-balance md:text-5xl">
-                Everything you need to ask better questions.
+                Built for the questions that matter.
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base text-ink/60 md:text-lg">
-                Thoughtful primitives for forms that adapt, brand-match, and
-                actually get finished.
+                A precise toolkit for teams who treat every interaction
+                like a first impression.
               </p>
             </div>
 
@@ -148,18 +147,19 @@ function Index() {
               className="pointer-events-none absolute -top-20 right-0 size-64 translate-x-1/3 rounded-full bg-brand/30 blur-[100px]"
             />
             <h2 className="relative text-3xl font-extrabold tracking-tight text-balance md:text-5xl">
-              Ready to collect better data?
+              Ask sharper. Learn faster.
             </h2>
             <p className="relative mx-auto mt-5 max-w-xl text-base text-white/60 md:mt-6 md:text-xl">
-              Build a form your audience will actually finish.
+              Ship your first Flowform in minutes — and never send a flat
+              survey again.
             </p>
             <div className="relative mt-8 flex justify-center md:mt-10">
               <PrimaryCTA size="lg" variant="light">
-                Start building for free
+                Start for free
               </PrimaryCTA>
             </div>
             <p className="relative mt-6 text-xs font-medium uppercase tracking-[0.2em] text-white/40">
-              No credit card required
+              Free forever · No card required
             </p>
           </div>
         </section>
