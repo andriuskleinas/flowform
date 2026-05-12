@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -82,11 +83,12 @@ function DashboardPage() {
   });
 
   const canSubmit = title.trim().length > 0 && !createForm.isPending;
+  const count = forms.length;
 
   return (
     <div className="min-h-screen bg-surface text-ink">
-      <header>
-        <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6 md:px-8">
+      <header className="border-b border-ink/5">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 md:px-8">
           <Link to="/" className="flex items-center gap-2">
             <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
               <span className="size-3 rounded-sm bg-white" />
@@ -103,106 +105,153 @@ function DashboardPage() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 pb-24 pt-8 md:px-8 md:pt-12">
-        <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-          Your forms
-        </h1>
-        <p className="mt-3 text-base text-ink/60 md:text-lg">
-          Create a form, then watch it appear in the list below.
-        </p>
+      <main className="mx-auto max-w-6xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
+        <div className="max-w-2xl">
+          <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+            Your forms
+          </h1>
+          <p className="mt-3 text-base text-ink/60 md:text-lg">
+            Create a form on the left, then watch it appear in the list.
+          </p>
+        </div>
 
-        <section
-          aria-labelledby="create-form-heading"
-          className="mt-10 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm md:p-8"
-        >
-          <h2 id="create-form-heading" className="text-lg font-bold tracking-tight">
-            New form
-          </h2>
-          <form
-            className="mt-5 space-y-5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (canSubmit) createForm.mutate();
-            }}
+        <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-10">
+          {/* Left: create form */}
+          <section
+            aria-labelledby="create-form-heading"
+            className="md:col-span-1"
           >
-            <div className="space-y-2">
-              <Label htmlFor="form-title">Title</Label>
-              <Input
-                id="form-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Customer feedback Q3"
-                maxLength={120}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="form-description">
-                Description{" "}
-                <span className="font-normal text-ink/40">(optional)</span>
-              </Label>
-              <Textarea
-                id="form-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What's this form for?"
-                maxLength={500}
-                rows={3}
-              />
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+            <div className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm md:sticky md:top-8">
+              <h2
+                id="create-form-heading"
+                className="text-lg font-bold tracking-tight"
               >
-                {createForm.isPending ? "Saving…" : "Save form"}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section aria-labelledby="forms-list-heading" className="mt-12">
-          <h2
-            id="forms-list-heading"
-            className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/50"
-          >
-            All forms {forms.length > 0 && `(${forms.length})`}
-          </h2>
-
-          <ul className="mt-4 space-y-3">
-            {isLoading && (
-              <li className="rounded-2xl border border-ink/5 bg-white p-6 text-sm text-ink/50">
-                Loading…
-              </li>
-            )}
-            {!isLoading && forms.length === 0 && (
-              <li className="rounded-2xl border border-dashed border-ink/15 bg-white/50 p-8 text-center text-sm text-ink/50">
-                No forms yet — create your first one above.
-              </li>
-            )}
-            {forms.map((f) => (
-              <li
-                key={f.id}
-                className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm transition-shadow hover:shadow-md md:p-6"
+                New form
+              </h2>
+              <form
+                className="mt-5 space-y-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (canSubmit) createForm.mutate();
+                }}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-base font-bold tracking-tight md:text-lg">
-                    {f.title}
-                  </h3>
-                  <span className="shrink-0 text-xs text-ink/40">
-                    {timeAgo(f.created_at)}
-                  </span>
+                <div className="space-y-2">
+                  <Label htmlFor="form-title">Title</Label>
+                  <Input
+                    id="form-title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Customer feedback Q3"
+                    maxLength={120}
+                    required
+                  />
                 </div>
-                {f.description && (
-                  <p className="mt-2 text-sm leading-relaxed text-ink/60">
-                    {f.description}
+                <div className="space-y-2">
+                  <Label htmlFor="form-description">
+                    Description{" "}
+                    <span className="font-normal text-ink/40">(optional)</span>
+                  </Label>
+                  <Textarea
+                    id="form-description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What's this form for?"
+                    maxLength={500}
+                    rows={3}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {createForm.isPending ? "Saving…" : "Save form"}
+                </button>
+              </form>
+            </div>
+          </section>
+
+          {/* Right: list */}
+          <section
+            aria-labelledby="forms-list-heading"
+            className="md:col-span-2"
+          >
+            <div className="flex items-center justify-between">
+              <h2
+                id="forms-list-heading"
+                className="text-lg font-bold tracking-tight"
+              >
+                All forms
+              </h2>
+              {!isLoading && (
+                <span className="inline-flex items-center rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink/70">
+                  {count} {count === 1 ? "form" : "forms"}
+                </span>
+              )}
+            </div>
+
+            <ul className="mt-4 space-y-3">
+              {isLoading &&
+                Array.from({ length: 3 }).map((_, i) => (
+                  <li
+                    key={i}
+                    className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm md:p-6"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <Skeleton className="h-5 w-1/2" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="mt-3 h-3 w-full" />
+                    <Skeleton className="mt-2 h-3 w-2/3" />
+                  </li>
+                ))}
+
+              {!isLoading && forms.length === 0 && (
+                <li className="flex flex-col items-center rounded-2xl border border-dashed border-ink/15 bg-white/50 px-6 py-14 text-center">
+                  <span className="flex size-12 items-center justify-center rounded-full bg-brand/10 text-brand">
+                    <FileText className="size-6" />
+                  </span>
+                  <h3 className="mt-4 text-base font-bold tracking-tight">
+                    No forms yet
+                  </h3>
+                  <p className="mt-1 max-w-xs text-sm text-ink/60">
+                    Create your first form using the panel on the left — it'll
+                    show up here.
                   </p>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+                </li>
+              )}
+
+              {!isLoading &&
+                forms.map((f) => (
+                  <li
+                    key={f.id}
+                    className="group rounded-2xl border border-ink/5 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md md:p-6"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
+                          <FileText className="size-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-base font-bold tracking-tight md:text-lg">
+                            {f.title}
+                          </h3>
+                          {f.description && (
+                            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">
+                              {f.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-xs text-ink/40">
+                        {timeAgo(f.created_at)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        </div>
       </main>
     </div>
   );
