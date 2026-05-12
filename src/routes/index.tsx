@@ -35,8 +35,6 @@ function PrimaryCTA({
   );
 }
 
-const logos = ["NORTHWIND", "LUMEN", "AXIOM", "FIELDNOTES", "KORU"];
-
 const testimonials = [
   {
     quote:
