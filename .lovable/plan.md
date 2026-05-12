@@ -1,34 +1,30 @@
 ## Goal
 
-Replace the placeholder home page with a polished landing page for a Typeform-style form builder ("Flowform"), using the **Modern Minimalist** direction. No other pages, no auth, no database.
+Add a social proof section to the Flowform landing page to reinforce premium credibility, placed between the Hero and Features sections in `src/routes/index.tsx`.
 
-## Scope
+## Section structure
 
-- Single route: `src/routes/index.tsx` (homepage only)
-- Add design tokens to `src/styles.css` (brand green, surface, ink) using `oklch`
-- Generate one hero product preview image to `src/assets/`
-- Update SEO metadata (title, description, og tags) in `src/routes/__root.tsx`
+1. **Logo bar** — A single row of 5 fictional brand wordmarks rendered as styled text (e.g. NORTHWIND, LUMEN, AXIOM, FIELDNOTES, KORU) in uppercase, tracked-out, `text-ink/40`, with a small eyebrow label above: "Trusted by teams shipping serious work."
+2. **Testimonials** — A 3-up grid of short quotes (1–2 sentences each), each card containing:
+   - Quote text in `text-ink/80`, slightly larger than body
+   - Author block: small circular avatar (initials on a `bg-brand/10` tile, no external image), name, role @ company
+   - Subtle `border border-ink/5` card on white, rounded-2xl, generous padding
+   - On mobile: stack to a single column
 
-## Page sections
+## Copy (premium, punchy — matches existing tone)
 
-1. **Nav** — Flowform logo mark + minimal links (Features, Pricing as anchors) + a primary CTA button
-2. **Hero** — Big headline "Forms that feel like a conversation.", subhead, single primary CTA "Create your first form", and a hero product preview image with soft brand glow
-3. **Features (3-up grid)** — Step-by-step logic / Beautiful themes / Deep analytics, each with an icon tile and short copy
-4. **Closing CTA** — Dark rounded card with headline, subhead, and the same primary CTA
-5. **Footer** — Copyright + minimal links
+- "We replaced three survey tools with one Flowform. Response rates doubled in a week." — Maya Chen, Head of Research @ Northwind
+- "It finally looks like our brand. Customers actually finish the form." — Daniel Ortiz, Design Lead @ Lumen
+- "The drop-off insights are surgical. We rewrote our onboarding in an afternoon." — Priya Raman, Growth @ Axiom
 
-## CTA behavior
+## Design
 
-All primary CTAs route to `/` with a `data-cta="demo"` attribute and a no-op `onClick` placeholder, so they're trivially wired to a real demo form later.
-
-## Design system
-
-Add tokens in `src/styles.css` (oklch equivalents of #059669 brand, #FAFAFA surface, #0F172A ink) and register them in `@theme inline` as `--color-brand`, `--color-surface`, `--color-ink`. Use Plus Jakarta Sans via Google Fonts link in `__root.tsx` head. All component classes use semantic tokens (`bg-surface`, `text-ink`, `bg-brand`) — no hardcoded hex.
-
-## Image
-
-Generate one image with `imagegen--generate_image` (fast tier, 1600x1000, jpg) for the hero product preview, save to `src/assets/hero-preview.jpg`, import as ES6.
+- Section background: `bg-surface` (matches hero) so the white Features section still pops below
+- Reuse existing tokens only: `bg-brand`, `text-ink`, `text-brand`, `border-ink/5`, `bg-white`
+- No new images, no new dependencies, no new design tokens
+- Logos are typographic (no SVG assets needed) to keep it premium and zero-cost
 
 ## Out of scope
 
-No additional routes, no Lovable Cloud, no forms logic, no testimonials/logo bar, no pricing section.
+- No new routes, no carousel, no real customer logos/images, no ratings widget, no CMS, no Cloud
+- No changes to nav, hero, features, closing CTA, or footer beyond the new section insertion

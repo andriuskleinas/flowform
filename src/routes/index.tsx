@@ -35,6 +35,32 @@ function PrimaryCTA({
   );
 }
 
+const logos = ["NORTHWIND", "LUMEN", "AXIOM", "FIELDNOTES", "KORU"];
+
+const testimonials = [
+  {
+    quote:
+      "We replaced three survey tools with one Flowform. Response rates doubled in a week.",
+    initials: "MC",
+    name: "Maya Chen",
+    role: "Head of Research @ Northwind",
+  },
+  {
+    quote:
+      "It finally looks like our brand. Customers actually finish the form.",
+    initials: "DO",
+    name: "Daniel Ortiz",
+    role: "Design Lead @ Lumen",
+  },
+  {
+    quote:
+      "The drop-off insights are surgical. We rewrote our onboarding in an afternoon.",
+    initials: "PR",
+    name: "Priya Raman",
+    role: "Growth @ Axiom",
+  },
+];
+
 const features = [
   {
     icon: GitBranch,
