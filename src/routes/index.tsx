@@ -45,7 +45,170 @@ function PrimaryCTA({
   );
 }
 
-function HeroPreview() {
+type MockQuestion =
+  | { kind: "text"; label: string; placeholder: string }
+  | { kind: "choice"; label: string; options: string[] }
+  | { kind: "rating"; label: string };
+
+const MOCK_QUESTIONS: MockQuestion[] = [
+  { kind: "text", label: "What's your name?", placeholder: "Type your answer…" },
+  {
+    kind: "choice",
+    label: "Which best describes your team?",
+    options: ["Design", "Product", "Research", "Marketing"],
+  },
+  { kind: "rating", label: "How likely are you to recommend us?" },
+];
+
+const SHARDS = [
+  { top: "8%", left: "6%", size: 56, color: "brand", delay: "0s", duration: "11s" },
+  { top: "72%", left: "12%", size: 36, color: "gold", delay: "-3s", duration: "13s" },
+  { top: "20%", left: "88%", size: 44, color: "gold", delay: "-6s", duration: "15s" },
+  { top: "78%", left: "82%", size: 64, color: "brand", delay: "-2s", duration: "12s" },
+  { top: "50%", left: "94%", size: 28, color: "brand", delay: "-9s", duration: "17s" },
+];
+
+function AnimatedFormMock() {
+  const [step, setStep] = useState(0);
+  const [typed, setTyped] = useState("");
+
+  // Auto-advance the question every 3.6s
+  useEffect(() => {
+    const id = setInterval(() => {
+      setStep((s) => (s + 1) % MOCK_QUESTIONS.length);
+    }, 3600);
+    return () => clearInterval(id);
+  }, []);
+
+  // Typewriter effect for the active question label
+  useEffect(() => {
+    setTyped("");
+    const label = MOCK_QUESTIONS[step].label;
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setTyped(label.slice(0, i));
+      if (i >= label.length) clearInterval(id);
+    }, 28);
+    return () => clearInterval(id);
+  }, [step]);
+
+  const q = MOCK_QUESTIONS[step];
+  const progress = ((step + 1) / MOCK_QUESTIONS.length) * 100;
+
+  return (
+    <div
+      className="relative aspect-[3/2] w-full overflow-hidden bg-gradient-to-br from-white via-surface to-white"
+      aria-label="Animated Flowform preview cycling through example questions"
+    >
+      {/* Floating ambient shards */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        {SHARDS.map((s, i) => (
+          <div
+            key={i}
+            className={`absolute rounded-2xl opacity-40 blur-[2px] motion-safe:animate-[shard-drift_var(--dur)_ease-in-out_infinite] ${
+              s.color === "brand" ? "bg-brand/30" : "bg-gold/40"
+            }`}
+            style={{
+              top: s.top,
+              left: s.left,
+              width: s.size,
+              height: s.size * 0.6,
+              animationDelay: s.delay,
+              ["--dur" as string]: s.duration,
+              transform:
+                "translate3d(calc(var(--px, 0) * 0.04px), calc(var(--py, 0) * 0.04px), 0) rotate(-12deg)",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Form card */}
+      <div className="absolute inset-0 flex items-center justify-center p-[6%]">
+        <div className="relative w-full max-w-[78%] rounded-2xl border border-ink/5 bg-white/90 p-6 shadow-xl backdrop-blur-sm md:p-8">
+          {/* Progress */}
+          <div className="mb-6 flex items-center gap-3">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/40">
+              {step + 1} / {MOCK_QUESTIONS.length}
+            </span>
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-ink/5">
+              <div
+                className="h-full rounded-full bg-brand transition-all duration-700 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Question label with typewriter caret */}
+          <h3 className="min-h-[2.5em] text-xl font-bold tracking-tight text-ink md:text-2xl">
+            {typed}
+            <span
+              aria-hidden
+              className="ml-0.5 inline-block h-[1em] w-[2px] -translate-y-[2px] bg-brand align-middle motion-safe:animate-[caret-blink_1s_steps(2)_infinite]"
+            />
+          </h3>
+
+          {/* Answer area swaps per question */}
+          <div key={step} className="mt-5 motion-safe:animate-[fade-in_0.5s_ease-out_both]">
+            {q.kind === "text" && (
+              <div className="rounded-lg border border-ink/10 bg-surface px-4 py-3 text-sm text-ink/40">
+                {q.placeholder}
+              </div>
+            )}
+            {q.kind === "choice" && (
+              <ul className="grid grid-cols-2 gap-2">
+                {q.options.map((opt, i) => (
+                  <li
+                    key={opt}
+                    className="flex items-center gap-2 rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm font-medium text-ink/70"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                  >
+                    <span className="grid size-5 place-items-center rounded border border-ink/15 text-[10px] font-bold text-ink/40">
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    {opt}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {q.kind === "rating" && (
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <span
+                    key={n}
+                    className={`grid h-9 flex-1 place-items-center rounded-md border text-sm font-semibold transition-colors ${
+                      n <= 8
+                        ? "border-brand/30 bg-brand/10 text-brand"
+                        : "border-ink/10 bg-white text-ink/50"
+                    }`}
+                  >
+                    {n}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Continue button */}
+          <div className="mt-6 flex items-center justify-between">
+            <span className="text-xs text-ink/40">Press Enter ↵</span>
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-hidden
+              className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground shadow-md shadow-brand/20 motion-safe:animate-[btn-breathe_2.6s_ease-in-out_infinite]"
+            >
+              Continue
+              <ArrowRight className="size-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
   return (
     <div
       className="group relative mt-16 motion-safe:animate-[hero-rise_0.7s_ease-out_both] md:mt-20"
