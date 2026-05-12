@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
-import { useRef } from "react";
+
 import heroPreview from "@/assets/hero-preview.jpg";
 
 export const Route = createFileRoute("/")({
