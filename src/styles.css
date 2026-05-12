@@ -70,8 +70,10 @@
 
 :root {
   --radius: 0.625rem;
-  --brand: oklch(0.6 0.13 160);
+  --brand: oklch(0.55 0.22 295);
   --brand-foreground: oklch(0.985 0 0);
+  --gold: oklch(0.82 0.16 90);
+  --gold-foreground: oklch(0.2 0.04 90);
   --surface: oklch(0.985 0.002 90);
   --ink: oklch(0.18 0.03 260);
   --background: oklch(1 0 0);
