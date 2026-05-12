@@ -208,7 +208,7 @@ function AnimatedFormMock() {
   );
 }
 
-
+function HeroPreview() {
   return (
     <div
       className="group relative mt-16 motion-safe:animate-[hero-rise_0.7s_ease-out_both] md:mt-20"
