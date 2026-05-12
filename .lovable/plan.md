@@ -1,34 +1,25 @@
 ## Goal
+Replace the green brand color across the site with a **purple** primary brand and a **yellow-golden** secondary accent. No layout, copy, or animation changes.
 
-Convert the testimonials section into a single-card carousel and bring back the company logo on each testimonial card.
+## Changes
 
-## Carousel
+### 1. `src/styles.css` — swap brand tokens, add gold accent
+- `--brand` (currently green `oklch(0.6 0.13 160)`) → purple `oklch(0.55 0.22 295)`
+- `--brand-foreground` stays near-white
+- Add new tokens:
+  - `--gold: oklch(0.82 0.16 90)` (warm yellow-golden)
+  - `--gold-foreground: oklch(0.2 0.04 90)`
+- Register both in the `@theme inline` block so Tailwind utilities `bg-gold`, `text-gold`, `bg-brand`, etc. work.
+- Mirror token values in `.dark` if needed (slightly lighter purple for contrast).
 
-- Use the existing shadcn `Carousel` component (`src/components/ui/carousel.tsx`, built on `embla-carousel-react`) — already in the project, no new dependencies.
-- Show **one testimonial per slide on mobile, two on tablet, three on desktop** via the standard `basis-full md:basis-1/2 lg:basis-1/3` pattern. This keeps the section feeling generous while letting the user swipe/click through.
-- Add `<CarouselPrevious />` and `<CarouselNext />` arrows positioned just outside the slide track on desktop, hidden on small screens (touch users get native drag).
-- Add slim dot pagination beneath the track that reflects the active slide. Dots are clickable.
-- Enable `loop: true` and `align: "start"` on the Carousel `opts`. Optional: an autoplay tick every ~6s using a tiny `useEffect` that calls `api.scrollNext()` and pauses on hover (no autoplay plugin needed).
-- Section background and card styles stay exactly as they are.
+### 2. `src/routes/index.tsx` — replace remaining green
+- Line 67: `bg-emerald-300/40` (aurora blob in HeroPreview) → `bg-gold/40`
+- Any other green-flavored utility classes spotted during the edit pass get swapped to `bg-brand` (purple) or `bg-gold` (yellow) based on which reads better contextually (e.g., secondary aurora/glow → gold; primary surfaces, dots, CTAs → purple).
 
-## Logos on each testimonial
-
-- Re-import the existing `src/assets/logo-northwind.png`, `logo-lumen.png`, `logo-axiom.png`.
-- Add `logo` and `company` back to each entry of the `testimonials` array.
-- Render the logo as a small **wordmark-style row at the top of each card**: a 32px-tall logo image followed by the company name in tracked uppercase text, separated by a thin divider beneath the row. This avoids the previous round-tile awkwardness — logos sit clean at the top, name + role stay below the quote.
-
-## Card layout (per slide)
-
-```
-[ logo + company name ]
-────────────────────────
-"Quote text..."
-[ name ]
-[ role ]
-```
-
-- Min-height on the quote stays so cards align across slides.
+### 3. Verification
+- Grep for `green|emerald|lime|teal` in `src/` after edits to confirm none remain.
+- Visually check hero, feature icons, CTA buttons, testimonial dots, footer mark.
 
 ## Out of scope
-
-- No new sections, no new dependencies, no carousel autoplay plugin (manual interval if we want autoplay), no testimonial copy changes, no design-token changes.
+- No changes to typography, spacing, animations, or component structure.
+- No changes to chart colors or destructive/semantic tokens unrelated to brand.
