@@ -1,27 +1,26 @@
 ## Goal
 
-Turn the static brand glow behind the hero preview into a living aurora — a slow, premium light show that feels alive without distracting from the product image.
+Make the entire hero **section** react to the cursor — not just the preview card. The whole space feels alive: light follows the pointer, the headline drifts subtly with parallax, and the preview's tilt + spotlight responds even when the cursor is far from the card.
 
 ## What you'll see
 
-Three layered light sources behind the preview card, each on its own independent timeline:
+1. **Section-wide cursor spotlight** — a large soft radial glow (tinted brand-green) tracks the cursor across the full hero. It sits behind everything and bleeds through the existing aurora. Fades in on enter, fades out on leave.
+2. **Headline + subhead parallax** — the H1 and subhead shift ~6–10px opposite to cursor position (cursor right → text drifts left), giving a subtle 3D depth read between text and image.
+3. **Preview tilt extends to section** — the existing card tilt + spotlight now key off the **section-wide** cursor position (normalized to the card's own bounds), so moving the mouse anywhere in the hero already nudges the preview. The card's local hover still amplifies the effect.
+4. **CTA gleam follow** — the primary CTA gets a faint angled gleam that follows the cursor X position when it's near.
 
-1. **Primary brand orb** — large soft `bg-brand/30` blurred blob, slowly drifts in a figure-8 pattern over ~14s and gently breathes (scale 1 → 1.1 → 1) over ~10s.
-2. **Secondary cool orb** — smaller `bg-emerald-300/25` blob drifting on a different ~18s loop in the opposite direction, slightly offset.
-3. **Pulse halo** — a thin outer ring that fades opacity 0.4 → 0.8 → 0.4 on a ~6s loop for a heartbeat feel.
+## Implementation in `src/routes/index.tsx`
 
-On hover, all three intensify (existing `--glow` var already in place from the tilt component) and the drift speeds up slightly via a CSS class swap. The whole stack respects `prefers-reduced-motion`.
-
-## Implementation
-
-- Replace the single glow `<div>` inside `HeroPreview` (in `src/routes/index.tsx`) with a stacked container holding three absolutely-positioned blurred divs, each with `motion-safe:animate-[name_duration_ease_infinite]`.
-- Add three new keyframes to `src/styles.css`: `aurora-drift-a`, `aurora-drift-b`, `aurora-pulse`. Each translates and scales — pure GPU transform, no layout cost.
-- Keep the wrapper sized via the existing `-inset-6 rounded-[40px]` so positioning is unchanged.
-- Each orb uses `will-change: transform` and `mix-blend-mode: screen` so they layer like light, not paint.
-- Glow intensity still keys off `--glow` (set by the existing pointer handler) for hover boost.
+- Wrap the hero `<section>` with a single `onPointerMove` / `onPointerLeave` handler that writes four CSS custom properties on the section element: `--sx`, `--sy` (0–1 normalized cursor position), `--px`, `--py` (px from center for parallax), and `--active` (0 or 1 for fade).
+- Move that logic into a small `HeroSection` component so the route stays clean.
+- The current `HeroPreview` component reads the same vars from its closest section ancestor via `var(--sx, 0.5)` etc., replacing its own local pointer handler. (One pointer source, multiple consumers.)
+- Add a fixed-position-but-section-bound layer at the top of the section: `<div className="absolute inset-0 pointer-events-none">` containing a radial-gradient div whose `background-position` uses `calc(var(--sx, 0.5) * 100%) calc(var(--sy, 0.5) * 100%)` and `opacity: var(--active, 0)`.
+- Headline + subhead get inline `transform: translate3d(calc(var(--px,0) * -0.04px), calc(var(--py,0) * -0.04px), 0)` plus `transition: transform 200ms ease-out` for smoothing.
+- All motion behind `motion-safe:` — reduced-motion users see static hero.
 
 ## Out of scope
 
-- No new dependencies (no Framer Motion, no canvas).
-- No changes to hero copy, image, layout, or other sections.
-- No change to the existing tilt + float + spotlight motion on the card itself — this only enhances the glow behind it.
+- No new dependencies (still pure CSS vars + one pointer handler).
+- No layout, copy, or color-token changes.
+- No changes to nav, features, testimonials, CTA section, or footer.
+- The existing aurora/float/entrance animations stay; this layers on top.
