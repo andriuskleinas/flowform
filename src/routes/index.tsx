@@ -310,23 +310,7 @@ function Index() {
         {/* Social proof */}
         <section className="px-6 pb-24 md:px-8 md:pb-32">
           <div className="mx-auto max-w-7xl">
-            <ul className="grid gap-6 md:grid-cols-3">
-
-              {testimonials.map((t) => (
-                <li
-                  key={t.name}
-                  className="flex flex-col rounded-2xl border border-ink/5 bg-white p-8 shadow-sm"
-                >
-                  <p className="min-h-[7rem] text-lg leading-relaxed text-ink/80 md:min-h-[8rem]">
-                    &ldquo;{t.quote}&rdquo;
-                  </p>
-                  <div className="mt-8 text-sm">
-                    <div className="font-semibold text-ink">{t.name}</div>
-                    <div className="text-ink/50">{t.role}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <TestimonialsCarousel />
           </div>
         </section>
 
