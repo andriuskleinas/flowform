@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
-import { useRef } from "react";
+
 import heroPreview from "@/assets/hero-preview.jpg";
 
 export const Route = createFileRoute("/")({
@@ -37,31 +37,6 @@ function PrimaryCTA({
 }
 
 function HeroPreview() {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const handleMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    const ry = (x - 0.5) * 12; // -6deg .. 6deg
-    const rx = (0.5 - y) * 12;
-    el.style.setProperty("--rx", `${rx}deg`);
-    el.style.setProperty("--ry", `${ry}deg`);
-    el.style.setProperty("--mx", `${x * 100}%`);
-    el.style.setProperty("--my", `${y * 100}%`);
-    el.style.setProperty("--glow", "1");
-  };
-
-  const handleLeave = () => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.setProperty("--rx", "0deg");
-    el.style.setProperty("--ry", "0deg");
-    el.style.setProperty("--glow", "0");
-  };
-
   return (
     <div
       className="group relative mt-16 motion-safe:animate-[hero-rise_0.7s_ease-out_both] md:mt-20"
@@ -70,7 +45,7 @@ function HeroPreview() {
       <div
         aria-hidden
         className="pointer-events-none absolute -inset-10 overflow-hidden rounded-[48px] transition-opacity duration-500"
-        style={{ opacity: "calc(0.75 + 0.35 * var(--glow, 0))" }}
+        style={{ opacity: "calc(0.75 + 0.35 * var(--active, 0))" }}
       >
         <div
           className="absolute left-1/2 top-1/2 size-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/40 blur-3xl will-change-transform motion-safe:animate-[aurora-drift-a_14s_ease-in-out_infinite]"
@@ -83,13 +58,10 @@ function HeroPreview() {
         <div className="absolute inset-6 rounded-[40px] border border-brand/20 motion-safe:animate-[aurora-pulse_6s_ease-in-out_infinite]" />
       </div>
       <div
-        ref={ref}
-        onPointerMove={handleMove}
-        onPointerLeave={handleLeave}
         className="relative overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-2xl transition-transform duration-300 ease-out motion-safe:animate-[float_6s_ease-in-out_infinite] will-change-transform"
         style={{
           transform:
-            "perspective(1200px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))",
+            "perspective(1200px) rotateX(calc((0.5 - var(--sy, 0.5)) * 8deg)) rotateY(calc((var(--sx, 0.5) - 0.5) * 10deg))",
           transformStyle: "preserve-3d",
         }}
       >
@@ -102,11 +74,12 @@ function HeroPreview() {
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          className="pointer-events-none absolute inset-0 transition-opacity duration-300"
           style={{
             background:
-              "radial-gradient(circle 240px at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.5), transparent 70%)",
+              "radial-gradient(circle 280px at calc(var(--sx, 0.5) * 100%) calc(var(--sy, 0.5) * 100%), rgba(255,255,255,0.55), transparent 70%)",
             mixBlendMode: "soft-light",
+            opacity: "var(--active, 0)",
           }}
         />
       </div>
@@ -179,13 +152,55 @@ function Index() {
 
       <main>
         {/* Hero */}
-        <section className="px-6 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32">
-          <div className="mx-auto max-w-4xl text-center">
-            <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-7xl">
+        <section
+          className="relative overflow-hidden px-6 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32"
+          onPointerMove={(e) => {
+            const el = e.currentTarget;
+            const r = el.getBoundingClientRect();
+            const sx = (e.clientX - r.left) / r.width;
+            const sy = (e.clientY - r.top) / r.height;
+            el.style.setProperty("--sx", `${sx}`);
+            el.style.setProperty("--sy", `${sy}`);
+            el.style.setProperty("--px", `${(sx - 0.5) * r.width}`);
+            el.style.setProperty("--py", `${(sy - 0.5) * r.height}`);
+            el.style.setProperty("--active", "1");
+          }}
+          onPointerLeave={(e) => {
+            const el = e.currentTarget;
+            el.style.setProperty("--sx", "0.5");
+            el.style.setProperty("--sy", "0.5");
+            el.style.setProperty("--px", "0");
+            el.style.setProperty("--py", "0");
+            el.style.setProperty("--active", "0");
+          }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 transition-opacity duration-500"
+            style={{
+              background:
+                "radial-gradient(circle 600px at calc(var(--sx, 0.5) * 100%) calc(var(--sy, 0.5) * 100%), color-mix(in oklch, var(--brand) 18%, transparent), transparent 70%)",
+              opacity: "var(--active, 0)",
+            }}
+          />
+          <div className="relative mx-auto max-w-4xl text-center">
+            <h1
+              className="text-5xl font-extrabold leading-[1.05] tracking-tight text-balance transition-transform duration-200 ease-out md:text-7xl"
+              style={{
+                transform:
+                  "translate3d(calc(var(--px, 0) * -0.025px), calc(var(--py, 0) * -0.025px), 0)",
+              }}
+            >
               Forms, finally{" "}
               <span className="text-brand">worth finishing.</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 md:mt-8 md:text-xl">
+            <p
+              className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 transition-transform duration-200 ease-out md:mt-8 md:text-xl"
+              style={{
+                transform:
+                  "translate3d(calc(var(--px, 0) * -0.015px), calc(var(--py, 0) * -0.015px), 0)",
+              }}
+            >
               Craft beautifully simple, one-question-at-a-time experiences that
               feel less like a survey and more like a conversation worth having.
             </p>
