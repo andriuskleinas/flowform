@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import heroPreview from "@/assets/hero-preview.jpg";
+
 import logoNorthwind from "@/assets/logo-northwind.png";
 import logoLumen from "@/assets/logo-lumen.png";
 import logoAxiom from "@/assets/logo-axiom.png";
