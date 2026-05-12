@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
+import { useRef } from "react";
 import heroPreview from "@/assets/hero-preview.jpg";
 
 export const Route = createFileRoute("/")({
@@ -32,6 +33,74 @@ function PrimaryCTA({
       {children}
       <ArrowRight className="size-4" />
     </button>
+  );
+}
+
+function HeroPreview() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const handleMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const ry = (x - 0.5) * 12; // -6deg .. 6deg
+    const rx = (0.5 - y) * 12;
+    el.style.setProperty("--rx", `${rx}deg`);
+    el.style.setProperty("--ry", `${ry}deg`);
+    el.style.setProperty("--mx", `${x * 100}%`);
+    el.style.setProperty("--my", `${y * 100}%`);
+    el.style.setProperty("--glow", "1");
+  };
+
+  const handleLeave = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.setProperty("--rx", "0deg");
+    el.style.setProperty("--ry", "0deg");
+    el.style.setProperty("--glow", "0");
+  };
+
+  return (
+    <div
+      className="group relative mt-16 motion-safe:animate-[hero-rise_0.7s_ease-out_both] md:mt-20"
+      style={{ perspective: "1200px" }}
+    >
+      <div
+        aria-hidden
+        className="absolute -inset-6 rounded-[40px] bg-gradient-to-b from-brand/15 to-transparent blur-2xl transition-opacity duration-500"
+        style={{ opacity: "calc(0.6 + 0.4 * var(--glow, 0))" }}
+      />
+      <div
+        ref={ref}
+        onPointerMove={handleMove}
+        onPointerLeave={handleLeave}
+        className="relative overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-2xl transition-transform duration-300 ease-out motion-safe:animate-[float_6s_ease-in-out_infinite] will-change-transform"
+        style={{
+          transform:
+            "perspective(1200px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))",
+          transformStyle: "preserve-3d",
+        }}
+      >
+        <img
+          src={heroPreview}
+          alt="A Flowform conversational form asking one question at a time"
+          width={1536}
+          height={1024}
+          className="h-auto w-full"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          style={{
+            background:
+              "radial-gradient(circle 240px at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.5), transparent 70%)",
+            mixBlendMode: "soft-light",
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -115,21 +184,7 @@ function Index() {
             </div>
 
             {/* Preview */}
-            <div className="relative mt-16 md:mt-20">
-              <div
-                aria-hidden
-                className="absolute -inset-6 rounded-[40px] bg-gradient-to-b from-brand/15 to-transparent blur-2xl"
-              />
-              <div className="relative overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-2xl">
-                <img
-                  src={heroPreview}
-                  alt="A Flowform conversational form asking one question at a time"
-                  width={1536}
-                  height={1024}
-                  className="h-auto w-full"
-                />
-              </div>
-            </div>
+            <HeroPreview />
           </div>
         </section>
 
