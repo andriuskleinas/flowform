@@ -188,6 +188,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
                   <Label htmlFor="form-title">Title</Label>
                   <Input
                     id="form-title"
+                    ref={titleRef}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Customer feedback Q3"
