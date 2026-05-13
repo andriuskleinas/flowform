@@ -70,6 +70,13 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  const focusCreate = () => {
+    titleRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    titleRef.current?.focus({ preventScroll: true });
+  };
+
 
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ["forms", userId],
