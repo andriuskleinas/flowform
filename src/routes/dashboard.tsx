@@ -1,10 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { ArrowLeft, FileText } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, FileText, LogOut } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -14,15 +15,9 @@ export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — Flowform" },
-      {
-        name: "description",
-        content: "Create and manage your Flowform forms.",
-      },
+      { name: "description", content: "Create and manage your Flowform forms." },
       { property: "og:title", content: "Dashboard — Flowform" },
-      {
-        property: "og:description",
-        content: "Create and manage your Flowform forms.",
-      },
+      { property: "og:description", content: "Create and manage your Flowform forms." },
     ],
   }),
   component: DashboardPage,
@@ -47,16 +42,42 @@ function timeAgo(iso: string) {
 }
 
 function DashboardPage() {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate({ to: "/login", search: { redirect: "/dashboard" } });
+    }
+  }, [authLoading, user, navigate]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-surface text-ink">
+        <div className="mx-auto max-w-6xl px-6 py-16 md:px-8">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="mt-4 h-5 w-96" />
+        </div>
+      </div>
+    );
+  }
+
+  return <DashboardAuthed userId={user.id} email={user.email ?? ""} />;
+}
+
+function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
   const { data: forms = [], isLoading } = useQuery({
-    queryKey: ["forms"],
+    queryKey: ["forms", userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
         .select("id, title, description, created_at")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as FormRow[];
@@ -68,6 +89,7 @@ function DashboardPage() {
       const { error } = await supabase.from("forms").insert({
         title: title.trim(),
         description: description.trim() || null,
+        user_id: userId,
       });
       if (error) throw error;
     },
@@ -75,12 +97,17 @@ function DashboardPage() {
       toast.success("Form saved");
       setTitle("");
       setDescription("");
-      qc.invalidateQueries({ queryKey: ["forms"] });
+      qc.invalidateQueries({ queryKey: ["forms", userId] });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Could not save form");
     },
   });
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/" });
+  };
 
   const canSubmit = title.trim().length > 0 && !createForm.isPending;
   const count = forms.length;
@@ -95,39 +122,38 @@ function DashboardPage() {
             </span>
             <span className="text-xl font-bold tracking-tight">Flowform</span>
           </Link>
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 transition-colors hover:text-ink"
-          >
-            <ArrowLeft className="size-4" />
-            Back home
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 transition-colors hover:text-ink"
+            >
+              <ArrowLeft className="size-4" />
+              Back home
+            </Link>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 transition-colors hover:text-ink"
+            >
+              <LogOut className="size-4" />
+              Sign out
+            </button>
+          </div>
         </nav>
       </header>
 
       <main className="mx-auto max-w-6xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
         <div className="max-w-2xl">
-          <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-            Your forms
-          </h1>
+          <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">Your forms</h1>
           <p className="mt-3 text-base text-ink/60 md:text-lg">
-            Create a form on the left, then watch it appear in the list.
+            Welcome, <span className="font-semibold text-ink">{email}</span>. Create a form on the left, then watch it appear in the list.
           </p>
         </div>
 
         <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-10">
-          {/* Left: create form */}
-          <section
-            aria-labelledby="create-form-heading"
-            className="md:col-span-1"
-          >
+          <section aria-labelledby="create-form-heading" className="md:col-span-1">
             <div className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm md:sticky md:top-8">
-              <h2
-                id="create-form-heading"
-                className="text-lg font-bold tracking-tight"
-              >
-                New form
-              </h2>
+              <h2 id="create-form-heading" className="text-lg font-bold tracking-tight">New form</h2>
               <form
                 className="mt-5 space-y-5"
                 onSubmit={(e) => {
@@ -148,8 +174,7 @@ function DashboardPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="form-description">
-                    Description{" "}
-                    <span className="font-normal text-ink/40">(optional)</span>
+                    Description <span className="font-normal text-ink/40">(optional)</span>
                   </Label>
                   <Textarea
                     id="form-description"
@@ -171,18 +196,9 @@ function DashboardPage() {
             </div>
           </section>
 
-          {/* Right: list */}
-          <section
-            aria-labelledby="forms-list-heading"
-            className="md:col-span-2"
-          >
+          <section aria-labelledby="forms-list-heading" className="md:col-span-2">
             <div className="flex items-center justify-between">
-              <h2
-                id="forms-list-heading"
-                className="text-lg font-bold tracking-tight"
-              >
-                All forms
-              </h2>
+              <h2 id="forms-list-heading" className="text-lg font-bold tracking-tight">All forms</h2>
               {!isLoading && (
                 <span className="inline-flex items-center rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink/70">
                   {count} {count === 1 ? "form" : "forms"}
@@ -193,10 +209,7 @@ function DashboardPage() {
             <ul className="mt-4 space-y-3">
               {isLoading &&
                 Array.from({ length: 3 }).map((_, i) => (
-                  <li
-                    key={i}
-                    className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm md:p-6"
-                  >
+                  <li key={i} className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm md:p-6">
                     <div className="flex items-start justify-between gap-4">
                       <Skeleton className="h-5 w-1/2" />
                       <Skeleton className="h-3 w-16" />
@@ -211,12 +224,9 @@ function DashboardPage() {
                   <span className="flex size-12 items-center justify-center rounded-full bg-brand/10 text-brand">
                     <FileText className="size-6" />
                   </span>
-                  <h3 className="mt-4 text-base font-bold tracking-tight">
-                    No forms yet
-                  </h3>
+                  <h3 className="mt-4 text-base font-bold tracking-tight">No forms yet</h3>
                   <p className="mt-1 max-w-xs text-sm text-ink/60">
-                    Create your first form using the panel on the left — it'll
-                    show up here.
+                    Create your first form using the panel on the left — it'll show up here.
                   </p>
                 </li>
               )}
@@ -233,19 +243,13 @@ function DashboardPage() {
                           <FileText className="size-4" />
                         </span>
                         <div className="min-w-0">
-                          <h3 className="truncate text-base font-bold tracking-tight md:text-lg">
-                            {f.title}
-                          </h3>
+                          <h3 className="truncate text-base font-bold tracking-tight md:text-lg">{f.title}</h3>
                           {f.description && (
-                            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">
-                              {f.description}
-                            </p>
+                            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">{f.description}</p>
                           )}
                         </div>
                       </div>
-                      <span className="shrink-0 text-xs text-ink/40">
-                        {timeAgo(f.created_at)}
-                      </span>
+                      <span className="shrink-0 text-xs text-ink/40">{timeAgo(f.created_at)}</span>
                     </div>
                   </li>
                 ))}

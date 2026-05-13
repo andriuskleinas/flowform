@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-
+import { useAuth } from "@/hooks/use-auth";
 import logoNorthwind from "@/assets/logo-northwind.png";
 import logoLumen from "@/assets/logo-lumen.png";
 import logoAxiom from "@/assets/logo-axiom.png";
@@ -375,6 +375,7 @@ const features = [
 ];
 
 function Index() {
+  const { session } = useAuth();
   return (
     <div className="min-h-screen bg-surface text-ink">
       {/* Nav */}
@@ -393,12 +394,21 @@ function Index() {
             >
               Features
             </a>
-            <Link
-              to="/dashboard"
-              className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
-            >
-              Dashboard
-            </Link>
+            {session ? (
+              <Link
+                to="/dashboard"
+                className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
+              >
+                Log in
+              </Link>
+            )}
             <PrimaryCTA>Get started</PrimaryCTA>
           </div>
         </nav>
