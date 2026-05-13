@@ -1,30 +1,16 @@
 ## Goal
-Greet the dashboard user by their display name when they have one, falling back to email.
+Make the dashboard's empty state more inviting with a prominent "Create your first form" CTA button.
 
 ## Current state
-The dashboard already shows `Welcome, {email}`. There is no profiles table yet, so there's nowhere to store a display name.
+The dashboard already shows an empty state in the right column when `forms.length === 0` — a `FileText` icon, "No forms yet" heading, and a body line ("Create your first form using the panel on the left"). It has no button.
 
-## Database
-New migration:
-- Create `public.profiles` table:
-  - `id uuid primary key references auth.users(id) on delete cascade`
-  - `display_name text` (nullable)
-  - `created_at timestamptz default now()`
-  - `updated_at timestamptz default now()`
-- Enable RLS:
-  - SELECT: a user can read their own profile (`auth.uid() = id`)
-  - UPDATE: a user can update their own profile
-  - INSERT: a user can insert their own profile (covers the trigger path too)
-- Trigger `handle_new_user()` on `auth.users` (AFTER INSERT) that creates a matching `profiles` row, seeding `display_name` from `raw_user_meta_data->>'display_name'` if present (otherwise NULL). `SECURITY DEFINER`, `search_path = public`.
-
-(No signup-form change in this turn — the field exists in the DB so a future "edit profile" screen can fill it. The trigger will pick it up automatically when signup starts passing it.)
-
-## Dashboard (`src/routes/dashboard.tsx`)
-- Add a profile query keyed by user id that selects `display_name` from `profiles`.
-- Compute `greetingName = profile?.display_name?.trim() || email`.
-- Render `Welcome, {greetingName}` in the existing subtitle (unchanged layout).
+## Change (frontend only — `src/routes/dashboard.tsx`)
+- Add a `useRef<HTMLInputElement>` on the title `Input` and a `focusCreate()` helper that calls `titleRef.current?.focus()` and `scrollIntoView({ behavior: "smooth", block: "center" })`.
+- In the empty-state card, add a primary brand button "Create your first form" below the body text. Clicking it calls `focusCreate()` so the user lands on the title field with the create card scrolled into view (important on mobile, where the create card sits above the list, and on desktop where the sticky card is already visible but should still get focus).
+- Soften the body copy to "You haven't created any forms yet. Get started below." so it reads naturally with the button underneath.
+- Keep the existing icon, dashed border, and overall card styling — just add the CTA.
 
 ## Out of scope
-- A profile editor / settings page
-- Adding a display-name field to the signup form
-- Avatars or any other profile fields
+- Modal / drawer for form creation
+- Animations beyond the existing scroll/focus
+- Any backend or schema change
