@@ -129,7 +129,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    navigate({ to: "/" });
+    navigate({ to: "/login" });
   };
 
   const canSubmit = title.trim().length > 0 && !createForm.isPending;
