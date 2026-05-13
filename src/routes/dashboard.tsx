@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, FileText, LogOut } from "lucide-react";
 import { toast } from "sonner";
 
@@ -70,6 +70,13 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  const focusCreate = () => {
+    titleRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    titleRef.current?.focus({ preventScroll: true });
+  };
+
 
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ["forms", userId],
@@ -181,6 +188,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
                   <Label htmlFor="form-title">Title</Label>
                   <Input
                     id="form-title"
+                    ref={titleRef}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Customer feedback Q3"
@@ -237,13 +245,20 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
 
               {!isLoading && forms.length === 0 && (
                 <li className="flex flex-col items-center rounded-2xl border border-dashed border-ink/15 bg-white/50 px-6 py-14 text-center">
-                  <span className="flex size-12 items-center justify-center rounded-full bg-brand/10 text-brand">
-                    <FileText className="size-6" />
+                  <span className="flex size-14 items-center justify-center rounded-full bg-brand/10 text-brand">
+                    <FileText className="size-7" />
                   </span>
-                  <h3 className="mt-4 text-base font-bold tracking-tight">No forms yet</h3>
-                  <p className="mt-1 max-w-xs text-sm text-ink/60">
-                    Create your first form using the panel on the left — it'll show up here.
+                  <h3 className="mt-5 text-xl font-bold tracking-tight">No forms yet</h3>
+                  <p className="mt-2 max-w-sm text-sm text-ink/60">
+                    You haven't created any forms yet. Get started below.
                   </p>
+                  <button
+                    type="button"
+                    onClick={focusCreate}
+                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25"
+                  >
+                    Create your first form
+                  </button>
                 </li>
               )}
 
