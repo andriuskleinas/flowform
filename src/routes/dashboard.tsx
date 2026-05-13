@@ -84,6 +84,22 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
     },
   });
 
+  const { data: profile } = useQuery({
+    queryKey: ["profile", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const greetingName = profile?.display_name?.trim() || email;
+
+
   const createForm = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("forms").insert({
