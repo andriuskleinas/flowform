@@ -162,7 +162,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
         <div className="max-w-2xl">
           <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">Your forms</h1>
           <p className="mt-3 text-base text-ink/60 md:text-lg">
-            Welcome, <span className="font-semibold text-ink">{email}</span>. Create a form on the left, then watch it appear in the list.
+            Welcome, <span className="font-semibold text-ink">{greetingName}</span>. Create a form on the left, then watch it appear in the list.
           </p>
         </div>
 
