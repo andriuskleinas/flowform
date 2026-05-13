@@ -245,13 +245,20 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
 
               {!isLoading && forms.length === 0 && (
                 <li className="flex flex-col items-center rounded-2xl border border-dashed border-ink/15 bg-white/50 px-6 py-14 text-center">
-                  <span className="flex size-12 items-center justify-center rounded-full bg-brand/10 text-brand">
-                    <FileText className="size-6" />
+                  <span className="flex size-14 items-center justify-center rounded-full bg-brand/10 text-brand">
+                    <FileText className="size-7" />
                   </span>
-                  <h3 className="mt-4 text-base font-bold tracking-tight">No forms yet</h3>
-                  <p className="mt-1 max-w-xs text-sm text-ink/60">
-                    Create your first form using the panel on the left — it'll show up here.
+                  <h3 className="mt-5 text-xl font-bold tracking-tight">No forms yet</h3>
+                  <p className="mt-2 max-w-sm text-sm text-ink/60">
+                    You haven't created any forms yet. Get started below.
                   </p>
+                  <button
+                    type="button"
+                    onClick={focusCreate}
+                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25"
+                  >
+                    Create your first form
+                  </button>
                 </li>
               )}
 
