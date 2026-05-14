@@ -152,12 +152,29 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
         .select("id")
         .single();
       if (error) throw error;
-      return data.id as string;
+      const newId = data.id as string;
+
+      const optionsByType: Record<QType, any> = {
+        text: null,
+        multiple_choice: ["Option 1", "Option 2"],
+        rating: { max: 5 },
+      };
+      const { error: qErr } = await supabase.from("questions").insert({
+        form_id: newId,
+        type: questionType,
+        label: "Untitled question",
+        options: optionsByType[questionType],
+        position: 0,
+      });
+      if (qErr) throw qErr;
+
+      return newId;
     },
     onSuccess: (newId) => {
-      toast.success("Form saved");
+      toast.success("Form created");
       setTitle("");
       setDescription("");
+      setQuestionType("text");
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["forms", userId] });
       navigate({ to: "/forms/$formId/edit", params: { formId: newId } });
@@ -178,6 +195,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
     if (!next) {
       setTitle("");
       setDescription("");
+      setQuestionType("text");
     }
   };
 
