@@ -14,6 +14,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FormsFormIdRouteImport } from './routes/forms.$formId'
+import { Route as FormsFormIdResponsesRouteImport } from './routes/forms.$formId.responses'
+import { Route as FormsFormIdEditRouteImport } from './routes/forms.$formId.edit'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -40,6 +43,21 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FormsFormIdRoute = FormsFormIdRouteImport.update({
+  id: '/forms/$formId',
+  path: '/forms/$formId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FormsFormIdResponsesRoute = FormsFormIdResponsesRouteImport.update({
+  id: '/responses',
+  path: '/responses',
+  getParentRoute: () => FormsFormIdRoute,
+} as any)
+const FormsFormIdEditRoute = FormsFormIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => FormsFormIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +65,9 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/forms/$formId': typeof FormsFormIdRouteWithChildren
+  '/forms/$formId/edit': typeof FormsFormIdEditRoute
+  '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +75,9 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/forms/$formId': typeof FormsFormIdRouteWithChildren
+  '/forms/$formId/edit': typeof FormsFormIdEditRoute
+  '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +86,41 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/forms/$formId': typeof FormsFormIdRouteWithChildren
+  '/forms/$formId/edit': typeof FormsFormIdEditRoute
+  '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/demo' | '/login' | '/signup'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/demo'
+    | '/login'
+    | '/signup'
+    | '/forms/$formId'
+    | '/forms/$formId/edit'
+    | '/forms/$formId/responses'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/demo' | '/login' | '/signup'
-  id: '__root__' | '/' | '/dashboard' | '/demo' | '/login' | '/signup'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/demo'
+    | '/login'
+    | '/signup'
+    | '/forms/$formId'
+    | '/forms/$formId/edit'
+    | '/forms/$formId/responses'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/demo'
+    | '/login'
+    | '/signup'
+    | '/forms/$formId'
+    | '/forms/$formId/edit'
+    | '/forms/$formId/responses'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +129,7 @@ export interface RootRouteChildren {
   DemoRoute: typeof DemoRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  FormsFormIdRoute: typeof FormsFormIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -116,8 +169,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forms/$formId': {
+      id: '/forms/$formId'
+      path: '/forms/$formId'
+      fullPath: '/forms/$formId'
+      preLoaderRoute: typeof FormsFormIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forms/$formId/responses': {
+      id: '/forms/$formId/responses'
+      path: '/responses'
+      fullPath: '/forms/$formId/responses'
+      preLoaderRoute: typeof FormsFormIdResponsesRouteImport
+      parentRoute: typeof FormsFormIdRoute
+    }
+    '/forms/$formId/edit': {
+      id: '/forms/$formId/edit'
+      path: '/edit'
+      fullPath: '/forms/$formId/edit'
+      preLoaderRoute: typeof FormsFormIdEditRouteImport
+      parentRoute: typeof FormsFormIdRoute
+    }
   }
 }
+
+interface FormsFormIdRouteChildren {
+  FormsFormIdEditRoute: typeof FormsFormIdEditRoute
+  FormsFormIdResponsesRoute: typeof FormsFormIdResponsesRoute
+}
+
+const FormsFormIdRouteChildren: FormsFormIdRouteChildren = {
+  FormsFormIdEditRoute: FormsFormIdEditRoute,
+  FormsFormIdResponsesRoute: FormsFormIdResponsesRoute,
+}
+
+const FormsFormIdRouteWithChildren = FormsFormIdRoute._addFileChildren(
+  FormsFormIdRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -125,17 +213,8 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRoute: DemoRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  FormsFormIdRoute: FormsFormIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
