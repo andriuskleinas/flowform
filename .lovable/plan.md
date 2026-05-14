@@ -1,27 +1,50 @@
-## What's actually happening
+## What already works
 
-You're not on the editor — you're on the **public form page** (`/forms/:id`), which is the page respondents see when they fill in a form. That's why:
+The editor at `/forms/:id/edit` already covers 5 of the 6 requirements:
 
-- There's no **Add question** button (respondents don't add questions).
-- The inputs feel "read-only" — they're not the question label, they're the **answer fields** for the question. The question text "Untitled question" is intentionally not editable here.
-- The badge / type editor isn't shown — this page renders the question for answering, not for editing.
+- Add questions with type **Short answer / Multiple choice / Rating** (Add question dropdown).
+- Edit a question's text (label input, saves on blur).
+- Reorder questions via Up/Down arrows — `position` is persisted to the DB, so order survives refresh.
+- Delete questions (trash icon).
+- Live preview pane on the right, plus "Preview public form" link that opens the respondent view in a new tab.
 
-The actual editor lives at `/forms/:id/edit` and already has: type badge, label input, options editor, Add question dropdown, move up/down, delete, live preview. You probably landed on the public page by clicking **Open public link** from the editor, then assumed it was still the editor.
+The only missing piece is **draft / published status**.
 
-## Fix (frontend only, no DB / business-logic changes)
+## What I'll add
 
-**1. `src/routes/forms.$formId.tsx` (public form page)** — when the signed-in user is the owner, show a prominent banner at the top:
+### 1. Database (one migration)
 
-> "You're viewing the public version of this form. **Edit form →**"
+Add a `status` column to `forms`:
 
-The "Edit form" link goes to `/forms/$formId/edit`. Keeps the existing "Back to dashboard" link too. Non-owners (real respondents) see nothing extra.
+- `status text not null default 'draft'` with a CHECK for `'draft' | 'published'`.
+- Replace the existing `Anyone can view forms` SELECT policy so the public can only see forms where `status = 'published'`. Owners keep full visibility via the existing `Users can view their own forms` policy.
+- Mirror the same gate on `questions` (public can only read questions whose parent form is published).
+- Same gate on `responses` insert: only allow inserting against a published form.
 
-**2. `src/routes/forms.$formId.edit.tsx` (editor)** — rename the top-right link from **"Open public link"** to **"Preview public form"** with a tooltip / subtitle "(opens the page respondents see)" so it's clear that following it leaves the editor. Keep `target="_blank"` so the editor stays open in the original tab.
+### 2. Editor (`src/routes/forms.$formId.edit.tsx`)
 
-**3. `src/routes/dashboard.tsx`** — the **Share link** icon currently copies the public URL silently. Add a tiny visual cue: keep the copy behavior but label the tooltip **"Copy public link"** (currently "Share link") to reduce ambiguity vs. the Pencil = edit icon.
+- Show a status pill next to the title: gray "Draft" or green "Published".
+- Add a **Publish** / **Unpublish** button in the header. Toggles `forms.status` and invalidates the form query. Toast on success.
+- Keep "Preview public form" — owners can always preview even when draft (RLS allows it for the owner).
 
-That's it — three small UI/copy tweaks, no schema or logic changes. The "type isn't multiple choice / can't add / can't edit" symptoms all disappear once you're on `/edit` instead of `/forms/:id`.
+### 3. Public form page (`src/routes/forms.$formId.tsx`)
 
-## Want me to also…?
+- If the form is draft and the viewer is **not** the owner, show "This form isn't published yet" instead of the questions / submit button.
+- If the form is draft and the viewer **is** the owner, show an extra warning line in the existing owner banner: "Draft — respondents can't see this yet."
 
-If after this you still want to change the question type from inside the editor (e.g. realise a question should be Rating instead of Short answer), I can add a type dropdown on each question card in the editor. Say the word and I'll include it.
+### 4. Dashboard (`src/routes/dashboard.tsx`)
+
+- Add a small Draft / Published pill on each form card next to the title.
+- New forms still default to `draft` (no change to the create flow).
+
+## Out of scope
+
+- Drag-and-drop reordering — current Up/Down arrows already persist order. Happy to add later if you want.
+- Anything around private/invited-only forms — that was a different earlier idea, not part of this request.
+
+## Files touched
+
+- new migration: add `status` to `forms` + updated RLS on `forms`, `questions`, `responses`
+- `src/routes/forms.$formId.edit.tsx` — status pill + publish toggle
+- `src/routes/forms.$formId.tsx` — gate non-owner view on published
+- `src/routes/dashboard.tsx` — status pill per card
