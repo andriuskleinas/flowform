@@ -192,8 +192,33 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       </div>
 
       <header className="mt-6">
-        <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{form.title}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{form.title}</h1>
+          <StatusPill status={form.status as "draft" | "published"} />
+        </div>
         {form.description && <p className="mt-2 text-ink/60">{form.description}</p>}
+        <div className="mt-4">
+          {form.status === "published" ? (
+            <button
+              type="button"
+              onClick={() => togglePublish.mutate("draft")}
+              disabled={togglePublish.isPending}
+              className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+            >
+              Unpublish
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => togglePublish.mutate("published")}
+              disabled={togglePublish.isPending || questions.length === 0}
+              title={questions.length === 0 ? "Add at least one question first" : undefined}
+              className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Publish form
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
