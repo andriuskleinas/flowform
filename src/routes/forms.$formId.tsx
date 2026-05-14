@@ -17,6 +17,7 @@ type FormRow = { id: string; title: string; description: string | null; user_id:
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
+  const { user } = useAuth();
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitted, setSubmitted] = useState(false);
 
@@ -25,7 +26,7 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description")
+        .select("id, title, description, user_id")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
