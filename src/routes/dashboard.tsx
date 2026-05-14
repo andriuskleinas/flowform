@@ -31,6 +31,7 @@ type FormRow = {
   title: string;
   description: string | null;
   created_at: string;
+  status: "draft" | "published";
 };
 
 function timeAgo(iso: string) {
