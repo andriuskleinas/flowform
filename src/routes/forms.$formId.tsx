@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionRender, type Question } from "@/components/question-render";
 
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/forms/$formId")({
   component: PublicFormPage,
 });
 
-type FormRow = { id: string; title: string; description: string | null };
+type FormRow = { id: string; title: string; description: string | null; user_id: string };
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
