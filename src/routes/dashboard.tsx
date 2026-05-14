@@ -74,6 +74,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [questionType, setQuestionType] = useState<QType>("text");
 
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ["forms", userId],
