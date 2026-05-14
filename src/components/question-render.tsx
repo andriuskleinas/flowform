@@ -1,0 +1,110 @@
+import { Star } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+
+export type QuestionType = "text" | "multiple_choice" | "rating";
+
+export type Question = {
+  id: string;
+  form_id: string;
+  type: QuestionType;
+  label: string;
+  options: any;
+  position: number;
+};
+
+type Props = {
+  question: Question;
+  value: any;
+  onChange?: (v: any) => void;
+  disabled?: boolean;
+};
+
+export function QuestionRender({ question, value, onChange, disabled }: Props) {
+  const id = `q-${question.id}`;
+  return (
+    <div className="space-y-3">
+      <Label htmlFor={id} className="text-base font-semibold text-ink">
+        {question.label || <span className="italic text-ink/40">Untitled question</span>}
+      </Label>
+
+      {question.type === "text" && (
+        <Input
+          id={id}
+          value={value ?? ""}
+          onChange={(e) => onChange?.(e.target.value)}
+          disabled={disabled}
+          placeholder="Your answer"
+        />
+      )}
+
+      {question.type === "multiple_choice" && (
+        <RadioGroup
+          value={value ?? ""}
+          onValueChange={(v) => onChange?.(v)}
+          disabled={disabled}
+        >
+          {(Array.isArray(question.options) ? question.options : []).map((opt: string, i: number) => (
+            <div key={i} className="flex items-center gap-3">
+              <RadioGroupItem id={`${id}-${i}`} value={opt} />
+              <Label htmlFor={`${id}-${i}`} className="font-normal">
+                {opt || <span className="italic text-ink/40">Option {i + 1}</span>}
+              </Label>
+            </div>
+          ))}
+          {(!Array.isArray(question.options) || question.options.length === 0) && (
+            <p className="text-sm text-ink/40">No options yet</p>
+          )}
+        </RadioGroup>
+      )}
+
+      {question.type === "rating" && (
+        <StarRating
+          max={question.options?.max ?? 5}
+          value={typeof value === "number" ? value : 0}
+          onChange={(n) => onChange?.(n)}
+          disabled={disabled}
+        />
+      )}
+    </div>
+  );
+}
+
+export function StarRating({
+  max,
+  value,
+  onChange,
+  disabled,
+  size = 28,
+}: {
+  max: number;
+  value: number;
+  onChange?: (n: number) => void;
+  disabled?: boolean;
+  size?: number;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      {Array.from({ length: max }).map((_, i) => {
+        const n = i + 1;
+        const filled = n <= value;
+        return (
+          <button
+            key={i}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange?.(n)}
+            className="rounded p-1 text-amber-500 transition-transform hover:scale-110 disabled:cursor-default disabled:hover:scale-100"
+            aria-label={`${n} star${n > 1 ? "s" : ""}`}
+          >
+            <Star
+              style={{ width: size, height: size }}
+              className={filled ? "fill-amber-400 stroke-amber-500" : "stroke-ink/30"}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
