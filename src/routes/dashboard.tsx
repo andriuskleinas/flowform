@@ -345,8 +345,8 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
                         <button
                           type="button"
                           onClick={copyShareLink}
-                          aria-label="Copy share link"
-                          title="Share link"
+                          aria-label="Copy public link"
+                          title="Copy public link"
                           className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
                         >
                           <Share2 className="size-4" />
