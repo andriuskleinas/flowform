@@ -283,7 +283,8 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
 
             {!isLoading &&
               forms.map((f) => {
-                const count = responseCounts[f.id] ?? 0;
+                const rCount = responseCounts[f.id] ?? 0;
+                const qCount = questionCounts[f.id] ?? 0;
                 const copyShareLink = async () => {
                   const url = `${window.location.origin}/forms/${f.id}`;
                   try {
@@ -313,7 +314,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
                             <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">{f.description}</p>
                           )}
                           <p className="mt-2 text-xs font-medium text-ink/50">
-                            {count} {count === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
+                            {qCount} {qCount === 1 ? "question" : "questions"} · {rCount} {rCount === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
                           </p>
                         </div>
                       </Link>
