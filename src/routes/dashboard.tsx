@@ -111,6 +111,24 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
     },
   });
 
+  const { data: questionCounts = {} } = useQuery({
+    queryKey: ["question-counts", userId, forms.map((f) => f.id).join(",")],
+    enabled: forms.length > 0,
+    queryFn: async () => {
+      const ids = forms.map((f) => f.id);
+      const { data, error } = await supabase
+        .from("questions")
+        .select("form_id")
+        .in("form_id", ids);
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      for (const row of data ?? []) {
+        counts[row.form_id] = (counts[row.form_id] ?? 0) + 1;
+      }
+      return counts;
+    },
+  });
+
   const { data: profile } = useQuery({
     queryKey: ["profile", userId],
     queryFn: async () => {
@@ -265,7 +283,8 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
 
             {!isLoading &&
               forms.map((f) => {
-                const count = responseCounts[f.id] ?? 0;
+                const rCount = responseCounts[f.id] ?? 0;
+                const qCount = questionCounts[f.id] ?? 0;
                 const copyShareLink = async () => {
                   const url = `${window.location.origin}/forms/${f.id}`;
                   try {
@@ -295,7 +314,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
                             <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">{f.description}</p>
                           )}
                           <p className="mt-2 text-xs font-medium text-ink/50">
-                            {count} {count === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
+                            {qCount} {qCount === 1 ? "question" : "questions"} · {rCount} {rCount === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
                           </p>
                         </div>
                       </Link>
