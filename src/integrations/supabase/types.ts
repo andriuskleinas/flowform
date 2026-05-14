@@ -59,6 +59,73 @@ export type Database = {
         }
         Relationships: []
       }
+      questions: {
+        Row: {
+          created_at: string
+          form_id: string
+          id: string
+          label: string
+          options: Json | null
+          position: number
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          form_id: string
+          id?: string
+          label: string
+          options?: Json | null
+          position: number
+          type: string
+        }
+        Update: {
+          created_at?: string
+          form_id?: string
+          id?: string
+          label?: string
+          options?: Json | null
+          position?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      responses: {
+        Row: {
+          answers: Json
+          form_id: string
+          id: string
+          submitted_at: string
+        }
+        Insert: {
+          answers: Json
+          form_id: string
+          id?: string
+          submitted_at?: string
+        }
+        Update: {
+          answers?: Json
+          form_id?: string
+          id?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
