@@ -49,7 +49,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, user_id")
+        .select("id, title, description, user_id, status")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
