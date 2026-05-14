@@ -133,6 +133,20 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const togglePublish = useMutation({
+    mutationFn: async (next: "draft" | "published") => {
+      const { error } = await supabase.from("forms").update({ status: next }).eq("id", formId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, next) => {
+      toast.success(next === "published" ? "Form published" : "Moved back to draft");
+      qc.invalidateQueries({ queryKey: ["form", formId] });
+      qc.invalidateQueries({ queryKey: ["forms"] });
+      qc.invalidateQueries({ queryKey: ["public-form", formId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (formQ.isLoading) {
     return (
       <Shell>
