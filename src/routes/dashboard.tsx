@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusPill } from "./forms.$formId.edit";
 
 type QType = "text" | "multiple_choice" | "rating";
 
@@ -31,6 +32,7 @@ type FormRow = {
   title: string;
   description: string | null;
   created_at: string;
+  status: "draft" | "published";
 };
 
 function timeAgo(iso: string) {
@@ -81,7 +83,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, created_at")
+        .select("id, title, description, created_at, status")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -323,7 +325,10 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
                           <FileText className="size-4" />
                         </span>
                         <div className="min-w-0">
-                          <h3 className="truncate text-base font-bold tracking-tight md:text-lg">{f.title}</h3>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-base font-bold tracking-tight md:text-lg">{f.title}</h3>
+                            <StatusPill status={f.status} />
+                          </div>
                           {f.description && (
                             <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">{f.description}</p>
                           )}

@@ -13,7 +13,7 @@ export const Route = createFileRoute("/forms/$formId")({
   component: PublicFormPage,
 });
 
-type FormRow = { id: string; title: string; description: string | null; user_id: string };
+type FormRow = { id: string; title: string; description: string | null; user_id: string; status: "draft" | "published" };
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
@@ -26,7 +26,7 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, user_id")
+        .select("id, title, description, user_id, status")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -89,6 +89,7 @@ function PublicFormPage() {
   }
 
   const isOwner = !!user && !!formQ.data && user.id === formQ.data.user_id;
+  const isDraft = formQ.data.status !== "published";
   const ownerNav = isOwner ? (
     <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
@@ -97,7 +98,11 @@ function PublicFormPage() {
         </span>
         <div className="text-sm">
           <p className="font-semibold text-ink">You're viewing the public version of this form.</p>
-          <p className="text-ink/60">This is what respondents see. To change questions, open the editor.</p>
+          <p className="text-ink/60">
+            {isDraft
+              ? "Draft — respondents can't see this yet. Publish from the editor to share it."
+              : "This is what respondents see. To change questions, open the editor."}
+          </p>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -117,6 +122,18 @@ function PublicFormPage() {
       </div>
     </div>
   ) : null;
+
+  if (isDraft && !isOwner) {
+    return (
+      <Shell>
+        <h1 className="text-3xl font-extrabold tracking-tight">This form isn't published yet</h1>
+        <p className="mt-3 text-ink/60">The owner hasn't published this form. Check back later.</p>
+        <Link to="/" className="mt-6 inline-block text-brand underline">
+          Go home
+        </Link>
+      </Shell>
+    );
+  }
 
   if (submitted) {
     return (
