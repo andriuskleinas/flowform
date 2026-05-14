@@ -82,7 +82,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, created_at")
+        .select("id, title, description, created_at, status")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (error) throw error;
