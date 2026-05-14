@@ -258,26 +258,74 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
             )}
 
             {!isLoading &&
-              forms.map((f) => (
-                <li
-                  key={f.id}
-                  className="group rounded-2xl border border-ink/5 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md md:p-6"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
-                        <FileText className="size-4" />
-                      </span>
-                      <div className="min-w-0">
-                        <h3 className="truncate text-base font-bold tracking-tight md:text-lg">{f.title}</h3>
-                        {f.description && (
-                          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">{f.description}</p>
-                        )}
+              forms.map((f) => {
+                const count = responseCounts[f.id] ?? 0;
+                const copyShareLink = async () => {
+                  const url = `${window.location.origin}/forms/${f.id}`;
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    toast.success("Link copied");
+                  } catch {
+                    toast.error("Could not copy link");
+                  }
+                };
+                return (
+                  <li
+                    key={f.id}
+                    className="group rounded-2xl border border-ink/5 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md md:p-6"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <Link
+                        to="/forms/$formId/edit"
+                        params={{ formId: f.id }}
+                        className="flex min-w-0 flex-1 items-start gap-3"
+                      >
+                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
+                          <FileText className="size-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-base font-bold tracking-tight md:text-lg">{f.title}</h3>
+                          {f.description && (
+                            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">{f.description}</p>
+                          )}
+                          <p className="mt-2 text-xs font-medium text-ink/50">
+                            {count} {count === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
+                          </p>
+                        </div>
+                      </Link>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Link
+                          to="/forms/$formId/edit"
+                          params={{ formId: f.id }}
+                          aria-label="Edit form"
+                          title="Edit"
+                          className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
+                        >
+                          <Pencil className="size-4" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={copyShareLink}
+                          aria-label="Copy share link"
+                          title="Share link"
+                          className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
+                        >
+                          <Share2 className="size-4" />
+                        </button>
+                        <Link
+                          to="/forms/$formId/responses"
+                          params={{ formId: f.id }}
+                          aria-label="View responses"
+                          title="View responses"
+                          className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
+                        >
+                          <BarChart3 className="size-4" />
+                        </Link>
                       </div>
                     </div>
-                    <span className="shrink-0 text-xs text-ink/40">{timeAgo(f.created_at)}</span>
-                  </div>
-                </li>
+                  </li>
+                );
+              })}
               ))}
           </ul>
         </section>
