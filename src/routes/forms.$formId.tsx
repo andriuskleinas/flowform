@@ -13,7 +13,7 @@ export const Route = createFileRoute("/forms/$formId")({
   component: PublicFormPage,
 });
 
-type FormRow = { id: string; title: string; description: string | null; user_id: string };
+type FormRow = { id: string; title: string; description: string | null; user_id: string; status: "draft" | "published" };
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
