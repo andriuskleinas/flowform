@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -90,12 +90,32 @@ function PublicFormPage() {
 
   const isOwner = !!user && !!formQ.data && user.id === formQ.data.user_id;
   const ownerNav = isOwner ? (
-    <Link
-      to="/dashboard"
-      className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 hover:text-ink"
-    >
-      <ArrowLeft className="size-4" /> Back to dashboard
-    </Link>
+    <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand/15 text-brand">
+          <Pencil className="size-4" />
+        </span>
+        <div className="text-sm">
+          <p className="font-semibold text-ink">You're viewing the public version of this form.</p>
+          <p className="text-ink/60">This is what respondents see. To change questions, open the editor.</p>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-ink/70 hover:bg-ink/5 hover:text-ink"
+        >
+          <ArrowLeft className="size-4" /> Dashboard
+        </Link>
+        <Link
+          to="/forms/$formId/edit"
+          params={{ formId }}
+          className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25"
+        >
+          <Pencil className="size-4" /> Edit form
+        </Link>
+      </div>
+    </div>
   ) : null;
 
   if (submitted) {

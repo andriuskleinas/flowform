@@ -1,30 +1,27 @@
-## Changes to `src/routes/dashboard.tsx`
+## What's actually happening
 
-**1. Add a "Question type" dropdown to the Create dialog**
+You're not on the editor — you're on the **public form page** (`/forms/:id`), which is the page respondents see when they fill in a form. That's why:
 
-Below the Description textarea, add a `<select>` with three options:
-- Short answer (`text`)
-- Multiple choice (`multiple_choice`)
-- Rating scale (`rating`)
+- There's no **Add question** button (respondents don't add questions).
+- The inputs feel "read-only" — they're not the question label, they're the **answer fields** for the question. The question text "Untitled question" is intentionally not editable here.
+- The badge / type editor isn't shown — this page renders the question for answering, not for editing.
 
-Default: `text`. State: `const [questionType, setQuestionType] = useState<"text" | "multiple_choice" | "rating">("text")`.
+The actual editor lives at `/forms/:id/edit` and already has: type badge, label input, options editor, Add question dropdown, move up/down, delete, live preview. You probably landed on the public page by clicking **Open public link** from the editor, then assumed it was still the editor.
 
-**2. On save, create the form AND seed a first question**
+## Fix (frontend only, no DB / business-logic changes)
 
-Update `createForm.mutationFn`:
-- Insert the form, get back its `id` (already done).
-- Then insert one row into `questions` with `form_id = newId`, `position = 0`, `label = "Untitled question"`, and type-specific defaults matching the editor:
-  - `text` → `options: null`
-  - `multiple_choice` → `options: ["Option 1", "Option 2"]`
-  - `rating` → `options: { max: 5 }`
-- Navigate to `/forms/$formId/edit` (already done).
+**1. `src/routes/forms.$formId.tsx` (public form page)** — when the signed-in user is the owner, show a prominent banner at the top:
 
-Reset `questionType` back to `text` when the dialog closes.
+> "You're viewing the public version of this form. **Edit form →**"
 
-**3. Remove the dark backdrop on this dialog only**
+The "Edit form" link goes to `/forms/$formId/edit`. Keeps the existing "Back to dashboard" link too. Non-owners (real respondents) see nothing extra.
 
-In `src/components/ui/dialog.tsx`, the default overlay is `bg-black/80`. Don't change the shared component — instead, in `dashboard.tsx` render a custom `<DialogOverlay className="bg-transparent" />` inside `<DialogPortal>` for this dialog only, so other dialogs in the app keep their normal backdrop.
+**2. `src/routes/forms.$formId.edit.tsx` (editor)** — rename the top-right link from **"Open public link"** to **"Preview public form"** with a tooltip / subtitle "(opens the page respondents see)" so it's clear that following it leaves the editor. Keep `target="_blank"` so the editor stays open in the original tab.
 
-Concretely: import `DialogOverlay` and `DialogPortal` from `@/components/ui/dialog`, and replace `<DialogContent>...` with `<DialogPortal><DialogOverlay className="bg-transparent" /><DialogContent>...</DialogContent></DialogPortal>`. Also add a soft `shadow-2xl` and `border` to the content so it stays visually anchored without the dim backdrop.
+**3. `src/routes/dashboard.tsx`** — the **Share link** icon currently copies the public URL silently. Add a tiny visual cue: keep the copy behavior but label the tooltip **"Copy public link"** (currently "Share link") to reduce ambiguity vs. the Pencil = edit icon.
 
-No DB schema changes, no other files touched.
+That's it — three small UI/copy tweaks, no schema or logic changes. The "type isn't multiple choice / can't add / can't edit" symptoms all disappear once you're on `/edit` instead of `/forms/:id`.
+
+## Want me to also…?
+
+If after this you still want to change the question type from inside the editor (e.g. realise a question should be Rating instead of Short answer), I can add a type dropdown on each question card in the editor. Say the word and I'll include it.
