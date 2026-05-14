@@ -326,7 +326,6 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
                   </li>
                 );
               })}
-              ))}
           </ul>
         </section>
       </main>
