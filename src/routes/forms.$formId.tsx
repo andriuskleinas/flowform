@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionRender, type Question } from "@/components/question-render";
 
@@ -12,10 +13,11 @@ export const Route = createFileRoute("/forms/$formId")({
   component: PublicFormPage,
 });
 
-type FormRow = { id: string; title: string; description: string | null };
+type FormRow = { id: string; title: string; description: string | null; user_id: string };
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
+  const { user } = useAuth();
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitted, setSubmitted] = useState(false);
 
@@ -24,7 +26,7 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description")
+        .select("id, title, description, user_id")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -86,9 +88,20 @@ function PublicFormPage() {
     );
   }
 
+  const isOwner = !!user && !!formQ.data && user.id === formQ.data.user_id;
+  const ownerNav = isOwner ? (
+    <Link
+      to="/dashboard"
+      className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 hover:text-ink"
+    >
+      <ArrowLeft className="size-4" /> Back to dashboard
+    </Link>
+  ) : null;
+
   if (submitted) {
     return (
       <Shell>
+        {ownerNav}
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
           <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Thanks!</h1>
@@ -100,6 +113,7 @@ function PublicFormPage() {
 
   return (
     <Shell>
+      {ownerNav}
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{formQ.data.title}</h1>
         {formQ.data.description && (
