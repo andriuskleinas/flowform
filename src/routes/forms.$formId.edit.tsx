@@ -170,9 +170,10 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           href={publicUrl}
           target="_blank"
           rel="noreferrer"
+          title="Opens the page respondents see in a new tab"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 hover:text-ink"
         >
-          <ExternalLink className="size-4" /> Open public link
+          <ExternalLink className="size-4" /> Preview public form
         </a>
       </div>
 
