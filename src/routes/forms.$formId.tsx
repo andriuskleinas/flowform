@@ -88,9 +88,20 @@ function PublicFormPage() {
     );
   }
 
+  const isOwner = !!user && !!formQ.data && user.id === formQ.data.user_id;
+  const ownerNav = isOwner ? (
+    <Link
+      to="/dashboard"
+      className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 hover:text-ink"
+    >
+      <ArrowLeft className="size-4" /> Back to dashboard
+    </Link>
+  ) : null;
+
   if (submitted) {
     return (
       <Shell>
+        {ownerNav}
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
           <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Thanks!</h1>
@@ -102,6 +113,7 @@ function PublicFormPage() {
 
   return (
     <Shell>
+      {ownerNav}
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{formQ.data.title}</h1>
         {formQ.data.description && (
