@@ -93,6 +93,24 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
     },
   });
 
+  const { data: responseCounts = {} } = useQuery({
+    queryKey: ["response-counts", userId, forms.map((f) => f.id).join(",")],
+    enabled: forms.length > 0,
+    queryFn: async () => {
+      const ids = forms.map((f) => f.id);
+      const { data, error } = await supabase
+        .from("responses")
+        .select("form_id")
+        .in("form_id", ids);
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      for (const row of data ?? []) {
+        counts[row.form_id] = (counts[row.form_id] ?? 0) + 1;
+      }
+      return counts;
+    },
+  });
+
   const { data: profile } = useQuery({
     queryKey: ["profile", userId],
     queryFn: async () => {
