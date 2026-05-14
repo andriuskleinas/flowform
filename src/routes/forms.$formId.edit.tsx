@@ -49,7 +49,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, user_id")
+        .select("id, title, description, user_id, status")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -133,6 +133,20 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const togglePublish = useMutation({
+    mutationFn: async (next: "draft" | "published") => {
+      const { error } = await supabase.from("forms").update({ status: next }).eq("id", formId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, next) => {
+      toast.success(next === "published" ? "Form published" : "Moved back to draft");
+      qc.invalidateQueries({ queryKey: ["form", formId] });
+      qc.invalidateQueries({ queryKey: ["forms"] });
+      qc.invalidateQueries({ queryKey: ["public-form", formId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (formQ.isLoading) {
     return (
       <Shell>
@@ -178,8 +192,33 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       </div>
 
       <header className="mt-6">
-        <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{form.title}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{form.title}</h1>
+          <StatusPill status={form.status as "draft" | "published"} />
+        </div>
         {form.description && <p className="mt-2 text-ink/60">{form.description}</p>}
+        <div className="mt-4">
+          {form.status === "published" ? (
+            <button
+              type="button"
+              onClick={() => togglePublish.mutate("draft")}
+              disabled={togglePublish.isPending}
+              className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+            >
+              Unpublish
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => togglePublish.mutate("published")}
+              disabled={togglePublish.isPending || questions.length === 0}
+              title={questions.length === 0 ? "Add at least one question first" : undefined}
+              className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Publish form
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
@@ -387,5 +426,20 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-surface text-ink">
       <main className="mx-auto max-w-6xl px-6 py-10 md:px-8 md:py-14">{children}</main>
     </div>
+  );
+}
+
+export function StatusPill({ status }: { status: "draft" | "published" }) {
+  if (status === "published") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+        <span className="size-1.5 rounded-full bg-emerald-500" /> Published live
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-ink/10 px-2.5 py-0.5 text-xs font-semibold text-ink/60">
+      <span className="size-1.5 rounded-full bg-ink/40" /> Draft
+    </span>
   );
 }
