@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { ArrowLeft, BarChart3, FileText, LogOut, Pencil, Plus, Share2 } from "lucide-react";
+import { ArrowLeft, BarChart3, FileText, LogOut, Pencil, Plus, Share2, X } from "lucide-react";
 import { toast } from "sonner";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -10,14 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
+type QType = "text" | "multiple_choice" | "rating";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -79,6 +74,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [questionType, setQuestionType] = useState<QType>("text");
 
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ["forms", userId],
@@ -156,12 +152,29 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
         .select("id")
         .single();
       if (error) throw error;
-      return data.id as string;
+      const newId = data.id as string;
+
+      const optionsByType: Record<QType, any> = {
+        text: null,
+        multiple_choice: ["Option 1", "Option 2"],
+        rating: { max: 5 },
+      };
+      const { error: qErr } = await supabase.from("questions").insert({
+        form_id: newId,
+        type: questionType,
+        label: "Untitled question",
+        options: optionsByType[questionType],
+        position: 0,
+      });
+      if (qErr) throw qErr;
+
+      return newId;
     },
     onSuccess: (newId) => {
-      toast.success("Form saved");
+      toast.success("Form created");
       setTitle("");
       setDescription("");
+      setQuestionType("text");
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["forms", userId] });
       navigate({ to: "/forms/$formId/edit", params: { formId: newId } });
@@ -182,6 +195,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
     if (!next) {
       setTitle("");
       setDescription("");
+      setQuestionType("text");
     }
   };
 
@@ -355,66 +369,95 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
         </section>
       </main>
 
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Create a new form</DialogTitle>
-            <DialogDescription>
-              Give your form a title and an optional description. You can add questions later.
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            className="space-y-5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (canSubmit) createForm.mutate();
-            }}
+      <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-transparent data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Content
+            className="fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border border-ink/10 bg-white p-6 shadow-2xl shadow-ink/20 ring-1 ring-ink/5 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           >
-            <div className="space-y-2">
-              <Label htmlFor="form-title">Title</Label>
-              <Input
-                id="form-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Customer feedback Q3"
-                maxLength={120}
-                required
-                autoFocus
-              />
+            <div className="flex flex-col space-y-1.5">
+              <DialogPrimitive.Title className="text-lg font-semibold leading-none tracking-tight">
+                Create a new form
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description className="text-sm text-ink/60">
+                Give your form a title, description, and the type of the first question. You can add more questions later.
+              </DialogPrimitive.Description>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="form-description">
-                Description <span className="font-normal text-ink/40">(optional)</span>
-              </Label>
-              <Textarea
-                id="form-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What's this form for?"
-                maxLength={500}
-                rows={3}
-              />
-            </div>
-            <DialogFooter className="gap-2 sm:gap-2">
-              <button
-                type="button"
-                onClick={() => handleOpenChange(false)}
-                disabled={createForm.isPending}
-                className="inline-flex items-center justify-center rounded-full border border-ink/10 bg-white px-5 py-2.5 text-sm font-semibold text-ink/70 transition-colors hover:bg-ink/5 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {createForm.isPending ? "Saving…" : "Save form"}
-              </button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            <DialogPrimitive.Close
+              className="absolute right-4 top-4 rounded-sm text-ink/50 opacity-70 transition-opacity hover:opacity-100"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </DialogPrimitive.Close>
+            <form
+              className="space-y-5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (canSubmit) createForm.mutate();
+              }}
+            >
+              <div className="space-y-2">
+                <Label htmlFor="form-title">Title</Label>
+                <Input
+                  id="form-title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Customer feedback Q3"
+                  maxLength={120}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="form-description">
+                  Description <span className="font-normal text-ink/40">(optional)</span>
+                </Label>
+                <Textarea
+                  id="form-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What's this form for?"
+                  maxLength={500}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="form-question-type">First question type</Label>
+                <select
+                  id="form-question-type"
+                  value={questionType}
+                  onChange={(e) => setQuestionType(e.target.value as QType)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="text">Short answer (text)</option>
+                  <option value="multiple_choice">Multiple choice</option>
+                  <option value="rating">Rating scale</option>
+                </select>
+                <p className="text-xs text-ink/50">
+                  We'll add an empty question of this type so you can start editing right away.
+                </p>
+              </div>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleOpenChange(false)}
+                  disabled={createForm.isPending}
+                  className="inline-flex items-center justify-center rounded-full border border-ink/10 bg-white px-5 py-2.5 text-sm font-semibold text-ink/70 transition-colors hover:bg-ink/5 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {createForm.isPending ? "Creating…" : "Create form"}
+                </button>
+              </div>
+            </form>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </div>
   );
 }
