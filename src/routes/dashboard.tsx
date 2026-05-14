@@ -128,19 +128,25 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
 
   const createForm = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("forms").insert({
-        title: title.trim(),
-        description: description.trim() || null,
-        user_id: userId,
-      });
+      const { data, error } = await supabase
+        .from("forms")
+        .insert({
+          title: title.trim(),
+          description: description.trim() || null,
+          user_id: userId,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      return data.id as string;
     },
-    onSuccess: () => {
+    onSuccess: (newId) => {
       toast.success("Form saved");
       setTitle("");
       setDescription("");
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["forms", userId] });
+      navigate({ to: "/forms/$formId/edit", params: { formId: newId } });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Could not save form");
