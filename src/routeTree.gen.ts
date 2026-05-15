@@ -55,9 +55,9 @@ const FormsFormIdIndexRoute = FormsFormIdIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const FormsFormIdResponsesRoute = FormsFormIdResponsesRouteImport.update({
-  id: '/responses',
-  path: '/responses',
-  getParentRoute: () => FormsFormIdRoute,
+  id: '/forms/$formId/responses',
+  path: '/forms/$formId/responses',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const FormsFormIdEditRoute = FormsFormIdEditRouteImport.update({
   id: '/forms/$formId/edit',
@@ -143,6 +143,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   FormsNewRoute: typeof FormsNewRoute
   FormsFormIdEditRoute: typeof FormsFormIdEditRoute
+  FormsFormIdResponsesRoute: typeof FormsFormIdResponsesRoute
   FormsFormIdIndexRoute: typeof FormsFormIdIndexRoute
 }
 
@@ -199,10 +200,10 @@ declare module '@tanstack/react-router' {
     }
     '/forms/$formId/responses': {
       id: '/forms/$formId/responses'
-      path: '/responses'
+      path: '/forms/$formId/responses'
       fullPath: '/forms/$formId/responses'
       preLoaderRoute: typeof FormsFormIdResponsesRouteImport
-      parentRoute: typeof FormsFormIdRoute
+      parentRoute: typeof rootRouteImport
     }
     '/forms/$formId/edit': {
       id: '/forms/$formId/edit'
@@ -222,18 +223,9 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   FormsNewRoute: FormsNewRoute,
   FormsFormIdEditRoute: FormsFormIdEditRoute,
+  FormsFormIdResponsesRoute: FormsFormIdResponsesRoute,
   FormsFormIdIndexRoute: FormsFormIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
