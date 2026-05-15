@@ -1,25 +1,11 @@
-# Plan: Redirect "Get Started" to Signup
+# Plan: Update /login screen to match screenshot
 
-## Problem
-The "Get Started" CTA buttons on the landing page currently link to `/demo` unconditionally. Users who are not signed in should be directed to `/signup` first.
-
-## Solution
-Make the `PrimaryCTA` component auth-aware in `src/routes/index.tsx`:
-- If the user is **not authenticated**, the "Get started" / "Start building" buttons navigate to `/signup`.
-- If the user **is authenticated**, they navigate to `/dashboard` (where they can actually create forms).
-
-## Changes
-1. **src/routes/index.tsx**
-   - Pass `session` (or an `isAuthenticated` flag) into `PrimaryCTA`.
-   - Update `PrimaryCTA`'s `<Link>` `to` prop:
-     - `session` present → `/dashboard`
-     - `session` absent → `/signup`
-   - Update the nav link label from "Get started" to something context-appropriate (or keep as-is).
+## Visual changes (in `src/routes/login.tsx`)
+- Replace subheading "Log in to your Flowform account." with "New here? [Create an account]" — the "Create an account" portion is a `<Link to="/signup">` styled in brand color.
+- Remove the existing "Don't have an account? Sign up" line at the bottom of the form card (now redundant).
+- Keep existing layout: header with logo, centered max-w-md column, white card with Email + Password inputs and full-width pill "Log in" button.
 
 ## Files affected
-- `src/routes/index.tsx` only.
+- `src/routes/login.tsx` only.
 
-## Technical details
-- Use the existing `useAuth()` hook already imported in `Index`; `session` is already destructured.
-- `PrimaryCTA` currently accepts `children`, `size`, and `variant`. Add an optional `to` prop, or compute the destination inside the component using the passed `session`.
-- Use `<Link to="/signup">` and `<Link to="/dashboard">` from `@tanstack/react-router` for type-safe navigation.
+No business logic, auth, or routing changes.
