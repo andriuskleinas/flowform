@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusPill } from "./forms.$formId.edit";
+import { StatusPill } from "@/components/status-pill";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
