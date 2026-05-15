@@ -303,15 +303,17 @@ function QuestionAnalytics({
           <p className="text-sm text-ink/40">No options.</p>
         ) : (
           <div className="h-56 w-full">
-            <ResponsiveContainer>
-              <BarChart data={arr} layout="vertical" margin={{ top: 4, right: 12, left: 8, bottom: 0 }}>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
-                <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
-                <Tooltip content={<MiniTooltip />} />
-                <Bar dataKey="count" fill="var(--primary)" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
+              <ResponsiveContainer>
+                <BarChart data={arr} layout="vertical" margin={{ top: 4, right: 12, left: 8, bottom: 0 }}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
+                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
+                  <Tooltip content={<MiniTooltip />} />
+                  <Bar dataKey="count" fill="var(--primary)" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ClientOnly>
           </div>
         )}
       </Card>
