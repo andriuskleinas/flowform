@@ -420,7 +420,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/40">
                     Question {i + 1}
                   </p>
-                  <QuestionRender question={q} value={undefined} disabled />
+                  <QuestionRender
+                    question={q}
+                    value={previewAnswers[q.id]}
+                    onChange={(v) => setPreviewAnswers((a) => ({ ...a, [q.id]: v }))}
+                  />
                 </div>
               ))
             )}
