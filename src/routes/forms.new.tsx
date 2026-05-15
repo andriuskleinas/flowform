@@ -243,6 +243,9 @@ function NewFormAuthed({ userId }: { userId: string }) {
                         onChange={(e) => updateQuestion(q.key, { label: e.target.value })}
                         placeholder="Type your question…"
                         maxLength={300}
+                        autoComplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
                       />
                     </div>
                     <div className="space-y-2">
