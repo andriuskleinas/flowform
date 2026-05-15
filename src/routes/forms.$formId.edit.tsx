@@ -257,6 +257,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     });
   };
 
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   return (
     <Shell>
       <div className="flex flex-wrap items-center justify-between gap-4">
