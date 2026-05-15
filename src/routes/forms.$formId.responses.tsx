@@ -141,11 +141,19 @@ function ResponsesPage() {
 }
 
 function AnswerView({ question, value }: { question: Question; value: any }) {
-  if (value === undefined || value === null || value === "") {
+  if (
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    (Array.isArray(value) && value.length === 0)
+  ) {
     return <span className="italic text-ink/40">No answer</span>;
   }
   if (question.type === "rating") {
     return <StarRating max={question.options?.max ?? 5} value={Number(value)} disabled size={18} />;
+  }
+  if (Array.isArray(value)) {
+    return <span>{value.join(", ")}</span>;
   }
   return <span>{String(value)}</span>;
 }
