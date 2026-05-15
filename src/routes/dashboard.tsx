@@ -66,12 +66,7 @@ function DashboardPage() {
 }
 
 function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; email: string; signingOutRef: React.MutableRefObject<boolean> }) {
-  const qc = useQueryClient();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [questionType, setQuestionType] = useState<QType>("text");
 
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ["forms", userId],
@@ -137,68 +132,12 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
 
   const greetingName = profile?.display_name?.trim() || email;
 
-  const createForm = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase
-        .from("forms")
-        .insert({
-          title: title.trim(),
-          description: description.trim() || null,
-          user_id: userId,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-      const newId = data.id as string;
-
-      const optionsByType: Record<QType, any> = {
-        text: null,
-        multiple_choice: ["Option 1", "Option 2"],
-        rating: { max: 5 },
-      };
-      const { error: qErr } = await supabase.from("questions").insert({
-        form_id: newId,
-        type: questionType,
-        label: "Untitled question",
-        options: optionsByType[questionType],
-        position: 0,
-      });
-      if (qErr) throw qErr;
-
-      return newId;
-    },
-    onSuccess: (newId) => {
-      toast.success("Form created");
-      setTitle("");
-      setDescription("");
-      setQuestionType("text");
-      setOpen(false);
-      qc.invalidateQueries({ queryKey: ["forms", userId] });
-      navigate({ to: "/forms/$formId/edit", params: { formId: newId } });
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || "Could not save form");
-    },
-  });
-
   const handleSignOut = async () => {
     signingOutRef.current = true;
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };
 
-  const handleOpenChange = (next: boolean) => {
-    if (!next && createForm.isPending) return;
-    setOpen(next);
-    if (!next) {
-      setTitle("");
-      setDescription("");
-      setQuestionType("text");
-    }
-  };
-
-  const canSubmit = title.trim().length > 0 && !createForm.isPending;
-  const count = forms.length;
 
   return (
     <div className="min-h-screen bg-surface text-ink">
