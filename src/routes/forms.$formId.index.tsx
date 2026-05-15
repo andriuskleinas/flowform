@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,6 +20,7 @@ function PublicFormPage() {
   const { user } = useAuth();
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitted, setSubmitted] = useState(false);
+  const startedAtRef = useRef<string>(new Date().toISOString());
 
   const formQ = useQuery({
     queryKey: ["public-form", formId],
@@ -51,7 +52,7 @@ function PublicFormPage() {
     mutationFn: async () => {
       const { error } = await supabase
         .from("responses")
-        .insert({ form_id: formId, answers });
+        .insert({ form_id: formId, answers, started_at: startedAtRef.current });
       if (error) throw error;
     },
     onSuccess: () => setSubmitted(true),
