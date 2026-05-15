@@ -1,27 +1,21 @@
 ## Root cause
 
-`src/routes/dashboard.tsx` imports `StatusPill` directly from the edit route file:
+In TanStack Router's flat file-based routing, `src/routes/forms.$formId.tsx` is treated as a **layout route** for any sibling that extends its path — including `forms.$formId.edit.tsx` and `forms.$formId.responses.tsx`. A layout route MUST render `<Outlet />` for its children to appear.
 
-```ts
-// src/routes/dashboard.tsx:10
-import { StatusPill } from "./forms.$formId.edit";
-```
+`forms.$formId.tsx` instead renders the public form view (`PublicFormPage`) directly with no `<Outlet />`. Result: navigating to `/forms/<id>/edit` matches the edit route, but only the parent's public form view paints — that's why the editor controls (title input, question text, drag handles, delete buttons) are absent and "edit doesn't work."
 
-TanStack Start's code-splitter treats files in `src/routes/` as route modules and rewrites them so they're loaded dynamically. Statically importing one route from another (especially one that pulls in `@dnd-kit`, `useSortable`, etc.) breaks that contract — the edit chunk fails to load and the runtime ends up on the root 404 page (`Failed to fetch dynamically imported module: virtual:tanstack-start-client-entry`).
-
-That's why clicking the Edit pencil on the dashboard lands on a 404 instead of the editor.
+The selected element's text on the current page confirms this: it's the public form's "You're viewing the public version of this form" / "Submit" content, not the editor.
 
 ## Fix
 
-Extract `StatusPill` into a shared component and import it from both files.
+Convert the parent route into an index route so it stops acting as a layout.
 
-1. **Create `src/components/status-pill.tsx`** — move the component (the `published`/`draft` pill, lines 711–724 of `forms.$formId.edit.tsx`) verbatim into a standalone file with a named export.
+1. **Rename `src/routes/forms.$formId.tsx` → `src/routes/forms.$formId.index.tsx`.**
+   - Update the `createFileRoute` path from `"/forms/$formId"` to `"/forms/$formId/"`.
+   - No other code changes — `PublicFormPage` keeps its current behavior, and links like `to="/forms/$formId"` continue to resolve to the same URL.
 
-2. **Update `src/routes/dashboard.tsx`** — replace
-   `import { StatusPill } from "./forms.$formId.edit";`
-   with
-   `import { StatusPill } from "@/components/status-pill";`.
+2. **Regenerate `routeTree.gen.ts`** (TanStack Router's Vite plugin does this automatically on dev/build; no manual edit).
 
-3. **Update `src/routes/forms.$formId.edit.tsx`** — import `StatusPill` from `@/components/status-pill` and delete the local `export function StatusPill(...)` block at the bottom of the file.
+After the rename, `/forms/$formId/edit` and `/forms/$formId/responses` are standalone leaf routes with no swallowing parent layout. The editor renders its title/description inputs, sortable question cards (drag handle, up/down/delete buttons, debounced inputs), and reorder works as already implemented.
 
-No schema, RLS, or behavior changes. Editing functionality (title, description, questions, reorder, publish) stays exactly as built.
+No DB, RLS, dependency, or behavior changes elsewhere.
