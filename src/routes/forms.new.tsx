@@ -172,12 +172,16 @@ function NewFormAuthed({ userId }: { userId: string }) {
                 <Label htmlFor="form-title">Questionnaire title</Label>
                 <Input
                   id="form-title"
+                  name="questionnaire-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Customer feedback Q3"
                   maxLength={120}
                   required
                   autoFocus
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
                 />
               </div>
               <div className="space-y-2">
@@ -186,11 +190,15 @@ function NewFormAuthed({ userId }: { userId: string }) {
                 </Label>
                 <Textarea
                   id="form-description"
+                  name="questionnaire-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="What's this form for?"
                   maxLength={500}
                   rows={3}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
                 />
               </div>
             </div>
