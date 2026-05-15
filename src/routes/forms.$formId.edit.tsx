@@ -269,12 +269,37 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         </a>
       </div>
 
-      <header className="mt-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{form.title}</h1>
+      <header className="mt-6 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex-1 min-w-0 space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="form-title-edit" className="text-xs">Title</Label>
+              <DebouncedInput
+                value={form.title}
+                onChange={(v) => {
+                  const t = v.trim();
+                  if (t && t !== form.title) updateForm.mutate({ title: t });
+                }}
+                placeholder="Form title"
+                className="text-2xl font-extrabold tracking-tight md:text-3xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="form-description-edit" className="text-xs">
+                Description <span className="font-normal text-ink/40">(optional)</span>
+              </Label>
+              <DebouncedTextarea
+                value={form.description ?? ""}
+                onChange={(v) => {
+                  const next = v.trim() === "" ? null : v;
+                  if ((next ?? "") !== (form.description ?? "")) updateForm.mutate({ description: next });
+                }}
+                placeholder="What's this form for?"
+              />
+            </div>
+          </div>
           <StatusPill status={form.status as "draft" | "published"} />
         </div>
-        {form.description && <p className="mt-2 text-ink/60">{form.description}</p>}
         <div className="mt-4">
           {form.status === "published" ? (
             <button
