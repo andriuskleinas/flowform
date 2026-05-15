@@ -158,6 +158,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
         <form
           className="mt-10 space-y-6"
+          autoComplete="off"
           onSubmit={(e) => {
             e.preventDefault();
             if (canSubmit) createForm.mutate();
@@ -171,12 +172,16 @@ function NewFormAuthed({ userId }: { userId: string }) {
                 <Label htmlFor="form-title">Questionnaire title</Label>
                 <Input
                   id="form-title"
+                  name="questionnaire-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Customer feedback Q3"
                   maxLength={120}
                   required
                   autoFocus
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
                 />
               </div>
               <div className="space-y-2">
@@ -185,11 +190,15 @@ function NewFormAuthed({ userId }: { userId: string }) {
                 </Label>
                 <Textarea
                   id="form-description"
+                  name="questionnaire-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="What's this form for?"
                   maxLength={500}
                   rows={3}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
                 />
               </div>
             </div>
@@ -234,6 +243,9 @@ function NewFormAuthed({ userId }: { userId: string }) {
                         onChange={(e) => updateQuestion(q.key, { label: e.target.value })}
                         placeholder="Type your question…"
                         maxLength={300}
+                        autoComplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
                       />
                     </div>
                     <div className="space-y-2">
@@ -266,6 +278,9 @@ function NewFormAuthed({ userId }: { userId: string }) {
                               }}
                               placeholder={`Option ${idx + 1}`}
                               maxLength={120}
+                              autoComplete="off"
+                              data-1p-ignore
+                              data-lpignore="true"
                             />
                             <button
                               type="button"
