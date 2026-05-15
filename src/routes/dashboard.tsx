@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, BarChart3, FileText, LogOut, Pencil, Plus, Share2, X } from "lucide-react";
 import { toast } from "sonner";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -49,9 +49,10 @@ function timeAgo(iso: string) {
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const signingOutRef = useRef(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && !signingOutRef.current) {
       navigate({ to: "/login", search: { redirect: "/dashboard" } });
     }
   }, [authLoading, user, navigate]);
@@ -67,10 +68,10 @@ function DashboardPage() {
     );
   }
 
-  return <DashboardAuthed userId={user.id} email={user.email ?? ""} />;
+  return <DashboardAuthed userId={user.id} email={user.email ?? ""} signingOutRef={signingOutRef} />;
 }
 
-function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
+function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; email: string; signingOutRef: React.MutableRefObject<boolean> }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -187,6 +188,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
   });
 
   const handleSignOut = async () => {
+    signingOutRef.current = true;
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };

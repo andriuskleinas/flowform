@@ -1,11 +1,33 @@
-# Plan: Update /login screen to match screenshot
+## Problem
 
-## Visual changes (in `src/routes/login.tsx`)
-- Replace subheading "Log in to your Flowform account." with "New here? [Create an account]" — the "Create an account" portion is a `<Link to="/signup">` styled in brand color.
-- Remove the existing "Don't have an account? Sign up" line at the bottom of the form card (now redundant).
-- Keep existing layout: header with logo, centered max-w-md column, white card with Email + Password inputs and full-width pill "Log in" button.
+Clicking "Sign out" on the dashboard redirects to `/login?redirect=/dashboard` instead of the home page `/`.
 
-## Files affected
-- `src/routes/login.tsx` only.
+The handler at `src/routes/dashboard.tsx:189-192` does call `navigate({ to: "/" })`, but the dashboard's auth guard `useEffect` (lines 53–57) fires immediately afterward: when Supabase clears the session, `user` becomes `null`, and the effect navigates to `/login?redirect=/dashboard`, overwriting the home navigation.
 
-No business logic, auth, or routing changes.
+## Fix
+
+In `src/routes/dashboard.tsx`, add a `signingOut` ref (or state) and skip the auth-guard redirect while a sign-out is in flight.
+
+1. In `DashboardPage`, lift a shared `signingOutRef` (useRef) and pass it down, OR simpler: move `handleSignOut` into `DashboardPage` so it can flip the same ref the guard checks.
+
+Simplest concrete approach:
+- In `DashboardPage`, add `const signingOutRef = useRef(false);`
+- Update the guard:
+  ```ts
+  useEffect(() => {
+    if (!authLoading && !user && !signingOutRef.current) {
+      navigate({ to: "/login", search: { redirect: "/dashboard" } });
+    }
+  }, [authLoading, user, navigate]);
+  ```
+- Pass `signingOutRef` into `DashboardAuthed` as a prop.
+- In `handleSignOut` (in `DashboardAuthed`):
+  ```ts
+  const handleSignOut = async () => {
+    signingOutRef.current = true;
+    await supabase.auth.signOut();
+    navigate({ to: "/" });
+  };
+  ```
+
+No other files need changes. Pure frontend fix.
