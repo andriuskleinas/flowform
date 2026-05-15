@@ -5,12 +5,19 @@ import {
   ArrowLeft,
   ArrowDown,
   ArrowUp,
-  ExternalLink,
+  Eye,
   GripVertical,
   Plus,
   Trash2,
   X,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   DndContext,
