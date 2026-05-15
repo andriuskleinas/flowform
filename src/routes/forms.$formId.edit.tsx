@@ -43,6 +43,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { QuestionRender, type Question, type QuestionType } from "@/components/question-render";
+import { StatusPill } from "@/components/status-pill";
 
 export const Route = createFileRoute("/forms/$formId/edit")({
   component: EditFormPage,
