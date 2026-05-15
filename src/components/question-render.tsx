@@ -1,6 +1,6 @@
 import { Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 export type QuestionType = "text" | "multiple_choice" | "rating";
