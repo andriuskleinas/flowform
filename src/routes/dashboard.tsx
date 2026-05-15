@@ -21,6 +21,8 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
+const PUBLIC_SITE_ORIGIN = "https://project--28b39e04-4acb-4c0b-ad92-f35af8b0c276.lovable.app";
+
 type FormRow = {
   id: string;
   title: string;
@@ -234,8 +236,18 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
               forms.map((f) => {
                 const rCount = responseCounts[f.id] ?? 0;
                 const qCount = questionCounts[f.id] ?? 0;
+                const isPublished = f.status === "published";
                 const copyShareLink = async () => {
-                  const url = `${window.location.origin}/forms/${f.id}`;
+                  if (!isPublished) {
+                    toast.error("Publish this form before sharing", {
+                      action: {
+                        label: "Open editor",
+                        onClick: () => navigate({ to: "/forms/$formId/edit", params: { formId: f.id } }),
+                      },
+                    });
+                    return;
+                  }
+                  const url = `${PUBLIC_SITE_ORIGIN}/forms/${f.id}`;
                   try {
                     await navigator.clipboard.writeText(url);
                     toast.success("Link copied");
@@ -283,9 +295,9 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
                         <button
                           type="button"
                           onClick={copyShareLink}
-                          aria-label="Copy public link"
-                          title="Copy public link"
-                          className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
+                          aria-label={isPublished ? "Copy public link" : "Publish to enable sharing"}
+                          title={isPublished ? "Copy public link" : "Publish to enable sharing"}
+                          className={`rounded-lg p-2 hover:bg-ink/5 ${isPublished ? "text-ink/60 hover:text-ink" : "text-ink/30"}`}
                         >
                           <Share2 className="size-4" />
                         </button>

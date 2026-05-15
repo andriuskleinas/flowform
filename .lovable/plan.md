@@ -1,52 +1,39 @@
-## Goal
-Switch the form editor from auto-save to **explicit save**. Until the user clicks **Save**, every edit (title, description, question text, type, options, reorder, add, delete) lives only in local draft state. If they navigate away or click **Discard**, the form returns to whatever is currently in the database.
+## Problem
 
-## Scope
-File: `src/routes/forms.$formId.edit.tsx` only. No DB schema changes. Public form, dashboard, and responses are unaffected.
+The Share button copies `${window.location.origin}/forms/${id}`. When used from the editor preview (`id-preview--*.lovable.app`), the origin is the **preview host**, which is gated by a Lovable account login — recipients hit a Lovable sign-in wall before they ever reach the form.
 
-## Local draft model
+Two separate things need fixing for sharing to actually work for outside recipients:
 
-When server data loads, mirror it into local state:
+1. **Wrong origin** — share links must point at the **published** host, not the preview host.
+2. **Draft forms** — even on the right host, a `draft` form returns "This form isn't published yet" to non-owners (RLS blocks `SELECT` for non-owners; the public route shows the draft notice). A share link is meaningless until the form is published.
+
+## Fix
+
+File: `src/routes/dashboard.tsx` (and the same Share affordance on `src/routes/forms.$formId.edit.tsx` if present — verify during implementation).
+
+### 1. Build the share URL from the published host, not `window.location.origin`
+
+Use the project's stable public URL:
+
 ```
-const [draftForm, setDraftForm] = useState<{ title; description }>(...);
-const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>(...);
+https://project--28b39e04-4acb-4c0b-ad92-f35af8b0c276.lovable.app/forms/${formId}
 ```
 
-`DraftQuestion` extends `Question` with two extra flags:
-- `isNew: boolean` — created locally, not yet in DB. Uses a temporary client ID (e.g. `tmp-${nanoid}`).
-- `isDeleted: boolean` — marked for deletion on save; hidden from the editor UI but kept in the array so the diff knows to delete the original row.
+This URL is immutable, serves the published deployment, and does **not** require a Lovable login. (If a custom domain is later configured, the same URL keeps working; we can swap it out then.)
 
-All editor handlers (title input, description input, sortable card label/options/type/reorder/add/delete) mutate ONLY `draftForm` / `draftQuestions`. No Supabase calls fire on every keystroke.
+Implementation detail: put the host in a single constant at the top of the file (e.g. `const PUBLIC_SITE_ORIGIN = "https://project--28b39e04-4acb-4c0b-ad92-f35af8b0c276.lovable.app"`) so there's one place to change it.
 
-## Dirty detection
+### 2. Gate sharing on publish status
 
-Compute `isDirty` by comparing draft to the original server snapshot (form fields, plus serialized question list ordered by position with id/type/label/options). Show:
-- A small "Unsaved changes" pill near the title.
-- A `useBlocker` confirmation when the user tries to navigate away with `isDirty === true`.
-- Browser `beforeunload` guard while dirty.
+Per-form Share button behavior:
 
-## Save action
+- **`status === "published"`** — copy the public URL, toast `"Link copied"`.
+- **`status === "draft"`** — do **not** copy. Show a toast like `"Publish this form before sharing"` with an action that takes the user to the editor (where Publish lives). Visually dim the Share icon and set `title="Publish to enable sharing"` so the state is discoverable before clicking.
 
-A **Save** button (top toolbar, next to Preview, primary brand color) runs ONE coordinated mutation that, against the original server snapshot:
-1. Updates `forms` row if title/description changed.
-2. Inserts each `isNew && !isDeleted` question (server returns real ID).
-3. Deletes each `!isNew && isDeleted` question.
-4. Updates each existing question whose label/type/options changed.
-5. Writes `position` for every still-present question based on its index in the draft order.
-
-Wraps the whole thing in try/catch. On success: `toast.success("Saved")`, refresh queries, reset draft from new server data, clear dirty flag. On error: `toast.error(...)`, leave draft untouched so the user can retry.
-
-The Save button is disabled when `!isDirty` or while saving (shows "Saving…").
-
-## Discard action
-
-A secondary **Discard** button (only visible when dirty) re-initializes draft state from the current cached server data and clears dirty. Confirms via a small inline `<AlertDialog>` since it throws away work.
-
-## Publish/Unpublish
-
-Stays as-is (immediate status toggle — it's metadata, not content). The Publish button gets disabled while `isDirty` with tooltip "Save your changes first" so users can't publish stale content.
+No DB or RLS changes — published forms + their questions are already readable by `public` per the existing policies, and `responses` already accepts anonymous inserts for published forms. The only bug is the link host and the missing draft guard.
 
 ## Out of scope
-- Optimistic UI for individual edits (no longer needed — everything is local until Save)
-- Conflict detection if the form was edited in another tab between load and save (left as a future improvement)
-- No change to Preview modal — it already reads `form` and `questions`; we'll point it at the draft so previews reflect unsaved edits
+
+- Custom-domain detection (we hard-code the stable `project--<id>.lovable.app` host; it already serves the published app).
+- Any change to the public form page, RLS, or the responses flow.
+- Any change to the editor's Save/Publish logic beyond the dimmed-Share affordance.
