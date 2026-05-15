@@ -185,18 +185,17 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
               </h2>
               {!isLoading && (
                 <span className="inline-flex items-center rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink/70">
-                  {count} {count === 1 ? "form" : "forms"}
+                  {forms.length} {forms.length === 1 ? "form" : "forms"}
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
+            <Link
+              to="/forms/new"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25"
             >
               <Plus className="size-4" />
               New form
-            </button>
+            </Link>
           </div>
 
           <ul className="mt-4 space-y-3">
