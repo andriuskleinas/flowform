@@ -21,6 +21,8 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
+const PUBLIC_SITE_ORIGIN = "https://project--28b39e04-4acb-4c0b-ad92-f35af8b0c276.lovable.app";
+
 type FormRow = {
   id: string;
   title: string;
