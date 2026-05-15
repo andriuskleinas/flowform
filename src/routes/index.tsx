@@ -28,6 +28,8 @@ function PrimaryCTA({
   size?: "md" | "lg";
   variant?: "brand" | "light";
 }) {
+  const { session } = useAuth();
+  const to = session ? "/dashboard" : "/signup";
   const sizing = size === "lg" ? "px-8 py-4 text-base" : "px-5 py-2.5 text-sm";
   const variantClass =
     variant === "brand"
@@ -35,8 +37,8 @@ function PrimaryCTA({
       : "bg-white text-ink hover:scale-[1.02]";
   return (
     <Link
-      to="/demo"
-      data-cta="demo"
+      to={to}
+      data-cta="get-started"
       className={`inline-flex items-center gap-2 rounded-full font-semibold transition-all ${sizing} ${variantClass}`}
     >
       {children}
