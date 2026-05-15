@@ -387,7 +387,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         </section>
       </div>
 
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+      <Dialog
+        open={previewOpen}
+        onOpenChange={(open) => {
+          setPreviewOpen(open);
+          if (open) setPreviewAnswers({});
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-extrabold tracking-tight">
