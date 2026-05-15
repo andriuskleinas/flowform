@@ -234,8 +234,18 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
               forms.map((f) => {
                 const rCount = responseCounts[f.id] ?? 0;
                 const qCount = questionCounts[f.id] ?? 0;
+                const isPublished = f.status === "published";
                 const copyShareLink = async () => {
-                  const url = `${window.location.origin}/forms/${f.id}`;
+                  if (!isPublished) {
+                    toast.error("Publish this form before sharing", {
+                      action: {
+                        label: "Open editor",
+                        onClick: () => navigate({ to: "/forms/$formId/edit", params: { formId: f.id } }),
+                      },
+                    });
+                    return;
+                  }
+                  const url = `${PUBLIC_SITE_ORIGIN}/forms/${f.id}`;
                   try {
                     await navigator.clipboard.writeText(url);
                     toast.success("Link copied");
