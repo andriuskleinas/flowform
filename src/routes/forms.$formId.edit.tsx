@@ -523,17 +523,11 @@ function SortableQuestionCard({
 
 /* ----------------------------- Debounced input ----------------------------- */
 
-function DebouncedInput({
-  value,
-  onChange,
-  placeholder,
+function useDebouncedLocal(
+  value: string,
+  onChange: (v: string) => void,
   delay = 600,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  delay?: number;
-}) {
+) {
   const [local, setLocal] = useState(value);
   const lastExternal = useRef(value);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -564,17 +558,65 @@ function DebouncedInput({
     }
   };
 
+  const onLocalChange = (v: string) => {
+    setLocal(v);
+    schedule(v);
+  };
+
+  return { local, onLocalChange, flush };
+}
+
+function DebouncedInput({
+  value,
+  onChange,
+  placeholder,
+  delay,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  delay?: number;
+  className?: string;
+}) {
+  const { local, onLocalChange, flush } = useDebouncedLocal(value, onChange, delay);
   return (
     <Input
       value={local}
       placeholder={placeholder}
+      className={className}
       autoComplete="off"
       data-1p-ignore
       data-lpignore="true"
-      onChange={(e) => {
-        setLocal(e.target.value);
-        schedule(e.target.value);
-      }}
+      onChange={(e) => onLocalChange(e.target.value)}
+      onBlur={flush}
+    />
+  );
+}
+
+function DebouncedTextarea({
+  value,
+  onChange,
+  placeholder,
+  delay,
+  rows = 3,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  delay?: number;
+  rows?: number;
+}) {
+  const { local, onLocalChange, flush } = useDebouncedLocal(value, onChange, delay);
+  return (
+    <Textarea
+      value={local}
+      placeholder={placeholder}
+      rows={rows}
+      autoComplete="off"
+      data-1p-ignore
+      data-lpignore="true"
+      onChange={(e) => onLocalChange(e.target.value)}
       onBlur={flush}
     />
   );
