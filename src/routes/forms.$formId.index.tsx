@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionRender, type Question } from "@/components/question-render";
 
-export const Route = createFileRoute("/forms/$formId")({
+export const Route = createFileRoute("/forms/$formId/")({
   component: PublicFormPage,
 });
 
