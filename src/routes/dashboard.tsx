@@ -1,19 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, BarChart3, FileText, LogOut, Pencil, Plus, Share2, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { ArrowLeft, BarChart3, FileText, LogOut, Pencil, Plus, Share2 } from "lucide-react";
 import { toast } from "sonner";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusPill } from "./forms.$formId.edit";
-
-type QType = "text" | "multiple_choice" | "rating";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
