@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -82,6 +82,24 @@ const TYPE_DEFAULTS: Record<QuestionType, { label: string; options: any }> = {
   rating: { label: "Untitled question", options: { max: 5 } },
 };
 
+type DraftQuestion = Question & { isNew?: boolean; isDeleted?: boolean };
+
+function snapshotKey(
+  form: { title: string; description: string | null },
+  questions: Array<Pick<Question, "id" | "type" | "label" | "options">>,
+) {
+  return JSON.stringify({
+    title: form.title.trim(),
+    description: (form.description ?? "").trim(),
+    questions: questions.map((q) => ({
+      id: q.id,
+      type: q.type,
+      label: q.label.trim(),
+      options: q.options ?? null,
+    })),
+  });
+}
+
 function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) {
   const qc = useQueryClient();
 
@@ -111,83 +129,206 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     },
   });
 
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["questions", formId] });
-    qc.invalidateQueries({ queryKey: ["public-questions", formId] });
-  };
+  // Local draft state — server-truth is mirrored in `snapshot`.
+  const [snapshot, setSnapshot] = useState<{
+    form: { title: string; description: string | null };
+    questions: Question[];
+  } | null>(null);
+  const [draftForm, setDraftForm] = useState<{ title: string; description: string | null }>({
+    title: "",
+    description: null,
+  });
+  const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
 
-  const addQuestion = useMutation({
-    mutationFn: async (type: QuestionType) => {
-      const list = questionsQ.data ?? [];
-      const position = list.length;
-      const { error } = await supabase.from("questions").insert({
+  // Initialize / re-sync draft from server when (a) we don't have one yet,
+  // or (b) the server snapshot changed AND the user has no unsaved changes.
+  useEffect(() => {
+    const sf = formQ.data;
+    if (!sf) return;
+    const sq = questionsQ.data ?? [];
+    const newSnap = {
+      form: { title: sf.title, description: sf.description ?? null },
+      questions: sq,
+    };
+    if (!snapshot) {
+      setSnapshot(newSnap);
+      setDraftForm(newSnap.form);
+      setDraftQuestions(sq.map((q) => ({ ...q })));
+      return;
+    }
+    const visibleDraft = draftQuestions.filter((q) => !q.isDeleted);
+    const draftMatchesOldSnap =
+      snapshotKey(draftForm, visibleDraft) === snapshotKey(snapshot.form, snapshot.questions) &&
+      !draftQuestions.some((q) => q.isNew);
+    const serverChanged =
+      snapshotKey(snapshot.form, snapshot.questions) !==
+      snapshotKey(newSnap.form, newSnap.questions);
+    if (serverChanged && draftMatchesOldSnap) {
+      setSnapshot(newSnap);
+      setDraftForm(newSnap.form);
+      setDraftQuestions(sq.map((q) => ({ ...q })));
+    } else if (serverChanged && !draftMatchesOldSnap) {
+      // Keep user's edits; just update snapshot reference for future diffs.
+      setSnapshot(newSnap);
+    }
+  }, [formQ.data, questionsQ.data]);
+
+  const visibleDraftQuestions = draftQuestions.filter((q) => !q.isDeleted);
+
+  const isDirty = (() => {
+    if (!snapshot) return false;
+    if (draftForm.title !== snapshot.form.title) return true;
+    if ((draftForm.description ?? null) !== (snapshot.form.description ?? null)) return true;
+    if (visibleDraftQuestions.length !== snapshot.questions.length) return true;
+    for (let i = 0; i < visibleDraftQuestions.length; i++) {
+      const v = visibleDraftQuestions[i];
+      const s = snapshot.questions[i];
+      if (v.isNew) return true;
+      if (v.id !== s.id) return true;
+      if (v.type !== s.type) return true;
+      if (v.label !== s.label) return true;
+      if (JSON.stringify(v.options ?? null) !== JSON.stringify(s.options ?? null)) return true;
+    }
+    return false;
+  })();
+
+  // Block in-app navigation away while there are unsaved changes.
+  useBlocker({
+    shouldBlockFn: () => {
+      if (!isDirty) return false;
+      return !window.confirm("You have unsaved changes. Leave without saving?");
+    },
+    enableBeforeUnload: isDirty,
+  });
+
+  /* ----------------------------- Local mutators ---------------------------- */
+
+  const setDraftLabel = (id: string, label: string) =>
+    setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, label } : q)));
+  const setDraftOptions = (id: string, options: any) =>
+    setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, options } : q)));
+  const setDraftType = (id: string, type: QuestionType) =>
+    setDraftQuestions((qs) =>
+      qs.map((q) =>
+        q.id === id && q.type !== type
+          ? { ...q, type, options: TYPE_DEFAULTS[type].options }
+          : q,
+      ),
+    );
+  const addDraftQuestion = (type: QuestionType) =>
+    setDraftQuestions((qs) => [
+      ...qs,
+      {
+        id: `tmp-${Math.random().toString(36).slice(2, 10)}`,
         form_id: formId,
         type,
         label: TYPE_DEFAULTS[type].label,
         options: TYPE_DEFAULTS[type].options,
-        position,
-      });
-      if (error) throw error;
-    },
-    onSuccess: invalidate,
-    onError: (e: Error) => toast.error(e.message),
-  });
+        position: qs.length,
+        isNew: true,
+      },
+    ]);
+  const removeDraftQuestion = (id: string) =>
+    setDraftQuestions((qs) =>
+      qs
+        .map((q) => (q.id === id ? { ...q, isDeleted: true } : q))
+        // Drop tmp/new questions entirely; keep server rows so they can be deleted on save.
+        .filter((q) => !(q.isNew && q.isDeleted)),
+    );
+  const reorderDraft = (next: DraftQuestion[]) => setDraftQuestions(next);
 
-  const updateQuestion = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Question> }) => {
-      const { error } = await supabase.from("questions").update(patch).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: invalidate,
-    onError: (e: Error) => toast.error(e.message),
-  });
+  /* ---------------------------------- Save --------------------------------- */
 
-  const deleteQuestion = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("questions").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: invalidate,
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const saveAll = useMutation({
+    mutationFn: async () => {
+      if (!snapshot) throw new Error("Not loaded yet");
 
-  // Persist a full reorder by writing each row's new position.
-  const reorder = useMutation({
-    mutationFn: async (ordered: Question[]) => {
-      // Optimistic cache update
-      qc.setQueryData(
-        ["questions", formId],
-        ordered.map((q, i) => ({ ...q, position: i })),
-      );
-      for (let i = 0; i < ordered.length; i++) {
-        const q = ordered[i];
-        if (q.position === i) continue;
-        const { error } = await supabase
-          .from("questions")
-          .update({ position: i })
-          .eq("id", q.id);
+      // 1. Form patch
+      const trimmedTitle = draftForm.title.trim() || "Untitled form";
+      const trimmedDesc =
+        draftForm.description && draftForm.description.trim() !== ""
+          ? draftForm.description.trim()
+          : null;
+      const formPatch: { title?: string; description?: string | null } = {};
+      if (trimmedTitle !== snapshot.form.title) formPatch.title = trimmedTitle;
+      if ((trimmedDesc ?? null) !== (snapshot.form.description ?? null))
+        formPatch.description = trimmedDesc;
+      if (Object.keys(formPatch).length > 0) {
+        const { error } = await supabase.from("forms").update(formPatch).eq("id", formId);
         if (error) throw error;
       }
-    },
-    onSuccess: invalidate,
-    onError: (e: Error) => {
-      toast.error(e.message);
-      invalidate();
-    },
-  });
 
-  const updateForm = useMutation({
-    mutationFn: async (patch: { title?: string; description?: string | null }) => {
-      const { error } = await supabase.from("forms").update(patch).eq("id", formId);
-      if (error) throw error;
+      // 2. Deletes (existing rows the user removed)
+      const toDeleteIds = draftQuestions
+        .filter((q) => !q.isNew && q.isDeleted)
+        .map((q) => q.id);
+      if (toDeleteIds.length > 0) {
+        const { error } = await supabase.from("questions").delete().in("id", toDeleteIds);
+        if (error) throw error;
+      }
+
+      // 3. Inserts and updates, with positions matching the visible draft order.
+      const visible = draftQuestions.filter((q) => !q.isDeleted);
+      for (let i = 0; i < visible.length; i++) {
+        const q = visible[i];
+        const label = q.label.trim() || "Untitled question";
+        if (q.isNew) {
+          const { error } = await supabase.from("questions").insert({
+            form_id: formId,
+            type: q.type,
+            label,
+            options: q.options ?? null,
+            position: i,
+          });
+          if (error) throw error;
+        } else {
+          const orig = snapshot.questions.find((o) => o.id === q.id);
+          const patch: {
+            position: number;
+            type?: QuestionType;
+            label?: string;
+            options?: any;
+          } = { position: i };
+          if (orig) {
+            if (orig.type !== q.type) patch.type = q.type;
+            if (orig.label !== label) patch.label = label;
+            if (JSON.stringify(orig.options ?? null) !== JSON.stringify(q.options ?? null))
+              patch.options = q.options ?? null;
+          } else {
+            patch.type = q.type;
+            patch.label = label;
+            patch.options = q.options ?? null;
+          }
+          const { error } = await supabase.from("questions").update(patch).eq("id", q.id);
+          if (error) throw error;
+        }
+      }
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["form", formId] });
-      qc.invalidateQueries({ queryKey: ["forms"] });
-      qc.invalidateQueries({ queryKey: ["public-form", formId] });
+    onSuccess: async () => {
+      toast.success("Saved");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["form", formId] }),
+        qc.invalidateQueries({ queryKey: ["questions", formId] }),
+        qc.invalidateQueries({ queryKey: ["public-form", formId] }),
+        qc.invalidateQueries({ queryKey: ["public-questions", formId] }),
+        qc.invalidateQueries({ queryKey: ["forms"] }),
+      ]);
+      // Force draft to re-sync from fresh server data on the next effect tick.
+      setSnapshot(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const discard = () => {
+    if (!snapshot) return;
+    if (!window.confirm("Discard all unsaved changes?")) return;
+    setDraftForm(snapshot.form);
+    setDraftQuestions(snapshot.questions.map((q) => ({ ...q })));
+  };
+
+  /* -------------------------------- Publish -------------------------------- */
 
   const togglePublish = useMutation({
     mutationFn: async (next: "draft" | "published") => {
@@ -208,7 +349,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  if (formQ.isLoading) {
+  if (formQ.isLoading || !snapshot) {
     return (
       <Shell>
         <Skeleton className="h-10 w-64" />
@@ -216,7 +357,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     );
   }
 
-  if (!formQ.data || formQ.data.user_id !== userId) {
+  const form = formQ.data;
+  if (!form || form.user_id !== userId) {
     return (
       <Shell>
         <h1 className="text-2xl font-bold">Form not found</h1>
@@ -228,37 +370,26 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     );
   }
 
-  const form = formQ.data;
-  const questions = questionsQ.data ?? [];
-  
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = questions.findIndex((q) => q.id === active.id);
-    const newIndex = questions.findIndex((q) => q.id === over.id);
+    const oldIndex = visibleDraftQuestions.findIndex((q) => q.id === active.id);
+    const newIndex = visibleDraftQuestions.findIndex((q) => q.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
-    const next = arrayMove(questions, oldIndex, newIndex);
-    reorder.mutate(next);
+    const nextVisible = arrayMove(visibleDraftQuestions, oldIndex, newIndex);
+    // Rebuild draftQuestions: visible in new order, then keep deleted-marked rows at the end.
+    const deleted = draftQuestions.filter((q) => q.isDeleted);
+    reorderDraft([...nextVisible, ...deleted]);
   };
 
   const moveBy = (id: string, delta: number) => {
-    const idx = questions.findIndex((q) => q.id === id);
+    const idx = visibleDraftQuestions.findIndex((q) => q.id === id);
     const target = idx + delta;
-    if (idx < 0 || target < 0 || target >= questions.length) return;
-    reorder.mutate(arrayMove(questions, idx, target));
+    if (idx < 0 || target < 0 || target >= visibleDraftQuestions.length) return;
+    const nextVisible = arrayMove(visibleDraftQuestions, idx, target);
+    const deleted = draftQuestions.filter((q) => q.isDeleted);
+    reorderDraft([...nextVisible, ...deleted]);
   };
-
-  const changeType = (q: Question, type: QuestionType) => {
-    if (q.type === type) return;
-    updateQuestion.mutate({
-      id: q.id,
-      patch: { type, options: TYPE_DEFAULTS[type].options },
-    });
-  };
-
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
 
   return (
     <Shell>
@@ -269,13 +400,33 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         >
           <ArrowLeft className="size-4" /> Back to dashboard
         </Link>
-        <button
-          type="button"
-          onClick={() => setPreviewOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
-        >
-          <Eye className="size-4" /> Preview
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
+          >
+            <Eye className="size-4" /> Preview
+          </button>
+          {isDirty && (
+            <button
+              type="button"
+              onClick={discard}
+              disabled={saveAll.isPending}
+              className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+            >
+              Discard
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => saveAll.mutate()}
+            disabled={!isDirty || saveAll.isPending}
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saveAll.isPending ? "Saving…" : "Save"}
+          </button>
+        </div>
       </div>
 
       <header className="mt-6 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm md:p-8">
@@ -284,11 +435,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             <div className="space-y-1.5">
               <Label htmlFor="form-title-edit" className="text-xs">Title</Label>
               <DebouncedInput
-                value={form.title}
-                onChange={(v) => {
-                  const t = v.trim();
-                  if (t && t !== form.title) updateForm.mutate({ title: t });
-                }}
+                value={draftForm.title}
+                onChange={(v) => setDraftForm((f) => ({ ...f, title: v }))}
                 placeholder="Form title"
                 className="text-2xl font-extrabold tracking-tight md:text-3xl"
               />
@@ -298,16 +446,20 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 Description <span className="font-normal text-ink/40">(optional)</span>
               </Label>
               <DebouncedTextarea
-                value={form.description ?? ""}
-                onChange={(v) => {
-                  const next = v.trim() === "" ? null : v;
-                  if ((next ?? "") !== (form.description ?? "")) updateForm.mutate({ description: next });
-                }}
+                value={draftForm.description ?? ""}
+                onChange={(v) => setDraftForm((f) => ({ ...f, description: v === "" ? null : v }))}
                 placeholder="What's this form for?"
               />
             </div>
           </div>
-          <StatusPill status={form.status as "draft" | "published"} />
+          <div className="flex flex-col items-end gap-2">
+            <StatusPill status={form.status as "draft" | "published"} />
+            {isDirty && (
+              <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                Unsaved changes
+              </span>
+            )}
+          </div>
         </div>
         <div className="mt-4">
           {form.status === "published" ? (
@@ -323,8 +475,16 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             <button
               type="button"
               onClick={() => togglePublish.mutate("published")}
-              disabled={togglePublish.isPending || questions.length === 0}
-              title={questions.length === 0 ? "Add at least one question first" : undefined}
+              disabled={
+                togglePublish.isPending || visibleDraftQuestions.length === 0 || isDirty
+              }
+              title={
+                isDirty
+                  ? "Save your changes first"
+                  : visibleDraftQuestions.length === 0
+                    ? "Add at least one question first"
+                    : undefined
+              }
               className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Publish form
@@ -337,22 +497,25 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         <section>
           <h2 className="text-lg font-bold">Questions</h2>
           <p className="mt-1 text-xs text-ink/50">
-            Drag the handle to reorder. Edits save automatically.
+            Drag the handle to reorder. Click <span className="font-semibold">Save</span> to keep your changes.
           </p>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext
+              items={visibleDraftQuestions.map((q) => q.id)}
+              strategy={verticalListSortingStrategy}
+            >
               <ul className="mt-4 space-y-4">
-                {questions.map((q, i) => (
+                {visibleDraftQuestions.map((q, i) => (
                   <SortableQuestionCard
                     key={q.id}
                     question={q}
                     index={i}
-                    total={questions.length}
-                    onChangeLabel={(label) => updateQuestion.mutate({ id: q.id, patch: { label } })}
-                    onChangeOptions={(options) => updateQuestion.mutate({ id: q.id, patch: { options } })}
-                    onChangeType={(type) => changeType(q, type)}
-                    onDelete={() => deleteQuestion.mutate(q.id)}
+                    total={visibleDraftQuestions.length}
+                    onChangeLabel={(label) => setDraftLabel(q.id, label)}
+                    onChangeOptions={(options) => setDraftOptions(q.id, options)}
+                    onChangeType={(type) => setDraftType(q.id, type)}
+                    onDelete={() => removeDraftQuestion(q.id)}
                     onMoveUp={() => moveBy(q.id, -1)}
                     onMoveDown={() => moveBy(q.id, 1)}
                   />
@@ -372,13 +535,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={() => addQuestion.mutate("text")}>
+                <DropdownMenuItem onClick={() => addDraftQuestion("text")}>
                   Short answer
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => addQuestion.mutate("multiple_choice")}>
+                <DropdownMenuItem onClick={() => addDraftQuestion("multiple_choice")}>
                   Multiple choice
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => addQuestion.mutate("rating")}>
+                <DropdownMenuItem onClick={() => addDraftQuestion("rating")}>
                   Rating scale
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -397,11 +560,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-extrabold tracking-tight">
-              {form.title || "Untitled form"}
+              {draftForm.title || "Untitled form"}
             </DialogTitle>
-            {form.description ? (
+            {draftForm.description ? (
               <DialogDescription className="text-base text-ink/60">
-                {form.description}
+                {draftForm.description}
               </DialogDescription>
             ) : null}
             <p className="mt-2 text-xs uppercase tracking-wide text-ink/40">
@@ -410,12 +573,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           </DialogHeader>
 
           <div className="mt-4 space-y-6">
-            {questions.length === 0 ? (
+            {visibleDraftQuestions.length === 0 ? (
               <p className="rounded-xl border border-dashed border-ink/15 p-6 text-center text-sm text-ink/50">
                 No questions yet — add one to see a preview.
               </p>
             ) : (
-              questions.map((q, i) => (
+              visibleDraftQuestions.map((q, i) => (
                 <div key={q.id} className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/40">
                     Question {i + 1}
@@ -429,7 +592,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               ))
             )}
 
-            {questions.length > 0 && (
+            {visibleDraftQuestions.length > 0 && (
               <div className="flex items-center justify-between gap-3 pt-2">
                 <p className="text-xs text-ink/50">Responses aren't recorded in preview.</p>
                 <button
