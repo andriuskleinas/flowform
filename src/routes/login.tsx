@@ -58,7 +58,12 @@ function LoginPage() {
       </header>
       <main className="mx-auto flex max-w-md flex-col px-6 pb-24 pt-16 md:px-8">
         <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Welcome back</h1>
-        <p className="mt-2 text-ink/60">Log in to your Flowform account.</p>
+        <p className="mt-2 text-ink/60">
+          New here?{" "}
+          <Link to="/signup" className="font-semibold text-brand hover:underline">
+            Create an account
+          </Link>
+        </p>
         <form onSubmit={onSubmit} className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -75,11 +80,8 @@ function LoginPage() {
           >
             {submitting ? "Logging in…" : "Log in"}
           </button>
-          <p className="text-center text-sm text-ink/60">
-            Don't have an account?{" "}
-            <Link to="/signup" className="font-semibold text-brand hover:underline">Sign up</Link>
-          </p>
         </form>
+
       </main>
     </div>
   );
