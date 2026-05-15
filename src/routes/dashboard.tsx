@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, BarChart3, FileText, LogOut, Pencil, Plus, Share2, X } from "lucide-react";
 import { toast } from "sonner";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
