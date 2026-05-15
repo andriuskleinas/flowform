@@ -332,8 +332,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         </div>
       </header>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-2">
-        {/* Editor */}
+      <div className="mt-8">
         <section>
           <h2 className="text-lg font-bold">Questions</h2>
           <p className="mt-1 text-xs text-ink/50">
@@ -385,24 +384,54 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             </DropdownMenu>
           </div>
         </section>
-
-        {/* Preview */}
-        <section className="lg:sticky lg:top-6 lg:self-start">
-          <h2 className="text-lg font-bold">Preview</h2>
-          <div className="mt-4 rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
-            <h3 className="text-2xl font-extrabold tracking-tight">{form.title}</h3>
-            {form.description && <p className="mt-2 text-sm text-ink/60">{form.description}</p>}
-            <div className="mt-6 space-y-6">
-              {questions.length === 0 && (
-                <p className="text-sm text-ink/40">No questions yet — add one to see a preview.</p>
-              )}
-              {questions.map((q) => (
-                <QuestionRender key={q.id} question={q} value={undefined} disabled />
-              ))}
-            </div>
-          </div>
-        </section>
       </div>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-extrabold tracking-tight">
+              {form.title || "Untitled form"}
+            </DialogTitle>
+            {form.description ? (
+              <DialogDescription className="text-base text-ink/60">
+                {form.description}
+              </DialogDescription>
+            ) : null}
+            <p className="mt-2 text-xs uppercase tracking-wide text-ink/40">
+              Preview — this is what respondents will see
+            </p>
+          </DialogHeader>
+
+          <div className="mt-4 space-y-6">
+            {questions.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-ink/15 p-6 text-center text-sm text-ink/50">
+                No questions yet — add one to see a preview.
+              </p>
+            ) : (
+              questions.map((q, i) => (
+                <div key={q.id} className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/40">
+                    Question {i + 1}
+                  </p>
+                  <QuestionRender question={q} value={undefined} disabled />
+                </div>
+              ))
+            )}
+
+            {questions.length > 0 && (
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground opacity-60"
+                >
+                  Submit
+                </button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Shell>
   );
 }
