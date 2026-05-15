@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { ArrowLeft, BarChart3, FileText, LogOut, Pencil, Plus, Share2 } from "lucide-react";
 import { toast } from "sonner";
@@ -69,6 +69,7 @@ function DashboardPage() {
 
 function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; email: string; signingOutRef: React.MutableRefObject<boolean> }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ["forms", userId],
@@ -238,21 +239,21 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
                 const qCount = questionCounts[f.id] ?? 0;
                 const isPublished = f.status === "published";
                 const copyShareLink = async () => {
-                  if (!isPublished) {
-                    toast.error("Publish this form before sharing", {
-                      action: {
-                        label: "Open editor",
-                        onClick: () => navigate({ to: "/forms/$formId/edit", params: { formId: f.id } }),
-                      },
-                    });
-                    return;
-                  }
                   const url = `${PUBLIC_SITE_ORIGIN}/forms/${f.id}`;
                   try {
+                    if (!isPublished) {
+                      const { error } = await supabase
+                        .from("forms")
+                        .update({ status: "published" })
+                        .eq("id", f.id)
+                        .eq("user_id", userId);
+                      if (error) throw error;
+                      await queryClient.invalidateQueries({ queryKey: ["forms", userId] });
+                    }
                     await navigator.clipboard.writeText(url);
-                    toast.success("Link copied");
-                  } catch {
-                    toast.error("Could not copy link");
+                    toast.success(isPublished ? "Link copied" : "Form published and link copied");
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Could not copy link");
                   }
                 };
                 return (
@@ -295,9 +296,9 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
                         <button
                           type="button"
                           onClick={copyShareLink}
-                          aria-label={isPublished ? "Copy public link" : "Publish to enable sharing"}
-                          title={isPublished ? "Copy public link" : "Publish to enable sharing"}
-                          className={`rounded-lg p-2 hover:bg-ink/5 ${isPublished ? "text-ink/60 hover:text-ink" : "text-ink/30"}`}
+                          aria-label={isPublished ? "Copy public link" : "Publish and copy public link"}
+                          title={isPublished ? "Copy public link" : "Publish and copy public link"}
+                          className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
                         >
                           <Share2 className="size-4" />
                         </button>
