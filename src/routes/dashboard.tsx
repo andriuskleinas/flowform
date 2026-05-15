@@ -49,9 +49,10 @@ function timeAgo(iso: string) {
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const signingOutRef = useRef(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && !signingOutRef.current) {
       navigate({ to: "/login", search: { redirect: "/dashboard" } });
     }
   }, [authLoading, user, navigate]);
@@ -67,7 +68,7 @@ function DashboardPage() {
     );
   }
 
-  return <DashboardAuthed userId={user.id} email={user.email ?? ""} />;
+  return <DashboardAuthed userId={user.id} email={user.email ?? ""} signingOutRef={signingOutRef} />;
 }
 
 function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
