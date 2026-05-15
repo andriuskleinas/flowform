@@ -158,6 +158,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
         <form
           className="mt-10 space-y-6"
+          autoComplete="off"
           onSubmit={(e) => {
             e.preventDefault();
             if (canSubmit) createForm.mutate();
