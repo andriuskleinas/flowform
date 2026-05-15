@@ -33,6 +33,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -167,6 +168,19 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     },
   });
 
+  const updateForm = useMutation({
+    mutationFn: async (patch: { title?: string; description?: string | null }) => {
+      const { error } = await supabase.from("forms").update(patch).eq("id", formId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["form", formId] });
+      qc.invalidateQueries({ queryKey: ["forms"] });
+      qc.invalidateQueries({ queryKey: ["public-form", formId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const togglePublish = useMutation({
     mutationFn: async (next: "draft" | "published") => {
       const { error } = await supabase.from("forms").update({ status: next }).eq("id", formId);
@@ -255,12 +269,37 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         </a>
       </div>
 
-      <header className="mt-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{form.title}</h1>
+      <header className="mt-6 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex-1 min-w-0 space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="form-title-edit" className="text-xs">Title</Label>
+              <DebouncedInput
+                value={form.title}
+                onChange={(v) => {
+                  const t = v.trim();
+                  if (t && t !== form.title) updateForm.mutate({ title: t });
+                }}
+                placeholder="Form title"
+                className="text-2xl font-extrabold tracking-tight md:text-3xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="form-description-edit" className="text-xs">
+                Description <span className="font-normal text-ink/40">(optional)</span>
+              </Label>
+              <DebouncedTextarea
+                value={form.description ?? ""}
+                onChange={(v) => {
+                  const next = v.trim() === "" ? null : v;
+                  if ((next ?? "") !== (form.description ?? "")) updateForm.mutate({ description: next });
+                }}
+                placeholder="What's this form for?"
+              />
+            </div>
+          </div>
           <StatusPill status={form.status as "draft" | "published"} />
         </div>
-        {form.description && <p className="mt-2 text-ink/60">{form.description}</p>}
         <div className="mt-4">
           {form.status === "published" ? (
             <button
@@ -484,17 +523,11 @@ function SortableQuestionCard({
 
 /* ----------------------------- Debounced input ----------------------------- */
 
-function DebouncedInput({
-  value,
-  onChange,
-  placeholder,
+function useDebouncedLocal(
+  value: string,
+  onChange: (v: string) => void,
   delay = 600,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  delay?: number;
-}) {
+) {
   const [local, setLocal] = useState(value);
   const lastExternal = useRef(value);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -525,17 +558,65 @@ function DebouncedInput({
     }
   };
 
+  const onLocalChange = (v: string) => {
+    setLocal(v);
+    schedule(v);
+  };
+
+  return { local, onLocalChange, flush };
+}
+
+function DebouncedInput({
+  value,
+  onChange,
+  placeholder,
+  delay,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  delay?: number;
+  className?: string;
+}) {
+  const { local, onLocalChange, flush } = useDebouncedLocal(value, onChange, delay);
   return (
     <Input
       value={local}
       placeholder={placeholder}
+      className={className}
       autoComplete="off"
       data-1p-ignore
       data-lpignore="true"
-      onChange={(e) => {
-        setLocal(e.target.value);
-        schedule(e.target.value);
-      }}
+      onChange={(e) => onLocalChange(e.target.value)}
+      onBlur={flush}
+    />
+  );
+}
+
+function DebouncedTextarea({
+  value,
+  onChange,
+  placeholder,
+  delay,
+  rows = 3,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  delay?: number;
+  rows?: number;
+}) {
+  const { local, onLocalChange, flush } = useDebouncedLocal(value, onChange, delay);
+  return (
+    <Textarea
+      value={local}
+      placeholder={placeholder}
+      rows={rows}
+      autoComplete="off"
+      data-1p-ignore
+      data-lpignore="true"
+      onChange={(e) => onLocalChange(e.target.value)}
       onBlur={flush}
     />
   );
