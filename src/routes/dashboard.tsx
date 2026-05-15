@@ -295,9 +295,9 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
                         <button
                           type="button"
                           onClick={copyShareLink}
-                          aria-label="Copy public link"
-                          title="Copy public link"
-                          className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
+                          aria-label={isPublished ? "Copy public link" : "Publish to enable sharing"}
+                          title={isPublished ? "Copy public link" : "Publish to enable sharing"}
+                          className={`rounded-lg p-2 hover:bg-ink/5 ${isPublished ? "text-ink/60 hover:text-ink" : "text-ink/30"}`}
                         >
                           <Share2 className="size-4" />
                         </button>
