@@ -258,6 +258,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   };
 
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
 
   return (
     <Shell>
@@ -386,7 +387,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         </section>
       </div>
 
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+      <Dialog
+        open={previewOpen}
+        onOpenChange={(open) => {
+          setPreviewOpen(open);
+          if (open) setPreviewAnswers({});
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-extrabold tracking-tight">
@@ -413,13 +420,18 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/40">
                     Question {i + 1}
                   </p>
-                  <QuestionRender question={q} value={undefined} disabled />
+                  <QuestionRender
+                    question={q}
+                    value={previewAnswers[q.id]}
+                    onChange={(v) => setPreviewAnswers((a) => ({ ...a, [q.id]: v }))}
+                  />
                 </div>
               ))
             )}
 
             {questions.length > 0 && (
-              <div className="flex justify-end pt-2">
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <p className="text-xs text-ink/50">Responses aren't recorded in preview.</p>
                 <button
                   type="button"
                   disabled

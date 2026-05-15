@@ -1,32 +1,33 @@
 ## Goal
-Make "Multiple choice" questions actually allow selecting multiple options (checkboxes), instead of single-pick radio buttons.
+Make the Preview modal fully interactive — typing in text fields, ticking checkboxes, and clicking stars should work — without actually submitting any response to the database.
 
-## Changes
+## Changes (single file: `src/routes/forms.$formId.edit.tsx`)
 
-### 1. `src/components/question-render.tsx`
-Replace the `RadioGroup` block for `multiple_choice` with a checkbox list using shadcn's `Checkbox`.
+1. **Add local preview-answers state** alongside the existing `previewOpen` state:
+   ```
+   const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
+   ```
 
-- Treat `value` as `string[]` (default to `[]` when not array).
-- On toggle, call `onChange?.(checked ? [...selected, opt] : selected.filter(x => x !== opt))`.
-- Keep the same "No options yet" empty state and italic placeholder for blank option labels.
+2. **Reset answers when the dialog opens** so reopening starts fresh — wire into the existing `onOpenChange`:
+   ```
+   onOpenChange={(open) => {
+     setPreviewOpen(open);
+     if (open) setPreviewAnswers({});
+   }}
+   ```
 
-### 2. `src/routes/forms.$formId.index.tsx` — `allAnswered` validation (line 65)
-Change from:
-```
-if (q.type === "multiple_choice") return typeof v === "string" && v.length > 0;
-```
-to:
-```
-if (q.type === "multiple_choice") return Array.isArray(v) && v.length > 0;
-```
+3. **Drop `disabled` and wire `value` / `onChange`** on each `<QuestionRender>` inside the dialog:
+   ```
+   <QuestionRender
+     question={q}
+     value={previewAnswers[q.id]}
+     onChange={(v) => setPreviewAnswers((a) => ({ ...a, [q.id]: v }))}
+   />
+   ```
 
-### 3. `src/routes/forms.$formId.responses.tsx` — `AnswerView` (line 143)
-Render array values as a comma-joined list (or bullet list) so submitted multi-select answers display correctly. Keep the "No answer" empty state when array is empty.
-
-### 4. Backward compatibility
-Old responses stored as a single string remain valid JSON. In `AnswerView`, if `value` is a string for a `multiple_choice` question, render it as-is. In `QuestionRender`, if incoming `value` is a string (legacy), coerce to `[value]` before rendering checkbox state.
+4. **Submit button stays disabled** in the preview (no DB write). Add a small note like "Responses aren't recorded in preview" near the submit button so it's clear why nothing happens on submit.
 
 ## Out of scope
-- No DB migration. `answers` is `jsonb` and already accepts arrays.
-- No change to the editor's option-list editing UI — the question authoring side stays identical.
-- No change to question type enum or "Add question" menu label (still "Multiple choice", which now correctly means multi-select).
+- No DB or schema changes
+- No change to `QuestionRender` itself — it already supports interactive mode (used on the public form page the same way)
+- No change to the public form rendering / actual submission flow
