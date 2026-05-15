@@ -1,52 +1,17 @@
-## Goal
+## Symptom
+Clicking the chart icon on the dashboard navigates to `/forms/<id>/responses` and shows the 404 / error page instead of the analytics view I just built.
 
-Make the chart icon (Dashboard → form's responses link) open an analytics view showing summary stats and per-question visual breakdowns, in addition to the raw response list.
+## Root cause
+`src/routes/forms.$formId.responses.tsx` (the analytics page) has two issues that break it during the initial server render:
 
-## Where
+1. **Recharts crashes in SSR.** `ResponsiveContainer` reads `window` / `ResizeObserver` at render time. In TanStack Start every route is SSR'd, so the page throws on the server before mount and the router falls back to its error/404 boundary.
+2. **Invalid color values.** Charts use `hsl(var(--primary))`, but the project's tokens in `src/styles.css` are already full `oklch(...)` values, so the wrapper produces invalid CSS like `hsl(oklch(...))`. Even when SSR works, bars/lines render blank.
 
-`src/routes/forms.$formId.responses.tsx` — already the destination of the chart icon. Extend it; no routing or dashboard changes.
+## Fix
+Edit only `src/routes/forms.$formId.responses.tsx`:
 
-## What the page shows
+- Gate every Recharts subtree behind a small `<ClientOnly>` component (renders `null` on the server, real chart on the client via a `useEffect` mount flag). Show a fixed-height skeleton placeholder while not mounted so layout doesn't jump.
+- Replace every `hsl(var(--token))` with the raw token reference `var(--token)` (works because tokens are already complete color functions).
+- Verify in the live preview: click the chart icon on a form card → the responses page renders with summary cards, line chart, and per-question charts; refreshing the page also works.
 
-Top: tabs (or two stacked sections) — **Overview** and **Individual responses**.
-
-### Overview — summary cards
-- Total responses
-- Responses in last 7 days
-- Average completion time *(see "Duration" below)*
-- Completion rate (responses with all questions answered ÷ total)
-
-### Overview — charts
-- **Responses over time** — line/area chart, daily counts (last 30 days). Uses `submitted_at`.
-- **Per-question breakdown**, one card each:
-  - `multiple_choice` → horizontal bar chart of option counts (handles arrays for multi-select)
-  - `rating` → bar chart of 1..max star distribution + average rating
-  - `text` → count of answered vs skipped + a list of the most recent N answers (truncated)
-
-Built with `recharts` (already a dep — `src/components/ui/chart.tsx` exists). Use design tokens (`--primary`, `--muted`, etc.); no hard-coded colors.
-
-### Individual responses
-Existing list, kept as-is, moved under the second tab.
-
-## Duration to answer
-
-The DB only has `submitted_at` — no start timestamp — so we can't compute true fill time from existing data.
-
-Proposal: add a `started_at` field tracked client-side.
-
-- Migration: `ALTER TABLE public.responses ADD COLUMN started_at timestamptz;` (nullable, so old rows still work).
-- Public form page (`src/routes/forms.$formId.index.tsx`): record `Date.now()` when the form first renders and send it as `started_at` on submit. RLS insert policy already allows anonymous inserts on published forms; column is nullable so no policy change needed.
-- Analytics: when both timestamps exist, compute `submitted_at - started_at`; show median + average; ignore rows where `started_at` is null or duration > 2h (likely tab left open).
-- If no rows have durations yet, show "Not enough data yet" instead of a number.
-
-## Technical notes
-
-- Reuse the existing auth-gated query pattern in the file (no schema for ownership change).
-- Aggregations done client-side in `useMemo` from the already-fetched `responses` + `questions` arrays — no extra queries.
-- Tabs via existing `@/components/ui/tabs`.
-- Charts via `recharts` + `ChartContainer`/`ChartTooltipContent` from `src/components/ui/chart.tsx`.
-- Empty states for each chart when a question has zero answers.
-
-## Out of scope
-
-- CSV export, filtering, date-range picker, per-respondent drill-down — can be follow-ups.
+No DB, dashboard, or routing changes needed.
