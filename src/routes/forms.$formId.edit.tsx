@@ -430,7 +430,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             )}
 
             {questions.length > 0 && (
-              <div className="flex justify-end pt-2">
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <p className="text-xs text-ink/50">Responses aren't recorded in preview.</p>
                 <button
                   type="button"
                   disabled
