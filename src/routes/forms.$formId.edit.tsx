@@ -268,15 +268,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         >
           <ArrowLeft className="size-4" /> Back to dashboard
         </Link>
-        <a
-          href={publicUrl}
-          target="_blank"
-          rel="noreferrer"
-          title="Opens the page respondents see in a new tab"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 hover:text-ink"
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
         >
-          <ExternalLink className="size-4" /> Preview public form
-        </a>
+          <Eye className="size-4" /> Preview
+        </button>
       </div>
 
       <header className="mt-6 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm md:p-8">
