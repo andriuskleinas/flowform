@@ -220,14 +220,13 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
                 <p className="mt-2 max-w-sm text-sm text-ink/60">
                   You haven't created any forms yet. Get started below.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setOpen(true)}
+                <Link
+                  to="/forms/new"
                   className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25"
                 >
                   <Plus className="size-4" />
                   Create your first form
-                </button>
+                </Link>
               </li>
             )}
 
