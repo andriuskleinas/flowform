@@ -1,6 +1,6 @@
 import { Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 export type QuestionType = "text" | "multiple_choice" | "rating";
@@ -39,25 +39,43 @@ export function QuestionRender({ question, value, onChange, disabled }: Props) {
         />
       )}
 
-      {question.type === "multiple_choice" && (
-        <RadioGroup
-          value={value ?? ""}
-          onValueChange={(v) => onChange?.(v)}
-          disabled={disabled}
-        >
-          {(Array.isArray(question.options) ? question.options : []).map((opt: string, i: number) => (
-            <div key={i} className="flex items-center gap-3">
-              <RadioGroupItem id={`${id}-${i}`} value={opt} />
-              <Label htmlFor={`${id}-${i}`} className="font-normal">
-                {opt || <span className="italic text-ink/40">Option {i + 1}</span>}
-              </Label>
-            </div>
-          ))}
-          {(!Array.isArray(question.options) || question.options.length === 0) && (
-            <p className="text-sm text-ink/40">No options yet</p>
-          )}
-        </RadioGroup>
-      )}
+      {question.type === "multiple_choice" && (() => {
+        const selected: string[] = Array.isArray(value)
+          ? value
+          : typeof value === "string" && value.length > 0
+            ? [value]
+            : [];
+        const opts = Array.isArray(question.options) ? question.options : [];
+        if (opts.length === 0) {
+          return <p className="text-sm text-ink/40">No options yet</p>;
+        }
+        return (
+          <div className="space-y-2">
+            {opts.map((opt: string, i: number) => {
+              const checked = selected.includes(opt);
+              return (
+                <div key={i} className="flex items-center gap-3">
+                  <Checkbox
+                    id={`${id}-${i}`}
+                    checked={checked}
+                    disabled={disabled}
+                    onCheckedChange={(c) => {
+                      if (!onChange) return;
+                      const next = c
+                        ? [...selected, opt]
+                        : selected.filter((x) => x !== opt);
+                      onChange(next);
+                    }}
+                  />
+                  <Label htmlFor={`${id}-${i}`} className="font-normal">
+                    {opt || <span className="italic text-ink/40">Option {i + 1}</span>}
+                  </Label>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {question.type === "rating" && (
         <StarRating
