@@ -139,6 +139,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     description: null,
   });
   const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
 
   // Initialize / re-sync draft from server when (a) we don't have one yet,
   // or (b) the server snapshot changed AND the user has no unsaved changes.
