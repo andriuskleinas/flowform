@@ -71,7 +71,7 @@ function DashboardPage() {
   return <DashboardAuthed userId={user.id} email={user.email ?? ""} signingOutRef={signingOutRef} />;
 }
 
-function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
+function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; email: string; signingOutRef: React.MutableRefObject<boolean> }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
