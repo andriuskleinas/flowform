@@ -611,10 +611,6 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   );
 }
 
-// Preview state lives at module scope of the component below to keep the
-// large EditFormAuthed body readable. Declared inside via hooks above.
-
-
 /* ------------------------------ Sortable card ------------------------------ */
 
 function SortableQuestionCard({
