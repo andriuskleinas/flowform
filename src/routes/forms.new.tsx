@@ -278,6 +278,9 @@ function NewFormAuthed({ userId }: { userId: string }) {
                               }}
                               placeholder={`Option ${idx + 1}`}
                               maxLength={120}
+                              autoComplete="off"
+                              data-1p-ignore
+                              data-lpignore="true"
                             />
                             <button
                               type="button"
