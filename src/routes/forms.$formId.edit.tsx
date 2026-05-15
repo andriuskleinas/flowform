@@ -230,7 +230,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
   const form = formQ.data;
   const questions = questionsQ.data ?? [];
-  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/forms/${formId}` : "";
+  
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
