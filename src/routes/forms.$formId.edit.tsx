@@ -285,7 +285,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           if (error) throw error;
         } else {
           const orig = snapshot.questions.find((o) => o.id === q.id);
-          const patch: Record<string, any> = { position: i };
+          const patch: {
+            position: number;
+            type?: QuestionType;
+            label?: string;
+            options?: any;
+          } = { position: i };
           if (orig) {
             if (orig.type !== q.type) patch.type = q.type;
             if (orig.label !== label) patch.label = label;
