@@ -193,31 +193,33 @@ function Overview({ questions, responses }: { questions: Question[]; responses: 
 
       <Card title="Responses over time" subtitle="Last 30 days">
         <div className="h-56 w-full">
-          <ResponsiveContainer>
-            <LineChart data={trend} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="label"
-                stroke="currentColor"
-                className="text-ink/50"
-                tick={{ fontSize: 11 }}
-              />
-              <YAxis
-                allowDecimals={false}
-                stroke="currentColor"
-                className="text-ink/50"
-                tick={{ fontSize: 11 }}
-              />
-              <Tooltip content={<MiniTooltip />} />
-              <Line
-                type="monotone"
-                dataKey="count"
-                stroke="var(--primary)"
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
+            <ResponsiveContainer>
+              <LineChart data={trend} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  stroke="currentColor"
+                  className="text-ink/50"
+                  tick={{ fontSize: 11 }}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  stroke="currentColor"
+                  className="text-ink/50"
+                  tick={{ fontSize: 11 }}
+                />
+                <Tooltip content={<MiniTooltip />} />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="var(--primary)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ClientOnly>
         </div>
       </Card>
 
