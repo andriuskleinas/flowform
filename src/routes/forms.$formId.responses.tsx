@@ -328,19 +328,21 @@ function QuestionAnalytics({
         subtitle={d.avg != null ? `Average ${d.avg.toFixed(2)}★` : "No ratings yet"}
       >
         <div className="h-56 w-full">
-          <ResponsiveContainer>
-            <BarChart data={d.bars} margin={{ top: 4, right: 12, left: -16, bottom: 0 }}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
-              <Tooltip content={<MiniTooltip />} />
-              <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                {d.bars.map((_, i) => (
-                  <Cell key={i} fill="var(--primary)" />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
+            <ResponsiveContainer>
+              <BarChart data={d.bars} margin={{ top: 4, right: 12, left: -16, bottom: 0 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
+                <Tooltip content={<MiniTooltip />} />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                  {d.bars.map((_, i) => (
+                    <Cell key={i} fill="var(--primary)" />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ClientOnly>
         </div>
       </Card>
     );
