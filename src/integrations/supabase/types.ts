@@ -105,18 +105,21 @@ export type Database = {
           answers: Json
           form_id: string
           id: string
+          started_at: string | null
           submitted_at: string
         }
         Insert: {
           answers: Json
           form_id: string
           id?: string
+          started_at?: string | null
           submitted_at?: string
         }
         Update: {
           answers?: Json
           form_id?: string
           id?: string
+          started_at?: string | null
           submitted_at?: string
         }
         Relationships: [
