@@ -1,21 +1,25 @@
-## Root cause
+## Goal
+Replace the always-visible right-column Preview pane in the editor with a **"Preview" button** that opens a modal showing the form exactly as a respondent would see it.
 
-In TanStack Router's flat file-based routing, `src/routes/forms.$formId.tsx` is treated as a **layout route** for any sibling that extends its path — including `forms.$formId.edit.tsx` and `forms.$formId.responses.tsx`. A layout route MUST render `<Outlet />` for its children to appear.
+## Changes (single file: `src/routes/forms.$formId.edit.tsx`)
 
-`forms.$formId.tsx` instead renders the public form view (`PublicFormPage`) directly with no `<Outlet />`. Result: navigating to `/forms/<id>/edit` matches the edit route, but only the parent's public form view paints — that's why the editor controls (title input, question text, drag handles, delete buttons) are absent and "edit doesn't work."
+1. **Remove the right-column `<section>` Preview block** (lines 382–397). The Questions section becomes full-width — change `lg:grid-cols-2` to a single column on the wrapping `<div>` (or drop the grid entirely).
 
-The selected element's text on the current page confirms this: it's the public form's "You're viewing the public version of this form" / "Submit" content, not the editor.
+2. **Add a "Preview" button** in the top toolbar next to the existing "Preview public form" external link (around line 262). Use the `Eye` icon from lucide-react. Style it as a subtle outline button matching the toolbar's visual weight.
 
-## Fix
+3. **Replace the external "Preview public form" link with the modal trigger** — opening a new tab is redundant once an in-app preview exists. Keep just one Preview entry point.
 
-Convert the parent route into an index route so it stops acting as a layout.
+4. **Add a shadcn `Dialog`** (already available in `@/components/ui/dialog`) that renders the respondent view inside:
+   - Title: form title
+   - Optional description
+   - Each question rendered with `<QuestionRender question={q} value={undefined} disabled />` (same disabled preview pattern already in use)
+   - A disabled "Submit" button at the bottom for visual fidelity
+   - Empty state when no questions yet
+   - Scrollable body (`max-h-[80vh] overflow-y-auto`) since long forms won't fit
 
-1. **Rename `src/routes/forms.$formId.tsx` → `src/routes/forms.$formId.index.tsx`.**
-   - Update the `createFileRoute` path from `"/forms/$formId"` to `"/forms/$formId/"`.
-   - No other code changes — `PublicFormPage` keeps its current behavior, and links like `to="/forms/$formId"` continue to resolve to the same URL.
+5. **No data, no routing, no DB changes.** Pure UI rearrangement using existing `questions` and `form` state already in the component.
 
-2. **Regenerate `routeTree.gen.ts`** (TanStack Router's Vite plugin does this automatically on dev/build; no manual edit).
-
-After the rename, `/forms/$formId/edit` and `/forms/$formId/responses` are standalone leaf routes with no swallowing parent layout. The editor renders its title/description inputs, sortable question cards (drag handle, up/down/delete buttons, debounced inputs), and reorder works as already implemented.
-
-No DB, RLS, dependency, or behavior changes elsewhere.
+## Result
+- Editor: full-width questions list, no split layout
+- Toolbar: single "Preview" button → opens modal showing the respondent's view
+- Live edits to title/description/questions reflect immediately when reopening the modal (same reactive state)
