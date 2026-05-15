@@ -1,17 +1,20 @@
-## Symptom
-Clicking the chart icon on the dashboard navigates to `/forms/<id>/responses` and shows the 404 / error page instead of the analytics view I just built.
+I confirmed there is an analytics-style page already implemented at `src/routes/forms.$formId.responses.tsx`, and the dashboard chart icon is intended to navigate to `/forms/$formId/responses`. Since the preview still shows the global 404 at that URL, I’ll make the analytics destination explicit and harder to break.
 
-## Root cause
-`src/routes/forms.$formId.responses.tsx` (the analytics page) has two issues that break it during the initial server render:
+Plan:
 
-1. **Recharts crashes in SSR.** `ResponsiveContainer` reads `window` / `ResizeObserver` at render time. In TanStack Start every route is SSR'd, so the page throws on the server before mount and the router falls back to its error/404 boundary.
-2. **Invalid color values.** Charts use `hsl(var(--primary))`, but the project's tokens in `src/styles.css` are already full `oklch(...)` values, so the wrapper produces invalid CSS like `hsl(oklch(...))`. Even when SSR works, bars/lines render blank.
+1. **Create a dedicated analytics route**
+   - Add a real `/forms/$formId/analytics` page for survey statistics.
+   - Move or reuse the existing responses/analytics UI there so the statistics have a clear page to render on.
 
-## Fix
-Edit only `src/routes/forms.$formId.responses.tsx`:
+2. **Update the chart icon navigation**
+   - Change the dashboard chart icon to link to `/forms/$formId/analytics` instead of the current responses URL.
+   - Keep the label/title aligned with analytics, e.g. “View analytics”.
 
-- Gate every Recharts subtree behind a small `<ClientOnly>` component (renders `null` on the server, real chart on the client via a `useEffect` mount flag). Show a fixed-height skeleton placeholder while not mounted so layout doesn't jump.
-- Replace every `hsl(var(--token))` with the raw token reference `var(--token)` (works because tokens are already complete color functions).
-- Verify in the live preview: click the chart icon on a form card → the responses page renders with summary cards, line chart, and per-question charts; refreshing the page also works.
+3. **Keep the old responses URL working**
+   - Make `/forms/$formId/responses` redirect or render the same analytics page, so existing links do not 404.
 
-No DB, dashboard, or routing changes needed.
+4. **Add route-level fallback handling**
+   - If a form is missing or access is denied, show a clear in-app message instead of falling through to the global 404.
+
+5. **Verify in preview**
+   - Open the exact form analytics URL and click the dashboard chart icon to confirm the analytics page loads with response counts, duration stats, charts, and individual responses.
