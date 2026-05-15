@@ -195,7 +195,7 @@ function Overview({ questions, responses }: { questions: Question[]; responses: 
         <div className="h-56 w-full">
           <ResponsiveContainer>
             <LineChart data={trend} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
-              <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="label"
                 stroke="currentColor"
@@ -212,7 +212,7 @@ function Overview({ questions, responses }: { questions: Question[]; responses: 
               <Line
                 type="monotone"
                 dataKey="count"
-                stroke="hsl(var(--primary))"
+                stroke="var(--primary)"
                 strokeWidth={2}
                 dot={false}
               />
@@ -303,11 +303,11 @@ function QuestionAnalytics({
           <div className="h-56 w-full">
             <ResponsiveContainer>
               <BarChart data={arr} layout="vertical" margin={{ top: 4, right: 12, left: 8, bottom: 0 }}>
-                <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" horizontal={false} />
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
                 <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
                 <Tooltip content={<MiniTooltip />} />
-                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="count" fill="var(--primary)" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -326,13 +326,13 @@ function QuestionAnalytics({
         <div className="h-56 w-full">
           <ResponsiveContainer>
             <BarChart data={d.bars} margin={{ top: 4, right: 12, left: -16, bottom: 0 }}>
-              <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
               <Tooltip content={<MiniTooltip />} />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                 {d.bars.map((_, i) => (
-                  <Cell key={i} fill="hsl(var(--primary))" />
+                  <Cell key={i} fill="var(--primary)" />
                 ))}
               </Bar>
             </BarChart>
