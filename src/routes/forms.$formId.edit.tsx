@@ -1,8 +1,34 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowDown, ArrowUp, ExternalLink, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowDown,
+  ArrowUp,
+  ExternalLink,
+  GripVertical,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -40,6 +66,12 @@ function EditFormPage() {
 
   return <EditFormAuthed formId={formId} userId={user.id} />;
 }
+
+const TYPE_DEFAULTS: Record<QuestionType, { label: string; options: any }> = {
+  text: { label: "Untitled question", options: null },
+  multiple_choice: { label: "Untitled question", options: ["Option 1", "Option 2"] },
+  rating: { label: "Untitled question", options: { max: 5 } },
+};
 
 function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) {
   const qc = useQueryClient();
@@ -79,16 +111,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     mutationFn: async (type: QuestionType) => {
       const list = questionsQ.data ?? [];
       const position = list.length;
-      const defaults: Record<QuestionType, { label: string; options: any }> = {
-        text: { label: "Untitled question", options: null },
-        multiple_choice: { label: "Untitled question", options: ["Option 1", "Option 2"] },
-        rating: { label: "Untitled question", options: { max: 5 } },
-      };
       const { error } = await supabase.from("questions").insert({
         form_id: formId,
         type,
-        label: defaults[type].label,
-        options: defaults[type].options,
+        label: TYPE_DEFAULTS[type].label,
+        options: TYPE_DEFAULTS[type].options,
         position,
       });
       if (error) throw error;
@@ -115,22 +142,29 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const swap = useMutation({
-    mutationFn: async ({ a, b }: { a: Question; b: Question }) => {
-      // Two-step swap to avoid unique-position issues (no constraint here, but safe pattern)
-      const { error: e1 } = await supabase
-        .from("questions")
-        .update({ position: b.position })
-        .eq("id", a.id);
-      if (e1) throw e1;
-      const { error: e2 } = await supabase
-        .from("questions")
-        .update({ position: a.position })
-        .eq("id", b.id);
-      if (e2) throw e2;
+  // Persist a full reorder by writing each row's new position.
+  const reorder = useMutation({
+    mutationFn: async (ordered: Question[]) => {
+      // Optimistic cache update
+      qc.setQueryData(
+        ["questions", formId],
+        ordered.map((q, i) => ({ ...q, position: i })),
+      );
+      for (let i = 0; i < ordered.length; i++) {
+        const q = ordered[i];
+        if (q.position === i) continue;
+        const { error } = await supabase
+          .from("questions")
+          .update({ position: i })
+          .eq("id", q.id);
+        if (error) throw error;
+      }
     },
     onSuccess: invalidate,
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      toast.error(e.message);
+      invalidate();
+    },
   });
 
   const togglePublish = useMutation({
@@ -146,6 +180,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   if (formQ.isLoading) {
     return (
@@ -170,6 +209,31 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const form = formQ.data;
   const questions = questionsQ.data ?? [];
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/forms/${formId}` : "";
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = questions.findIndex((q) => q.id === active.id);
+    const newIndex = questions.findIndex((q) => q.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const next = arrayMove(questions, oldIndex, newIndex);
+    reorder.mutate(next);
+  };
+
+  const moveBy = (id: string, delta: number) => {
+    const idx = questions.findIndex((q) => q.id === id);
+    const target = idx + delta;
+    if (idx < 0 || target < 0 || target >= questions.length) return;
+    reorder.mutate(arrayMove(questions, idx, target));
+  };
+
+  const changeType = (q: Question, type: QuestionType) => {
+    if (q.type === type) return;
+    updateQuestion.mutate({
+      id: q.id,
+      patch: { type, options: TYPE_DEFAULTS[type].options },
+    });
+  };
 
   return (
     <Shell>
@@ -225,80 +289,30 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         {/* Editor */}
         <section>
           <h2 className="text-lg font-bold">Questions</h2>
-          <ul className="mt-4 space-y-4">
-            {questions.map((q, i) => (
-              <li key={q.id} className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand">
-                    {labelForType(q.type)}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <IconBtn
-                      label="Move up"
-                      onClick={() => i > 0 && swap.mutate({ a: q, b: questions[i - 1] })}
-                      disabled={i === 0}
-                    >
-                      <ArrowUp className="size-4" />
-                    </IconBtn>
-                    <IconBtn
-                      label="Move down"
-                      onClick={() =>
-                        i < questions.length - 1 && swap.mutate({ a: q, b: questions[i + 1] })
-                      }
-                      disabled={i === questions.length - 1}
-                    >
-                      <ArrowDown className="size-4" />
-                    </IconBtn>
-                    <IconBtn label="Delete" onClick={() => deleteQuestion.mutate(q.id)}>
-                      <Trash2 className="size-4" />
-                    </IconBtn>
-                  </div>
-                </div>
+          <p className="mt-1 text-xs text-ink/50">
+            Drag the handle to reorder. Edits save automatically.
+          </p>
 
-                <div className="mt-4 space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Question</Label>
-                    <Input
-                      defaultValue={q.label}
-                      onBlur={(e) => {
-                        const v = e.target.value.trim();
-                        if (v && v !== q.label) updateQuestion.mutate({ id: q.id, patch: { label: v } });
-                      }}
-                    />
-                  </div>
-
-                  {q.type === "multiple_choice" && (
-                    <OptionsEditor
-                      options={Array.isArray(q.options) ? q.options : []}
-                      onChange={(options) => updateQuestion.mutate({ id: q.id, patch: { options } })}
-                    />
-                  )}
-
-                  {q.type === "rating" && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Max rating</Label>
-                      <select
-                        value={q.options?.max ?? 5}
-                        onChange={(e) =>
-                          updateQuestion.mutate({
-                            id: q.id,
-                            patch: { options: { max: Number(e.target.value) } },
-                          })
-                        }
-                        className="rounded-md border border-input bg-transparent px-3 py-1.5 text-sm"
-                      >
-                        {[3, 5, 7, 10].map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
+              <ul className="mt-4 space-y-4">
+                {questions.map((q, i) => (
+                  <SortableQuestionCard
+                    key={q.id}
+                    question={q}
+                    index={i}
+                    total={questions.length}
+                    onChangeLabel={(label) => updateQuestion.mutate({ id: q.id, patch: { label } })}
+                    onChangeOptions={(options) => updateQuestion.mutate({ id: q.id, patch: { options } })}
+                    onChangeType={(type) => changeType(q, type)}
+                    onDelete={() => deleteQuestion.mutate(q.id)}
+                    onMoveUp={() => moveBy(q.id, -1)}
+                    onMoveDown={() => moveBy(q.id, 1)}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
 
           <div className="mt-6">
             <DropdownMenu>
@@ -346,6 +360,189 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   );
 }
 
+/* ------------------------------ Sortable card ------------------------------ */
+
+function SortableQuestionCard({
+  question,
+  index,
+  total,
+  onChangeLabel,
+  onChangeOptions,
+  onChangeType,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+}: {
+  question: Question;
+  index: number;
+  total: number;
+  onChangeLabel: (label: string) => void;
+  onChangeOptions: (options: any) => void;
+  onChangeType: (type: QuestionType) => void;
+  onDelete: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: question.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Drag to reorder"
+            title="Drag to reorder"
+            className="cursor-grab touch-none rounded p-1 text-ink/40 hover:bg-ink/5 hover:text-ink active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="size-4" />
+          </button>
+          <span className="text-xs font-semibold uppercase tracking-wide text-ink/40">
+            Q{index + 1}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <IconBtn label="Move up" onClick={onMoveUp} disabled={index === 0}>
+            <ArrowUp className="size-4" />
+          </IconBtn>
+          <IconBtn label="Move down" onClick={onMoveDown} disabled={index === total - 1}>
+            <ArrowDown className="size-4" />
+          </IconBtn>
+          <IconBtn label="Delete" onClick={onDelete}>
+            <Trash2 className="size-4" />
+          </IconBtn>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_180px]">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Question</Label>
+          <DebouncedInput
+            value={question.label}
+            onChange={(v) => {
+              const trimmed = v.trim();
+              if (trimmed && trimmed !== question.label) onChangeLabel(trimmed);
+            }}
+            placeholder="Type your question…"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Type</Label>
+          <select
+            value={question.type}
+            onChange={(e) => onChangeType(e.target.value as QuestionType)}
+            className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="text">Short answer</option>
+            <option value="multiple_choice">Multiple choice</option>
+            <option value="rating">Rating scale</option>
+          </select>
+        </div>
+      </div>
+
+      {question.type === "multiple_choice" && (
+        <div className="mt-4">
+          <OptionsEditor
+            options={Array.isArray(question.options) ? question.options : []}
+            onChange={onChangeOptions}
+          />
+        </div>
+      )}
+
+      {question.type === "rating" && (
+        <div className="mt-4 space-y-1.5">
+          <Label className="text-xs">Max rating</Label>
+          <select
+            value={question.options?.max ?? 5}
+            onChange={(e) => onChangeOptions({ max: Number(e.target.value) })}
+            className="rounded-md border border-input bg-transparent px-3 py-1.5 text-sm"
+          >
+            {[3, 5, 7, 10].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+    </li>
+  );
+}
+
+/* ----------------------------- Debounced input ----------------------------- */
+
+function DebouncedInput({
+  value,
+  onChange,
+  placeholder,
+  delay = 600,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  delay?: number;
+}) {
+  const [local, setLocal] = useState(value);
+  const lastExternal = useRef(value);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (value !== lastExternal.current) {
+      lastExternal.current = value;
+      setLocal(value);
+    }
+  }, [value]);
+
+  const schedule = (v: string) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      lastExternal.current = v;
+      onChange(v);
+    }, delay);
+  };
+
+  const flush = () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    if (local !== lastExternal.current) {
+      lastExternal.current = local;
+      onChange(local);
+    }
+  };
+
+  return (
+    <Input
+      value={local}
+      placeholder={placeholder}
+      autoComplete="off"
+      data-1p-ignore
+      data-lpignore="true"
+      onChange={(e) => {
+        setLocal(e.target.value);
+        schedule(e.target.value);
+      }}
+      onBlur={flush}
+    />
+  );
+}
+
+/* ----------------------------- Options editor ----------------------------- */
+
 function OptionsEditor({
   options,
   onChange,
@@ -368,6 +565,9 @@ function OptionsEditor({
         <div key={i} className="flex items-center gap-2">
           <Input
             value={opt}
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
             onChange={(e) => setDraft(draft.map((o, j) => (j === i ? e.target.value : o)))}
             onBlur={() => onChange(draft)}
           />
@@ -392,6 +592,8 @@ function OptionsEditor({
   );
 }
 
+/* ---------------------------------- Misc ---------------------------------- */
+
 function IconBtn({
   children,
   label,
@@ -415,10 +617,6 @@ function IconBtn({
       {children}
     </button>
   );
-}
-
-function labelForType(t: QuestionType) {
-  return t === "text" ? "Short answer" : t === "multiple_choice" ? "Multiple choice" : "Rating";
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
