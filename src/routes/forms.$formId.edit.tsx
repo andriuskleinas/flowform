@@ -168,6 +168,19 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     },
   });
 
+  const updateForm = useMutation({
+    mutationFn: async (patch: { title?: string; description?: string | null }) => {
+      const { error } = await supabase.from("forms").update(patch).eq("id", formId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["form", formId] });
+      qc.invalidateQueries({ queryKey: ["forms"] });
+      qc.invalidateQueries({ queryKey: ["public-form", formId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const togglePublish = useMutation({
     mutationFn: async (next: "draft" | "published") => {
       const { error } = await supabase.from("forms").update({ status: next }).eq("id", formId);
