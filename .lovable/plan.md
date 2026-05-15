@@ -1,21 +1,28 @@
 ## Plan
 
-1. **Use the correct public domain**
-   - Replace the current hard-coded share host with the actual published app URL: `https://flowformapp.lovable.app`.
-   - This avoids both preview domains and `lovableproject.com`, which route recipients through the Lovable login portal.
+1. **Fix the copied share URL**
+   - Update the dashboard share action so it always copies the published public URL:
+     `https://flowformapp.lovable.app/forms/<formId>`.
+   - Remove any fallback to preview/workspace URLs such as `lovableproject.com`, because those require Lovable login.
 
-2. **Centralize share URL creation**
-   - Add a small shared helper for public form URLs, e.g. `getPublicFormUrl(formId)`.
-   - Use that helper anywhere the app copies, displays, or opens a respondent form link so future fixes are made in one place.
+2. **Make the public form route truly anonymous**
+   - Keep `/forms/:formId` as a public route with no login redirect.
+   - Ensure it loads only published forms for anonymous visitors.
+   - Keep draft forms hidden from non-owners.
 
-3. **Fix all share/copy affordances**
-   - Update the dashboard Share button to copy `https://flowformapp.lovable.app/forms/<formId>`.
-   - Search for any other form-share code paths and update them to the same helper if present.
-   - Keep the existing draft guard: draft forms should not be copied until published.
+3. **Make anonymous submit work**
+   - Verify the public database rules already allow anonymous response inserts for published forms.
+   - If the app code is causing auth/session behavior to interfere, adjust the public form page so anonymous visitors can submit without a user session.
 
-4. **Update the internal note**
-   - Update `.lovable/plan.md` so the documented public URL matches the current published domain and no longer references the wrong `project--...lovable.app` host.
+4. **Confirm the post-submit experience**
+   - Ensure a successful anonymous submit switches the page to the existing “Thanks! Your response was recorded.” confirmation.
 
-5. **Validate**
-   - Verify the copied link string is exactly `https://flowformapp.lovable.app/forms/df9ddaf9-5935-4c66-952b-e5c0b05626ba` for that form.
-   - Confirm no code still generates form links with `window.location.origin`, `lovableproject.com`, or the old `project--...lovable.app` host.
+5. **Validate end-to-end**
+   - Check that publish visibility is public.
+   - Verify there are no remaining generated share links using `lovableproject.com`, preview origin, or `window.location.origin`.
+   - Test the exact public URL path in a logged-out/public context: open form, fill answers, submit, and see the thank-you confirmation.
+
+## Technical notes
+
+- The project is already published and its effective visibility is public, so the remaining fix should be in app URL generation and public form behavior.
+- Current database policies already support public reads of published forms/questions and public inserts into responses for published forms.
