@@ -1,0 +1,1 @@
+ALTER TABLE public.responses ADD COLUMN started_at timestamptz;
