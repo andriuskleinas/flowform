@@ -188,6 +188,7 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
   });
 
   const handleSignOut = async () => {
+    signingOutRef.current = true;
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };
