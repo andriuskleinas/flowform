@@ -258,6 +258,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   };
 
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
 
   return (
     <Shell>
