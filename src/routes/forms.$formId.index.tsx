@@ -62,7 +62,7 @@ function PublicFormPage() {
   const allAnswered = questions.every((q) => {
     const v = answers[q.id];
     if (q.type === "text") return typeof v === "string" && v.trim().length > 0;
-    if (q.type === "multiple_choice") return typeof v === "string" && v.length > 0;
+    if (q.type === "multiple_choice") return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v.length > 0;
     if (q.type === "rating") return typeof v === "number" && v > 0;
     return false;
   });
