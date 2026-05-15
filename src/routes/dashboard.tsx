@@ -188,7 +188,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    navigate({ to: "/login" });
+    navigate({ to: "/" });
   };
 
   const handleOpenChange = (next: boolean) => {
