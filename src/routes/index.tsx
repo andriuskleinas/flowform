@@ -514,7 +514,7 @@ function Index() {
 
         {/* Closing CTA */}
         <section className="bg-ink px-6 pt-24 md:px-8 md:pt-32">
-          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[32px] bg-ink p-12 text-center text-white ring-1 ring-white/10 md:rounded-[40px] md:p-20">
+          <div className="relative mx-auto max-w-7xl overflow-hidden p-12 text-center text-white md:p-20">
             <div
               aria-hidden
               className="pointer-events-none absolute -top-24 -left-16 size-72 rounded-full bg-brand/25 blur-[120px]"
