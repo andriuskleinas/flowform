@@ -514,26 +514,38 @@ function Index() {
 
         {/* Closing CTA */}
         <section className="px-6 py-24 md:px-8 md:py-32">
-          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[32px] bg-ink p-10 text-center text-white md:rounded-[40px] md:p-16">
+          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[32px] bg-ink p-12 text-center text-white ring-1 ring-white/10 md:rounded-[40px] md:p-20">
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-20 right-0 size-64 translate-x-1/3 rounded-full bg-brand/30 blur-[100px]"
+              className="pointer-events-none absolute -top-24 -left-16 size-72 rounded-full bg-brand/25 blur-[120px]"
             />
-            <h2 className="relative text-3xl font-extrabold tracking-tight text-balance md:text-5xl">
-              Ask sharper. Learn faster.
-            </h2>
-            <p className="relative mx-auto mt-5 max-w-xl text-base text-white/60 md:mt-6 md:text-xl">
-              Ship your first Flowform in minutes — and never send a flat
-              survey again.
-            </p>
-            <div className="relative mt-8 flex justify-center md:mt-10">
-              <PrimaryCTA size="lg" variant="light">
-                Start for free
-              </PrimaryCTA>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-brand/25 blur-[120px]"
+            />
+            <div className="relative mx-auto max-w-2xl">
+              <h2 className="text-3xl font-extrabold tracking-tight text-balance md:text-5xl">
+                Ask sharper. Learn faster.
+              </h2>
+              <p className="mx-auto mt-6 max-w-xl text-base text-white/60 md:text-xl">
+                Ship your first Flowform in minutes — and never send a flat
+                survey again.
+              </p>
+              <div className="mt-10 flex justify-center">
+                <PrimaryCTA size="lg" variant="light">
+                  Start for free
+                </PrimaryCTA>
+              </div>
+              <div className="mt-10 border-t border-white/10 pt-6">
+                <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium uppercase tracking-[0.2em] text-white/40">
+                  <li>Free forever · No card required</li>
+                  <li aria-hidden className="text-white/20">·</li>
+                  <li>SOC 2 ready</li>
+                  <li aria-hidden className="text-white/20">·</li>
+                  <li>GDPR compliant</li>
+                </ul>
+              </div>
             </div>
-            <p className="relative mt-6 text-xs font-medium uppercase tracking-[0.2em] text-white/40">
-              Free forever · No card required
-            </p>
           </div>
         </section>
       </main>
