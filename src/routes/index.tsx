@@ -442,7 +442,7 @@ const featureAccentStyles: Record<
     iconBg: "bg-gold/10",
     iconText: "text-gold",
     glow: "bg-gold/25",
-    shadow: "hover:shadow-[0_24px_60px_-20px_hsl(var(--gold)/0.35)]",
+    shadow: "hover:shadow-[0_24px_60px_-20px_color-mix(in_oklch,var(--gold)_35%,transparent)]",
     bar: "bg-gold/50",
   },
 };
