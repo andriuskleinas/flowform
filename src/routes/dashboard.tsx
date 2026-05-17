@@ -50,6 +50,15 @@ function timeAgo(iso: string) {
   return `${d}d ago`;
 }
 
+function getInitials(displayName: string | null | undefined, email: string) {
+  const name = displayName?.trim();
+  if (name) {
+    const parts = name.split(/\s+/).slice(0, 2);
+    return parts.map((p) => p[0]).join("").toUpperCase();
+  }
+  return (email.split("@")[0] || "?").slice(0, 2).toUpperCase();
+}
+
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
