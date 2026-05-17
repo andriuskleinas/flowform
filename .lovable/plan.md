@@ -1,35 +1,53 @@
-## Replace dashboard "Back home" link with a profile dropdown
+## Profile page + dropdown cleanup
 
-In `src/routes/dashboard.tsx`, the header currently renders a "Back home" link next to "Sign out". Since the user is already inside the app, that link is redundant. Replace it with a user profile dropdown that consolidates account actions into one menu.
+### 1. Dropdown changes (`src/routes/dashboard.tsx`)
+- Remove the **New form** menu item (the page already has a primary "New form" button).
+- Replace the **Home** menu item with a **Profile** item (`User` icon) that navigates to `/profile`.
+- Keep the identity header (name + email) and Sign out item unchanged.
+- Drop the now-unused `Home` and `Plus` icon imports.
 
-### Header changes (`src/routes/dashboard.tsx`)
+### 2. Database — add name fields to `profiles`
+Current `profiles` table only has `display_name`. The user wants separate **Name** (first) and **Surname** (last) editable fields. Plan a migration:
+- Add `first_name text` and `last_name text` (both nullable) to `public.profiles`.
+- Add an `updated_at` trigger that calls the existing `update_updated_at_column` pattern (the column already exists; just wire a `BEFORE UPDATE` trigger if one isn't there).
+- Backfill: leave existing rows as-is; `display_name` stays for compatibility (we'll keep showing initials/menu name from `first_name + last_name`, falling back to `display_name` then email).
 
-Remove:
-- The `<Link to="/">… Back home</Link>` element
-- The standalone "Sign out" `<button>` (moves into the dropdown)
-- The now-unused `ArrowLeft` and `LogOut` imports (keep `LogOut` if used inside the dropdown)
+Email lives on `auth.users` — not duplicated in `profiles`. Account creation date comes from `auth.users.created_at` via `supabase.auth.getUser()`.
 
-Add a profile dropdown on the right of the nav:
-- Trigger: circular avatar button showing the user's initials (derived from `profile.display_name` or `email`), with `bg-brand/10 text-brand`, size 9, ring on hover/focus for accessibility. `aria-label="Open account menu"`.
-- Use the existing shadcn `DropdownMenu` primitives (`src/components/ui/dropdown-menu.tsx`) — already in the project.
-- Menu content (aligned end, width ~64):
-  - Header block (non-interactive): bold `display_name` (or "Account" fallback) + muted `email` underneath
-  - `DropdownMenuSeparator`
-  - `DropdownMenuItem` → "Home" (navigates to `/`) with `Home` icon — keeps the marketing site reachable without it living in the primary nav
-  - `DropdownMenuItem` → "New form" (navigates to `/forms/new`) with `Plus` icon — quick action from anywhere
-  - `DropdownMenuSeparator`
-  - `DropdownMenuItem` → "Sign out", destructive styling (`text-destructive focus:text-destructive`), `LogOut` icon, calls existing `handleSignOut`
+### 3. New route `src/routes/profile.tsx`
+Authenticated page (same auth gate pattern as `/dashboard` — redirect to `/login` if no session). Layout matches dashboard chrome: same header (logo + the new profile dropdown), main content with a max-w-2xl card.
 
-### Why this is valuable
+Contents:
+- **Header**: "Profile" h1 + muted subtitle "Manage your account details".
+- **Read-only summary row**: Account created on `{format(auth.users.created_at, 'MMM d, yyyy')}` displayed as a small muted line.
+- **Edit form** (single card, shadcn `Input` + `Label`):
+  - First name (`first_name`)
+  - Last name (`last_name`)
+  - Email (`email`) — prefilled from session
+- **Save button** (brand pill):
+  - If name fields changed → `supabase.from('profiles').update({ first_name, last_name, display_name: \`${first} ${last}\`.trim() || null }).eq('id', userId)`.
+  - If email changed → `supabase.auth.updateUser({ email: newEmail })`. Toast: "Confirmation email sent to your new address. Click the link to finalize the change." (Supabase requires confirmation; that's expected behavior.)
+  - Disable button while submitting; toast success/error via sonner.
+- **Validation** (zod, client-side):
+  - `first_name`/`last_name`: trim, max 50 chars, allow empty.
+  - `email`: `z.string().email().max(255)`.
+- **Back link**: small "← Back to dashboard" above the heading.
 
-- Removes a confusing in-app "Back home" affordance
-- Surfaces identity (initials + email) so users know which account they're in
-- Keeps "Home" reachable for users who do want to visit the landing page, but demotes it from primary nav
-- Adds a fast "New form" shortcut available from any dashboard scroll position
-- Sign out remains one click away, just grouped with account context
+### 4. Data loading on the profile page
+Use React Query keyed `['profile', userId]`:
+- Fetch `profiles` row (`first_name, last_name, display_name`).
+- Get `auth.users` info (email, created_at) from `supabase.auth.getUser()` — no extra query needed.
+- Initialize form state from fetched data; reset on successful save.
 
-### Technical notes
+### 5. Dashboard dropdown identity update
+Update `getInitials` (already added) to prefer `first_name`/`last_name` initials, then fall back to `display_name`, then email. Update the dropdown header to show `${first_name} ${last_name}` when present, else `display_name`, else "Account".
 
-- Initials helper: take first letters of `display_name` words (max 2), fallback to first 2 chars of email local-part, uppercase.
-- `profile` query already exists in `DashboardAuthed`; reuse it. While loading, render initials from email so the avatar never flashes empty.
-- No new dependencies. No route, schema, or data changes. Edit is scoped to the header `<nav>` inside `DashboardPage` / `DashboardAuthed` in `src/routes/dashboard.tsx`.
+### 6. Out of scope
+- No password change flow (user didn't ask).
+- No avatar upload.
+- No deletion / account close.
+
+### Files touched
+- New: `src/routes/profile.tsx`
+- Edited: `src/routes/dashboard.tsx` (dropdown items, icon imports, initials/name fallback)
+- Migration: add `first_name`, `last_name` columns to `public.profiles` (+ update trigger if missing)
