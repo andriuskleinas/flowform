@@ -1,58 +1,41 @@
 
-# Design Polish Plan
+# Color System Update
 
-Three focused, visual-only improvements. No features, routes, or logic touched.
+Retune the color tokens in `src/styles.css` to use a professional blue and neutral grays. No component code changes — all updates flow through CSS custom properties.
 
-## 1. Typography — Stronger hierarchy
+## Changes to `src/styles.css` (`:root` block)
 
-Update `src/styles.css` and page components to introduce a clear scale.
+| Token | New value | Used for |
+|---|---|---|
+| `--brand` | `oklch(0.58 0.21 256)` (≈ #0066FF) | Primary buttons (Create Form, Save, Submit, CTAs) |
+| `--brand-foreground` | `oklch(0.99 0 0)` (white) | Text on primary buttons |
+| `--primary` | same blue as `--brand` | shadcn `Button` default variant |
+| `--primary-foreground` | white | Text on primary |
+| `--secondary` | `oklch(0.94 0.003 260)` (light gray) | Secondary buttons (Cancel, back actions) |
+| `--secondary-foreground` | `oklch(0.25 0.01 260)` (dark gray) | Text on secondary |
+| `--muted` | `oklch(0.96 0.003 260)` (lighter gray) | Subtle fills, input bg |
+| `--muted-foreground` | `oklch(0.45 0.01 260)` (mid gray) | Secondary text |
+| `--background` | `oklch(0.985 0.002 260)` (light gray) | Page background |
+| `--surface` | same as background | Section surface |
+| `--ink` | `oklch(0.22 0.01 260)` (dark gray) | All body text |
+| `--foreground` | matches `--ink` | Default text color |
+| `--border` | `oklch(0.91 0.005 260)` | Hairlines, dividers |
+| `--ring` | matches `--brand` | Focus ring |
+| `--accent` | `oklch(0.95 0.04 256)` (pale blue tint) | Hover/highlight tint |
+| `--accent-foreground` | blue (`--brand`) | Text on accent |
 
-- Add base type styles in `@layer base`:
-  - `h1`: `text-4xl md:text-5xl font-bold tracking-tight` (was inconsistent)
-  - `h2`: `text-2xl md:text-3xl font-semibold tracking-tight`
-  - `h3`: `text-xl font-semibold`
-  - body: keep `text-base`, muted captions `text-sm text-muted-foreground`
-- Sweep heading usage in:
-  - `src/routes/index.tsx` (landing)
-  - `src/routes/dashboard.tsx`
-  - `src/routes/forms.$formId.index.tsx`
-  - `src/routes/forms.$formId.responses.tsx`
-  - `src/routes/forms.$formId.edit.tsx`
-  - `src/routes/login.tsx`, `signup.tsx`
-- Standardize `CardTitle` to `text-lg font-semibold` and section titles to `text-2xl font-semibold`.
+Dark mode (`.dark` block) is left untouched — these changes only affect the default light theme the app actually ships with.
 
-## 2. Color — Primary / Secondary / Neutral system
+## What stays the same
 
-Refine tokens in `src/styles.css` (light + dark) so buttons and surfaces read clearly.
-
-- **Primary** (CTA, key actions): use existing `--brand` (violet `oklch(0.55 0.22 295)`) as the primary button color. Remap `--primary` to brand so `<Button variant="default">` becomes the real CTA.
-- **Secondary** (supporting actions): keep `--secondary` as a soft neutral; ensure `<Button variant="secondary">` reads as a calm alternate (light slate / dark slate).
-- **Neutral palette** for backgrounds:
-  - `--background`: page surface (off-white / deep ink)
-  - `--surface`: cards / panels (already defined — wire `--card` to it in light mode)
-  - `--muted`: subtle fills (inputs, hover)
-  - `--border`: hairline dividers
-- Ensure contrast: `--primary-foreground` stays near-white against violet.
-
-No component code needs new color classes — just retune tokens so existing `bg-primary`, `bg-secondary`, `bg-card`, `bg-muted` look intentional.
-
-## 3. Spacing — Consistent 8 / 16 rhythm
-
-Apply an 8px base rhythm: **8px between related elements, 16px between sections**, with larger multiples (24/32/48) for page-level breathing room.
-
-- Page wrappers: `container mx-auto px-6 py-8 md:py-12 space-y-8` (16–32px between sections)
-- Cards: keep `CardHeader p-6`, ensure `CardContent` uses `space-y-4` for related items (16px) and inner clusters `space-y-2` (8px)
-- Form rows: label + input use `space-y-2`; field groups use `space-y-4`; form sections use `space-y-6`
-- Button groups: `gap-2` for tight pairs, `gap-4` between distinct action clusters
-- Sweep the same five route files as above to apply this consistently. Remove ad-hoc margins (`mt-3`, `mb-5`, etc.) in favor of parent `space-y-*`.
-
-## Technical notes
-
-- All color changes happen in `src/styles.css` token blocks (`:root` and `.dark`) — no component-level color hex.
-- Typography base styles added under `@layer base` so existing `<h1>`/`<h2>` tags pick them up automatically; per-page overrides only where a hero needs a bump.
-- Spacing changes are Tailwind class edits on existing JSX — no structural changes.
-- Zero changes to: routes, server functions, Supabase schema, auth, form rendering logic, analytics page behavior.
+- No component files are edited. Existing classes (`bg-brand`, `bg-primary`, `bg-secondary`, `text-ink`, `bg-surface`, `border-ink/5`, etc.) automatically pick up the new colors.
+- Typography scale, spacing, radius, animations untouched.
+- No functionality, routes, or business logic changed.
 
 ## Verification
 
-- Visit `/`, `/dashboard`, a form edit page, and the responses/analytics page; confirm headings have stronger hierarchy, primary buttons are violet, secondary buttons are neutral, and spacing feels even at the 8/16 rhythm.
+After save, check `/`, `/dashboard`, `/forms/new`, and a form edit page to confirm:
+- Primary CTAs render in professional blue
+- "Cancel" / secondary buttons render in light gray with dark text
+- Page backgrounds are light gray, body text is dark gray
+- Focus rings on inputs match the new blue
