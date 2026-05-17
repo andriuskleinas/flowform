@@ -1,26 +1,35 @@
-## What feels off today
+## Replace dashboard "Back home" link with a profile dropdown
 
-- The closing CTA uses `pt-24` only, then relies on the inner `p-12 md:p-20` for bottom space — so the dark block's vertical rhythm doesn't match the other sections, which all use a symmetric `py-24 md:py-32`.
-- The inner content sits in a `max-w-7xl` wrapper but the actual text column is `max-w-2xl`, so the two glow circles are pinned to the far top corners of a very wide invisible box and feel disconnected from the headline.
-- The footer is a single centered `© Flowform` line with `py-10` — it reads as an afterthought against a full-width dark slab, with no brand mark, no visual weight, and no relationship to the nav at the top.
+In `src/routes/dashboard.tsx`, the header currently renders a "Back home" link next to "Sign out". Since the user is already inside the app, that link is redundant. Replace it with a user profile dropdown that consolidates account actions into one menu.
 
-## Plan
+### Header changes (`src/routes/dashboard.tsx`)
 
-1. **Closing CTA section** (`src/routes/index.tsx`, lines 515–544)
-   - Match the page's section rhythm: `bg-ink px-6 py-24 md:px-8 md:py-32` (symmetric padding, no inner card padding doubling up).
-   - Drop the `p-12 md:p-20` inner padding. Use `relative mx-auto max-w-3xl text-center text-white` so the glow circles, headline, subcopy, CTA, and "Free forever" caption form one tight, centered column — same feel as the hero.
-   - Re-center the two `bg-brand/25 blur-[120px]` glows behind the headline (one slightly left, one slightly right) instead of pinned to far corners of an empty 7xl box, so they actually halo the CTA.
-   - Tighten type scale to mirror the hero/features rhythm (`text-4xl md:text-6xl` headline, `text-lg md:text-xl` subcopy).
+Remove:
+- The `<Link to="/">… Back home</Link>` element
+- The standalone "Sign out" `<button>` (moves into the dropdown)
+- The now-unused `ArrowLeft` and `LogOut` imports (keep `LogOut` if used inside the dropdown)
 
-2. **Footer** (lines 547–551)
-   - Keep `bg-ink` so it remains visually continuous with the CTA.
-   - Add a thin `border-t border-white/5` divider so the footer reads as its own band without breaking the dark color.
-   - Restructure into a `max-w-7xl` row mirroring the top nav: left side shows the Flowform logo mark + wordmark (same lockup as the header, white tint), right side shows `© {year} Flowform`. Stack vertically on mobile.
-   - Keep Privacy/Terms removed per the prior decision.
+Add a profile dropdown on the right of the nav:
+- Trigger: circular avatar button showing the user's initials (derived from `profile.display_name` or `email`), with `bg-brand/10 text-brand`, size 9, ring on hover/focus for accessibility. `aria-label="Open account menu"`.
+- Use the existing shadcn `DropdownMenu` primitives (`src/components/ui/dropdown-menu.tsx`) — already in the project.
+- Menu content (aligned end, width ~64):
+  - Header block (non-interactive): bold `display_name` (or "Account" fallback) + muted `email` underneath
+  - `DropdownMenuSeparator`
+  - `DropdownMenuItem` → "Home" (navigates to `/`) with `Home` icon — keeps the marketing site reachable without it living in the primary nav
+  - `DropdownMenuItem` → "New form" (navigates to `/forms/new`) with `Plus` icon — quick action from anywhere
+  - `DropdownMenuSeparator`
+  - `DropdownMenuItem` → "Sign out", destructive styling (`text-destructive focus:text-destructive`), `LogOut` icon, calls existing `handleSignOut`
 
-3. No changes to colors, tokens, copy wording, or any other section.
+### Why this is valuable
 
-## Technical notes
+- Removes a confusing in-app "Back home" affordance
+- Surfaces identity (initials + email) so users know which account they're in
+- Keeps "Home" reachable for users who do want to visit the landing page, but demotes it from primary nav
+- Adds a fast "New form" shortcut available from any dashboard scroll position
+- Sign out remains one click away, just grouped with account context
 
-- All edits stay inside `src/routes/index.tsx`. Reuse the existing logo lockup markup from the header (`<span className="flex size-8 ... bg-brand">`), swapping the wordmark color to `text-white` for the footer.
-- No new components, no new dependencies, no token changes in `src/styles.css`.
+### Technical notes
+
+- Initials helper: take first letters of `display_name` words (max 2), fallback to first 2 chars of email local-part, uppercase.
+- `profile` query already exists in `DashboardAuthed`; reuse it. While loading, render initials from email so the avatar never flashes empty.
+- No new dependencies. No route, schema, or data changes. Edit is scoped to the header `<nav>` inside `DashboardPage` / `DashboardAuthed` in `src/routes/dashboard.tsx`.
