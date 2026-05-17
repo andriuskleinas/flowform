@@ -434,7 +434,7 @@ const featureAccentStyles: Record<
     iconBg: "bg-brand/10",
     iconText: "text-brand",
     glow: "bg-brand/20",
-    shadow: "hover:shadow-[0_24px_60px_-20px_hsl(var(--brand)/0.35)]",
+    shadow: "hover:shadow-[0_24px_60px_-20px_color-mix(in_oklch,var(--brand)_35%,transparent)]",
     bar: "bg-brand/40",
   },
   gold: {
