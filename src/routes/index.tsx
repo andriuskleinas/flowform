@@ -513,39 +513,43 @@ function Index() {
         </section>
 
         {/* Closing CTA */}
-        <section className="bg-ink px-6 pt-24 md:px-8 md:pt-32">
-          <div className="relative mx-auto max-w-7xl overflow-hidden p-12 text-center text-white md:p-20">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-24 -left-16 size-72 rounded-full bg-brand/25 blur-[120px]"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-brand/25 blur-[120px]"
-            />
-            <div className="relative mx-auto max-w-2xl">
-              <h2 className="text-3xl font-extrabold tracking-tight text-balance md:text-5xl">
-                Ask sharper. Learn faster.
-              </h2>
-              <p className="mx-auto mt-6 max-w-xl text-base text-white/60 md:text-xl">
-                Ship your first Flowform in minutes — and never send a flat
-                survey again.
-              </p>
-              <div className="mt-10 flex justify-center">
-                <PrimaryCTA size="lg" variant="light">
-                  Start for free
-                </PrimaryCTA>
-              </div>
-              <p className="mt-8 text-xs font-medium uppercase tracking-[0.2em] text-white/90">
-                Free forever · No card required
-              </p>
+        <section className="relative overflow-hidden bg-ink px-6 py-24 md:px-8 md:py-32">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-1/2 size-[420px] -translate-x-[60%] -translate-y-1/2 rounded-full bg-brand/25 blur-[120px]"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-1/2 size-[420px] -translate-x-[40%] -translate-y-1/2 rounded-full bg-brand/25 blur-[120px]"
+          />
+          <div className="relative mx-auto max-w-3xl text-center text-white">
+            <h2 className="text-4xl font-extrabold tracking-tight text-balance md:text-6xl">
+              Ask sharper. Learn faster.
+            </h2>
+            <p className="mx-auto mt-6 max-w-xl text-lg text-white/60 md:text-xl">
+              Ship your first Flowform in minutes — and never send a flat
+              survey again.
+            </p>
+            <div className="mt-10 flex justify-center">
+              <PrimaryCTA size="lg" variant="light">
+                Start for free
+              </PrimaryCTA>
             </div>
+            <p className="mt-8 text-xs font-medium uppercase tracking-[0.2em] text-white/90">
+              Free forever · No card required
+            </p>
           </div>
         </section>
       </main>
 
-      <footer className="bg-ink px-6 py-10 md:px-8">
-        <div className="mx-auto flex max-w-7xl items-center justify-center text-sm text-white/40">
+      <footer className="border-t border-white/5 bg-ink px-6 py-10 md:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-white/40 sm:flex-row">
+          <a href="/" className="flex items-center gap-2">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
+              <span className="size-3 rounded-sm bg-white" />
+            </span>
+            <span className="text-xl font-bold tracking-tight text-white">Flowform</span>
+          </a>
           <span>&copy; {new Date().getFullYear()} Flowform</span>
         </div>
       </footer>
