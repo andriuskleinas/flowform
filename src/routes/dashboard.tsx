@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { BarChart3, FileText, Home, LogOut, Pencil, Plus, Share2 } from "lucide-react";
+import { BarChart3, FileText, LogOut, Pencil, Plus, Share2, User } from "lucide-react";
 
 import {
   DropdownMenu,
