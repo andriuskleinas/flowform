@@ -69,32 +69,33 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --brand: oklch(0.55 0.22 295);
   --brand-foreground: oklch(0.985 0 0);
   --gold: oklch(0.82 0.16 90);
   --gold-foreground: oklch(0.2 0.04 90);
   --surface: oklch(0.985 0.002 90);
-  --ink: oklch(0.18 0.03 260);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --ink: oklch(0.16 0.03 260);
+  --background: oklch(0.992 0.002 90);
+  --foreground: oklch(0.16 0.03 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: oklch(0.16 0.03 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.16 0.03 260);
+  /* Primary = brand (CTA). Secondary = neutral slate. */
+  --primary: oklch(0.55 0.22 295);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.96 0.005 260);
+  --secondary-foreground: oklch(0.18 0.03 260);
+  --muted: oklch(0.965 0.004 260);
+  --muted-foreground: oklch(0.5 0.02 260);
+  --accent: oklch(0.95 0.02 295);
+  --accent-foreground: oklch(0.3 0.12 295);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
+  --border: oklch(0.92 0.008 260);
+  --input: oklch(0.92 0.008 260);
+  --ring: oklch(0.55 0.22 295);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -158,7 +159,36 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
+
+  /* Type scale — stronger hierarchy with consistent rhythm.
+     Page-level Tailwind classes still override these defaults. */
+  h1 {
+    font-size: 2.25rem;        /* 36px */
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+  }
+  h2 {
+    font-size: 1.5rem;         /* 24px */
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  h3 {
+    font-size: 1.125rem;       /* 18px */
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  @media (min-width: 768px) {
+    h1 { font-size: 3rem; }    /* 48px */
+    h2 { font-size: 1.875rem; }/* 30px */
+    h3 { font-size: 1.25rem; } /* 20px */
+  }
+  p { line-height: 1.65; }
 }
 
 @keyframes float {
