@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { BarChart3, FileText, Home, LogOut, Pencil, Plus, Share2 } from "lucide-react";
+import { BarChart3, FileText, LogOut, Pencil, Plus, Share2, User } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -50,7 +50,17 @@ function timeAgo(iso: string) {
   return `${d}d ago`;
 }
 
-function getInitials(displayName: string | null | undefined, email: string) {
+function getInitials(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+  displayName: string | null | undefined,
+  email: string,
+) {
+  const first = firstName?.trim();
+  const last = lastName?.trim();
+  if (first || last) {
+    return `${first?.[0] ?? ""}${last?.[0] ?? ""}`.toUpperCase() || "?";
+  }
   const name = displayName?.trim();
   if (name) {
     const parts = name.split(/\s+/).slice(0, 2);
@@ -142,7 +152,7 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("display_name")
+        .select("display_name, first_name, last_name")
         .eq("id", userId)
         .maybeSingle();
       if (error) throw error;
@@ -150,7 +160,11 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
     },
   });
 
-  const greetingName = profile?.display_name?.trim() || email;
+  const fullName = [profile?.first_name, profile?.last_name]
+    .map((p) => p?.trim())
+    .filter(Boolean)
+    .join(" ");
+  const greetingName = fullName || profile?.display_name?.trim() || email;
 
   const handleSignOut = async () => {
     signingOutRef.current = true;
@@ -174,23 +188,19 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
               aria-label="Open account menu"
               className="flex size-9 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand outline-none transition-all hover:bg-brand/15 focus-visible:ring-2 focus-visible:ring-brand/40"
             >
-              {getInitials(profile?.display_name, email)}
+              {getInitials(profile?.first_name, profile?.last_name, profile?.display_name, email)}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               <div className="px-2 py-2">
                 <p className="truncate text-sm font-semibold text-ink">
-                  {profile?.display_name?.trim() || "Account"}
+                  {fullName || profile?.display_name?.trim() || "Account"}
                 </p>
                 <p className="truncate text-xs text-ink/60">{email}</p>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate({ to: "/" })}>
-                <Home className="size-4" />
-                Home
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate({ to: "/forms/new" })}>
-                <Plus className="size-4" />
-                New form
+              <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
+                <User className="size-4" />
+                Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
