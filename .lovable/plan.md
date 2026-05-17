@@ -1,21 +1,30 @@
-## Spacing Adjustments — Three Polish Edits
+## Goal
 
-### 1. Input field internal padding → 16px
-Update the base `Input` and `Textarea` UI components so all form fields receive consistent 16px horizontal and vertical padding.
+Tint the three company logos in the testimonials carousel (Northwind, Lumen, Axiom) so they visually match the primary brand blue (#0066FF), without touching the source PNG files.
 
-- `src/components/ui/input.tsx`: change `px-3 py-1` → `px-4 py-4`
-- `src/components/ui/textarea.tsx`: change `px-3 py-2` → `px-4 py-4`
+## Change
 
-### 2. Card padding → 16px
-The app uses custom card-like sections (not the shadcn Card primitive). Standardise their padding to `p-4` so every card has exactly 16px on all sides.
+In `src/routes/index.tsx`, inside `TestimonialsCarousel`, add a CSS filter to the `<img>` tag at lines 317–324 that recolors any opaque pixels to the brand blue:
 
-- `src/routes/dashboard.tsx`: form list items (`p-5 md:p-6` → `p-4`)
-- `src/routes/forms.new.tsx`: main sections (`p-6 md:p-8` → `p-4 md:p-4`) and question items (`p-4 md:p-5` → `p-4 md:p-4`)
-- `src/routes/forms.$formId.edit.tsx`: header card (`p-6 md:p-8` → `p-4 md:p-4`) and question cards (`p-4 md:p-5` → `p-4 md:p-4`)
+```tsx
+<img
+  src={t.logo}
+  alt={`${t.company} logo`}
+  width={32}
+  height={32}
+  loading="lazy"
+  className="size-8 object-contain"
+  style={{
+    filter:
+      "brightness(0) saturate(100%) invert(28%) sepia(98%) saturate(3500%) hue-rotate(217deg) brightness(101%) contrast(106%)",
+  }}
+/>
+```
 
-### 3. Section spacing → 24px; title/description gap → 12px
-- **Dashboard**: reduce `mt-10` between the page header and the forms list to `mt-6` (24px).
-- **New form page**: reduce `space-y-5` inside "Form details" to `space-y-3` (12px) between title and description fields.
-- **Edit form page**: reduce `space-y-4` inside the header card to `space-y-3` (12px) between title and description inputs.
+The `brightness(0)` collapses each logo to a solid silhouette, then the chained `invert/sepia/saturate/hue-rotate` filters retint it to #0066FF. Works on any PNG with a transparent background regardless of its original color.
 
-No functionality changes — only padding and margin values.
+## Out of scope
+
+- No changes to functionality, layout, spacing, or other components.
+- No edits to the source logo assets.
+- No design token changes — `--brand` already equals #0066FF.
