@@ -653,19 +653,8 @@ function Index() {
           </div>
         </section>
 
-        {/* Easing band into dark CTA */}
-        <div aria-hidden className="h-8 bg-gradient-to-b from-surface to-ink" />
-
         {/* Closing CTA */}
         <section className="relative overflow-hidden bg-ink px-6 py-24 md:px-8 md:py-32">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 left-1/2 size-[420px] -translate-x-[60%] -translate-y-1/2 rounded-full bg-brand/25 blur-[120px]"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 left-1/2 size-[420px] -translate-x-[40%] -translate-y-1/2 rounded-full bg-brand/25 blur-[120px]"
-          />
           <div className="relative mx-auto max-w-3xl text-center text-white">
             <h2 className="text-4xl font-extrabold tracking-tight text-balance md:text-6xl">
               Ask sharper. Learn faster.
