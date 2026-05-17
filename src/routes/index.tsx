@@ -314,15 +314,6 @@ function TestimonialsCarousel() {
           >
             <article className="flex h-full flex-col rounded-2xl border border-ink/5 bg-white p-8 shadow-sm">
               <div className="flex items-center gap-3 pb-5">
-                <img
-                  src={t.logo}
-                  alt={`${t.company} logo`}
-                  width={32}
-                  height={32}
-                  loading="lazy"
-                  className="size-8 object-contain mix-blend-multiply"
-                  style={{ filter: "hue-rotate(-35deg) saturate(1.6) brightness(0.95)" }}
-                />
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/50">
                   {t.company}
                 </span>
