@@ -495,7 +495,7 @@ function Index() {
       <main>
         {/* Hero */}
         <section
-          className="relative overflow-hidden px-6 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32"
+          className="relative overflow-hidden bg-gradient-to-b from-surface via-surface to-white px-6 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32"
           onPointerMove={(e) => {
             const el = e.currentTarget;
             const r = el.getBoundingClientRect();
@@ -565,7 +565,7 @@ function Index() {
         {/* Features */}
         <section
           id="features"
-          className="relative overflow-hidden border-y border-ink/5 bg-white px-6 py-24 md:px-8 md:py-32"
+          className="relative overflow-hidden bg-gradient-to-b from-white via-white to-surface px-6 py-24 md:px-8 md:py-32"
         >
           <div
             aria-hidden
@@ -652,6 +652,9 @@ function Index() {
             </div>
           </div>
         </section>
+
+        {/* Easing band into dark CTA */}
+        <div aria-hidden className="h-24 bg-gradient-to-b from-surface to-ink" />
 
         {/* Closing CTA */}
         <section className="relative overflow-hidden bg-ink px-6 py-24 md:px-8 md:py-32">
