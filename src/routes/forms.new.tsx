@@ -165,9 +165,9 @@ function NewFormAuthed({ userId }: { userId: string }) {
           }}
         >
           {/* Form details */}
-          <section className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm md:p-8">
+          <section className="rounded-2xl border border-ink/5 bg-white p-4 shadow-sm">
             <h2 className="text-lg font-bold tracking-tight">Form details</h2>
-            <div className="mt-5 space-y-5">
+            <div className="mt-5 space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="form-title">Questionnaire title</Label>
                 <Input
@@ -205,7 +205,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
           </section>
 
           {/* Questions */}
-          <section className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm md:p-8">
+          <section className="rounded-2xl border border-ink/5 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-lg font-bold tracking-tight">Questions</h2>
               <span className="inline-flex items-center rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink/70">
@@ -217,7 +217,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
               {questions.map((q, i) => (
                 <li
                   key={q.key}
-                  className="rounded-xl border border-ink/10 bg-surface/40 p-4 md:p-5"
+                  className="rounded-xl border border-ink/10 bg-surface/40 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <span className="mt-2 text-xs font-semibold uppercase tracking-wide text-ink/50">

@@ -1,41 +1,21 @@
+## Spacing Adjustments — Three Polish Edits
 
-# Color System Update
+### 1. Input field internal padding → 16px
+Update the base `Input` and `Textarea` UI components so all form fields receive consistent 16px horizontal and vertical padding.
 
-Retune the color tokens in `src/styles.css` to use a professional blue and neutral grays. No component code changes — all updates flow through CSS custom properties.
+- `src/components/ui/input.tsx`: change `px-3 py-1` → `px-4 py-4`
+- `src/components/ui/textarea.tsx`: change `px-3 py-2` → `px-4 py-4`
 
-## Changes to `src/styles.css` (`:root` block)
+### 2. Card padding → 16px
+The app uses custom card-like sections (not the shadcn Card primitive). Standardise their padding to `p-4` so every card has exactly 16px on all sides.
 
-| Token | New value | Used for |
-|---|---|---|
-| `--brand` | `oklch(0.58 0.21 256)` (≈ #0066FF) | Primary buttons (Create Form, Save, Submit, CTAs) |
-| `--brand-foreground` | `oklch(0.99 0 0)` (white) | Text on primary buttons |
-| `--primary` | same blue as `--brand` | shadcn `Button` default variant |
-| `--primary-foreground` | white | Text on primary |
-| `--secondary` | `oklch(0.94 0.003 260)` (light gray) | Secondary buttons (Cancel, back actions) |
-| `--secondary-foreground` | `oklch(0.25 0.01 260)` (dark gray) | Text on secondary |
-| `--muted` | `oklch(0.96 0.003 260)` (lighter gray) | Subtle fills, input bg |
-| `--muted-foreground` | `oklch(0.45 0.01 260)` (mid gray) | Secondary text |
-| `--background` | `oklch(0.985 0.002 260)` (light gray) | Page background |
-| `--surface` | same as background | Section surface |
-| `--ink` | `oklch(0.22 0.01 260)` (dark gray) | All body text |
-| `--foreground` | matches `--ink` | Default text color |
-| `--border` | `oklch(0.91 0.005 260)` | Hairlines, dividers |
-| `--ring` | matches `--brand` | Focus ring |
-| `--accent` | `oklch(0.95 0.04 256)` (pale blue tint) | Hover/highlight tint |
-| `--accent-foreground` | blue (`--brand`) | Text on accent |
+- `src/routes/dashboard.tsx`: form list items (`p-5 md:p-6` → `p-4`)
+- `src/routes/forms.new.tsx`: main sections (`p-6 md:p-8` → `p-4 md:p-4`) and question items (`p-4 md:p-5` → `p-4 md:p-4`)
+- `src/routes/forms.$formId.edit.tsx`: header card (`p-6 md:p-8` → `p-4 md:p-4`) and question cards (`p-4 md:p-5` → `p-4 md:p-4`)
 
-Dark mode (`.dark` block) is left untouched — these changes only affect the default light theme the app actually ships with.
+### 3. Section spacing → 24px; title/description gap → 12px
+- **Dashboard**: reduce `mt-10` between the page header and the forms list to `mt-6` (24px).
+- **New form page**: reduce `space-y-5` inside "Form details" to `space-y-3` (12px) between title and description fields.
+- **Edit form page**: reduce `space-y-4` inside the header card to `space-y-3` (12px) between title and description inputs.
 
-## What stays the same
-
-- No component files are edited. Existing classes (`bg-brand`, `bg-primary`, `bg-secondary`, `text-ink`, `bg-surface`, `border-ink/5`, etc.) automatically pick up the new colors.
-- Typography scale, spacing, radius, animations untouched.
-- No functionality, routes, or business logic changed.
-
-## Verification
-
-After save, check `/`, `/dashboard`, `/forms/new`, and a form edit page to confirm:
-- Primary CTAs render in professional blue
-- "Cancel" / secondary buttons render in light gray with dark text
-- Page backgrounds are light gray, body text is dark gray
-- Focus rings on inputs match the new blue
+No functionality changes — only padding and margin values.

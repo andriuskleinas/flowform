@@ -429,9 +429,9 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         </div>
       </div>
 
-      <header className="mt-6 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm md:p-8">
+      <header className="mt-6 rounded-2xl border border-ink/5 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex-1 min-w-0 space-y-4">
+          <div className="flex-1 min-w-0 space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="form-title-edit" className="text-xs">Title</Label>
               <DebouncedInput
