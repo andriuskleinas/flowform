@@ -314,18 +314,20 @@ function TestimonialsCarousel() {
           >
             <article className="flex h-full flex-col rounded-2xl border border-ink/5 bg-white p-8 shadow-sm">
               <div className="flex items-center gap-3 pb-5">
-                <img
-                  src={t.logo}
-                  alt={`${t.company} logo`}
-                  width={32}
-                  height={32}
-                  loading="lazy"
-                  className="size-8 object-contain"
-                  style={{
-                    filter:
-                      "brightness(0) saturate(100%) invert(28%) sepia(98%) saturate(3500%) hue-rotate(217deg) brightness(101%) contrast(106%)",
-                  }}
-                />
+                <span className="flex size-10 items-center justify-center rounded-lg bg-white p-1.5 ring-1 ring-ink/10">
+                  <img
+                    src={t.logo}
+                    alt={`${t.company} logo`}
+                    width={28}
+                    height={28}
+                    loading="lazy"
+                    className="size-7 object-contain"
+                    style={{
+                      filter:
+                        "brightness(0) saturate(100%) invert(28%) sepia(98%) saturate(3500%) hue-rotate(217deg) brightness(101%) contrast(106%)",
+                    }}
+                  />
+                </span>
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/50">
                   {t.company}
                 </span>
