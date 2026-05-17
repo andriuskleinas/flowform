@@ -564,9 +564,6 @@ function Index() {
           />
           <div className="relative mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
-              <span className="inline-flex items-center rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-                Testimonials
-              </span>
               <h2 className="mt-5 text-3xl font-extrabold tracking-tight text-balance md:text-5xl">
                 Loved by teams who ask better questions.
               </h2>
