@@ -392,7 +392,14 @@ function TestimonialsCarousel() {
   );
 }
 
-const features = [
+type FeatureAccent = "brand" | "gold";
+
+const features: Array<{
+  icon: typeof GitBranch;
+  title: string;
+  body: string;
+  accent?: FeatureAccent;
+}> = [
   {
     icon: GitBranch,
     title: "Logic that adapts.",
@@ -402,6 +409,7 @@ const features = [
     icon: Palette,
     title: "Design that owns the room.",
     body: "Pixel-perfect themes, your typography, your palette. A form that looks like it belongs on your homepage.",
+    accent: "gold",
   },
   {
     icon: BarChart3,
@@ -409,6 +417,35 @@ const features = [
     body: "Drop-off heatmaps, completion velocity, and live response streams — the signal behind every answer.",
   },
 ];
+
+const featureAccentStyles: Record<
+  FeatureAccent,
+  {
+    border: string;
+    iconBg: string;
+    iconText: string;
+    glow: string;
+    shadow: string;
+    bar: string;
+  }
+> = {
+  brand: {
+    border: "border-brand/10",
+    iconBg: "bg-brand/10",
+    iconText: "text-brand",
+    glow: "bg-brand/20",
+    shadow: "hover:shadow-[0_24px_60px_-20px_hsl(var(--brand)/0.35)]",
+    bar: "bg-brand/40",
+  },
+  gold: {
+    border: "border-gold/20",
+    iconBg: "bg-gold/10",
+    iconText: "text-gold",
+    glow: "bg-gold/25",
+    shadow: "hover:shadow-[0_24px_60px_-20px_hsl(var(--gold)/0.35)]",
+    bar: "bg-gold/50",
+  },
+};
 
 function Index() {
   const { session } = useAuth();
