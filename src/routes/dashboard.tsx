@@ -188,23 +188,19 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
               aria-label="Open account menu"
               className="flex size-9 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand outline-none transition-all hover:bg-brand/15 focus-visible:ring-2 focus-visible:ring-brand/40"
             >
-              {getInitials(profile?.display_name, email)}
+              {getInitials(profile?.first_name, profile?.last_name, profile?.display_name, email)}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               <div className="px-2 py-2">
                 <p className="truncate text-sm font-semibold text-ink">
-                  {profile?.display_name?.trim() || "Account"}
+                  {fullName || profile?.display_name?.trim() || "Account"}
                 </p>
                 <p className="truncate text-xs text-ink/60">{email}</p>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate({ to: "/" })}>
-                <Home className="size-4" />
-                Home
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate({ to: "/forms/new" })}>
-                <Plus className="size-4" />
-                New form
+              <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
+                <User className="size-4" />
+                Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
