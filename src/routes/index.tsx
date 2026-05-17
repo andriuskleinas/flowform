@@ -654,7 +654,7 @@ function Index() {
         </section>
 
         {/* Easing band into dark CTA */}
-        <div aria-hidden className="h-24 bg-gradient-to-b from-surface to-ink" />
+        <div aria-hidden className="h-8 bg-gradient-to-b from-surface to-ink" />
 
         {/* Closing CTA */}
         <section className="relative overflow-hidden bg-ink px-6 py-24 md:px-8 md:py-32">
