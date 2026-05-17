@@ -525,13 +525,6 @@ function Index() {
           </div>
         </section>
 
-        {/* Social proof */}
-        <section className="px-6 pb-24 md:px-8 md:pb-32">
-          <div className="mx-auto max-w-7xl">
-            <TestimonialsCarousel />
-          </div>
-        </section>
-
         {/* Features */}
         <section id="features" className="border-y border-ink/5 bg-white px-6 py-24 md:px-8 md:py-32">
           <div className="mx-auto max-w-7xl">
@@ -556,6 +549,36 @@ function Index() {
                 </li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        {/* Testimonials */}
+        <section className="relative overflow-hidden bg-gradient-to-b from-surface via-white to-surface px-6 py-24 md:px-8 md:py-32">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-24 -left-24 size-[420px] rounded-full bg-brand/15 blur-[120px]"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-24 -right-24 size-[420px] rounded-full bg-gold/20 blur-[120px]"
+          />
+          <div className="relative mx-auto max-w-7xl">
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="inline-flex items-center rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+                Testimonials
+              </span>
+              <h2 className="mt-5 text-3xl font-extrabold tracking-tight text-balance md:text-5xl">
+                Loved by teams who ask better questions.
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-base text-ink/60 md:text-lg">
+                Real words from teams who replaced clunky surveys with
+                conversations their customers actually finish.
+              </p>
+            </div>
+
+            <div className="mt-16">
+              <TestimonialsCarousel />
+            </div>
           </div>
         </section>
 
