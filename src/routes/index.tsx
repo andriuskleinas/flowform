@@ -283,6 +283,16 @@ const testimonials = [
   },
 ];
 
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 function TestimonialsCarousel() {
   const [api, setApi] = useState<CarouselApi>();
   const [selected, setSelected] = useState(0);
@@ -304,37 +314,68 @@ function TestimonialsCarousel() {
   return (
     <Carousel
       setApi={setApi}
-      opts={{ loop: true, align: "start" }}
+      opts={{ loop: true, align: "center" }}
       className="mx-auto w-full max-w-6xl"
     >
       <CarouselContent className="-ml-6">
-        {testimonials.map((t) => (
-          <CarouselItem
-            key={t.name}
-            className="pl-6 md:basis-1/2 lg:basis-1/3"
-          >
-            <article className="flex h-full flex-col rounded-2xl border border-ink/5 bg-white p-8 shadow-sm">
-              <div className="flex items-center gap-3 pb-5">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/50">
-                  {t.company}
-                </span>
-              </div>
-              <div className="border-t border-ink/5" />
-              <p className="mt-6 min-h-[7rem] text-lg leading-relaxed text-ink/80 md:min-h-[8rem]">
-                &ldquo;{t.quote}&rdquo;
-              </p>
-              <div className="mt-8 text-sm">
-                <div className="font-semibold text-ink">{t.name}</div>
-                <div className="text-ink/50">{t.role}</div>
-              </div>
-            </article>
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-      <CarouselPrevious className="hidden md:-left-12 md:flex" />
-      <CarouselNext className="hidden md:-right-12 md:flex" />
+        {testimonials.map((t, i) => {
+          const isActive = i === selected;
+          return (
+            <CarouselItem
+              key={t.name}
+              className="pl-6 md:basis-1/2 lg:basis-1/3"
+            >
+              <article
+                className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border bg-white p-10 transition-all duration-300 hover:-translate-y-1 ${
+                  isActive
+                    ? "border-brand/20 shadow-2xl shadow-brand/10 ring-1 ring-brand/20"
+                    : "border-ink/5 shadow-xl shadow-ink/5 hover:shadow-2xl hover:shadow-brand/10"
+                }`}
+              >
+                {/* Watermark quote glyph */}
+                <Quote
+                  aria-hidden
+                  className="pointer-events-none absolute -top-2 -left-2 size-28 rotate-180 text-brand/10 transition-colors duration-300 group-hover:text-brand/15"
+                  strokeWidth={1}
+                />
 
-      <div className="mt-8 flex justify-center gap-2">
+                {/* Stars */}
+                <div className="relative flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, s) => (
+                    <Star
+                      key={s}
+                      className="size-4 fill-gold text-gold"
+                      strokeWidth={0}
+                    />
+                  ))}
+                </div>
+
+                {/* Quote */}
+                <p className="relative mt-6 flex-1 text-xl font-medium leading-snug tracking-tight text-ink md:text-2xl">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+
+                {/* Footer */}
+                <div className="relative mt-10 flex items-center gap-4 border-t border-ink/5 pt-6">
+                  <div className="grid size-12 shrink-0 place-items-center rounded-full bg-brand/10 text-sm font-bold text-brand">
+                    {getInitials(t.name)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate font-bold text-ink">{t.name}</div>
+                    <div className="truncate text-sm text-ink/50">
+                      {t.role} · {t.company}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </CarouselItem>
+          );
+        })}
+      </CarouselContent>
+      <CarouselPrevious className="hidden border-ink/5 bg-white text-ink shadow-md hover:bg-brand hover:text-brand-foreground md:-left-14 md:flex" />
+      <CarouselNext className="hidden border-ink/5 bg-white text-ink shadow-md hover:bg-brand hover:text-brand-foreground md:-right-14 md:flex" />
+
+      <div className="mt-10 flex justify-center gap-2">
         {Array.from({ length: count }).map((_, i) => (
           <button
             key={i}
