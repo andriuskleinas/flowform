@@ -513,7 +513,7 @@ function Index() {
         </section>
 
         {/* Closing CTA */}
-        <section className="px-6 py-24 md:px-8 md:py-32">
+        <section className="bg-ink px-6 pt-24 md:px-8 md:pt-32">
           <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[32px] bg-ink p-12 text-center text-white ring-1 ring-white/10 md:rounded-[40px] md:p-20">
             <div
               aria-hidden
@@ -536,27 +536,17 @@ function Index() {
                   Start for free
                 </PrimaryCTA>
               </div>
-              <div className="mt-10 border-t border-white/10 pt-6">
-                <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium uppercase tracking-[0.2em] text-white/40">
-                  <li>Free forever · No card required</li>
-                  <li aria-hidden className="text-white/20">·</li>
-                  <li>SOC 2 ready</li>
-                  <li aria-hidden className="text-white/20">·</li>
-                  <li>GDPR compliant</li>
-                </ul>
-              </div>
+              <p className="mt-8 text-xs font-medium uppercase tracking-[0.2em] text-white/90">
+                Free forever · No card required
+              </p>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-ink/5 px-6 py-10 md:px-8">
-        <div className="mx-auto flex max-w-7xl items-center justify-between text-sm text-ink/40">
+      <footer className="bg-ink px-6 py-10 md:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-center text-sm text-white/40">
           <span>&copy; {new Date().getFullYear()} Flowform</span>
-          <div className="flex gap-6">
-            <a href="/" className="hover:text-ink">Privacy</a>
-            <a href="/" className="hover:text-ink">Terms</a>
-          </div>
         </div>
       </footer>
     </div>
