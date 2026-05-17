@@ -495,7 +495,7 @@ function Index() {
       <main>
         {/* Hero */}
         <section
-          className="relative overflow-hidden px-6 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32"
+          className="relative overflow-hidden bg-gradient-to-b from-surface via-surface to-white px-6 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32"
           onPointerMove={(e) => {
             const el = e.currentTarget;
             const r = el.getBoundingClientRect();
