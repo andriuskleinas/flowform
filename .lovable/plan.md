@@ -1,26 +1,36 @@
-## Goal
-When a logged-in user visits `/`, replace the "Get started" CTA with a profile avatar (initials) dropdown so they can see they're signed in. Unauthenticated users see the current nav unchanged.
+# Reorder + Redesign Testimonials
 
-## Changes
+## 1. Reorder sections in `src/routes/index.tsx`
+Current order: Hero → Testimonials → Features → Closing CTA.
+New order: Hero → Features → **Testimonials** → Closing CTA.
 
-**`src/routes/index.tsx` — nav section only (lines ~384-407)**
+Move the `<section>` containing `<TestimonialsCarousel />` so it renders directly after the `#features` section and before the dark "Ask sharper. Learn faster." CTA. No content change to other sections.
 
-- Already reads `session` via `useAuth()`. Extend to also fetch profile (first_name, last_name, display_name) when session exists, mirroring the dashboard pattern.
-- Keep "Features" link always visible.
-- When logged out (current behavior):
-  - Show "Log in" link + "Get started" PrimaryCTA → `/signup`.
-- When logged in:
-  - Show "Dashboard" link (already there).
-  - Replace "Get started" with an avatar button showing initials (computed from first_name/last_name → display_name → email, same `getInitials` helper as dashboard).
-  - Clicking opens a `DropdownMenu` with: identity header (name + email), "Profile" → `/profile`, "Dashboard" → `/dashboard`, separator, "Sign out" (destructive, calls `supabase.auth.signOut()` then navigates to `/`).
+## 2. Add a proper section header
+Match the page's existing eyebrow + headline + subhead pattern (same typography scale used by the Features section):
 
-## Implementation notes
+- Eyebrow chip: `Testimonials` — uppercase, tracked, `text-brand`, small pill with `bg-brand/10`
+- H2: `Loved by teams who ask better questions.` — `text-3xl md:text-5xl font-extrabold tracking-tight`
+- Subhead: short single sentence in `text-ink/60`
 
-- Reuse shadcn `DropdownMenu`, `Avatar`, `AvatarFallback` already used in `dashboard.tsx`.
-- Extract the avatar dropdown into a small local component `UserMenu` inside `index.tsx` (or a shared `src/components/UserMenu.tsx` if cleaner) to avoid duplicating dashboard logic.
-- Profile fetch uses `supabase.from('profiles').select('first_name,last_name,display_name').eq('id', session.user.id).maybeSingle()` inside a `useEffect` gated on `session`.
-- No DB/schema changes. No changes to logged-out experience.
+## 3. Redesign the testimonial cards (impress factor)
+Keep `TestimonialsCarousel` logic (embla, autoplay, dots, prev/next) but upgrade the visual treatment:
 
-## Out of scope
-- Mobile menu redesign beyond swapping the CTA.
-- Adding a notification bell or other dashboard chrome to the marketing page.
+- **Section background**: soft brand-tinted gradient band (`bg-gradient-to-b from-surface via-white to-surface`) with two large blurred brand/gold orbs as ambient backdrop (same vocabulary as hero aurora) so the section reads as a hero-grade moment, not a filler strip.
+- **Card style**:
+  - Larger, taller cards with generous padding (`p-10`), `rounded-3xl`, subtle border + layered shadow (`shadow-xl shadow-brand/5`)
+  - Oversized opening quote glyph (`"`) in `text-brand/15`, absolutely positioned top-left as a watermark
+  - Quote text bumped to `text-xl md:text-2xl leading-snug font-medium text-ink` (the star of the card, not muted)
+  - 5-star row in `text-gold` above the quote
+  - Footer row: circular avatar with initials on a `bg-brand/10 text-brand` chip + name (bold) + role · company (muted) on one line
+  - Active/center card gets a soft scale + ring (`ring-1 ring-brand/20`) so the carousel has a clear focal slide
+- **Hover**: card lifts (`-translate-y-1`), shadow deepens, quote glyph fades in slightly — all `transition-all duration-300`
+- **Controls**: keep prev/next arrows but restyle to match brand (circular, `bg-white shadow-md hover:bg-brand hover:text-brand-foreground`); keep the existing dot indicator row
+
+## 4. Tokens & consistency
+All colors via existing tokens (`brand`, `brand-foreground`, `gold`, `ink`, `surface`) — no raw hex. Reuse the typography scale already used by Features so the section feels native to the page.
+
+## Files touched
+- `src/routes/index.tsx` (reorder section, restyle `TestimonialsCarousel` + section wrapper)
+
+No data, no routing, no backend changes.
