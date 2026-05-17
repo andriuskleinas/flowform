@@ -321,6 +321,10 @@ function TestimonialsCarousel() {
                   height={32}
                   loading="lazy"
                   className="size-8 object-contain"
+                  style={{
+                    filter:
+                      "brightness(0) saturate(100%) invert(28%) sepia(98%) saturate(3500%) hue-rotate(217deg) brightness(101%) contrast(106%)",
+                  }}
                 />
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/50">
                   {t.company}
