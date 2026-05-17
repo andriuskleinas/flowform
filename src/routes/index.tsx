@@ -3,6 +3,7 @@ import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/hooks/use-auth";
+import { UserMenu } from "@/components/user-menu";
 import logoNorthwind from "@/assets/logo-northwind.png";
 import logoLumen from "@/assets/logo-lumen.png";
 import logoAxiom from "@/assets/logo-axiom.png";
@@ -389,21 +390,26 @@ function Index() {
               Features
             </a>
             {session ? (
-              <Link
-                to="/dashboard"
-                className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
-              >
-                Dashboard
-              </Link>
+              <>
+                <Link
+                  to="/dashboard"
+                  className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
+                >
+                  Dashboard
+                </Link>
+                <UserMenu userId={session.user.id} email={session.user.email ?? ""} />
+              </>
             ) : (
-              <Link
-                to="/login"
-                className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
-              >
-                Log in
-              </Link>
+              <>
+                <Link
+                  to="/login"
+                  className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
+                >
+                  Log in
+                </Link>
+                <PrimaryCTA>Get started</PrimaryCTA>
+              </>
             )}
-            <PrimaryCTA>Get started</PrimaryCTA>
           </div>
         </nav>
       </header>
