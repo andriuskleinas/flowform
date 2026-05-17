@@ -160,23 +160,39 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
             </span>
             <span className="text-xl font-bold tracking-tight">Flowform</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 transition-colors hover:text-ink"
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="Open account menu"
+              className="flex size-9 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand outline-none transition-all hover:bg-brand/15 focus-visible:ring-2 focus-visible:ring-brand/40"
             >
-              <ArrowLeft className="size-4" />
-              Back home
-            </Link>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 transition-colors hover:text-ink"
-            >
-              <LogOut className="size-4" />
-              Sign out
-            </button>
-          </div>
+              {getInitials(profile?.display_name, email)}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <div className="px-2 py-2">
+                <p className="truncate text-sm font-semibold text-ink">
+                  {profile?.display_name?.trim() || "Account"}
+                </p>
+                <p className="truncate text-xs text-ink/60">{email}</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate({ to: "/" })}>
+                <Home className="size-4" />
+                Home
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate({ to: "/forms/new" })}>
+                <Plus className="size-4" />
+                New form
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="text-destructive focus:text-destructive"
+              >
+                <LogOut className="size-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
       </header>
 
