@@ -159,7 +159,36 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
+
+  /* Type scale — stronger hierarchy with consistent rhythm.
+     Page-level Tailwind classes still override these defaults. */
+  h1 {
+    font-size: 2.25rem;        /* 36px */
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+  }
+  h2 {
+    font-size: 1.5rem;         /* 24px */
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  h3 {
+    font-size: 1.125rem;       /* 18px */
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  @media (min-width: 768px) {
+    h1 { font-size: 3rem; }    /* 48px */
+    h2 { font-size: 1.875rem; }/* 30px */
+    h3 { font-size: 1.25rem; } /* 20px */
+  }
+  p { line-height: 1.65; }
 }
 
 @keyframes float {
