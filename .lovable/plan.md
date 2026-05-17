@@ -1,26 +1,40 @@
 ## Goal
-Remove the hard edges between home sections so backgrounds blend continuously from hero → features → testimonials → final CTA.
+Rebrand the app's color system to:
+- **Primary** (Create Form, Save, main CTAs): purple `#9151B8`
+- **Secondary** (Cancel, secondary actions): pink `#FF57B0`
+- **Text**: golden yellow `#EEB72B`
+- **Backgrounds**: light gray
 
-## Current state
-- Wrapper: `bg-surface` (light blue tint)
-- Hero: transparent (inherits surface)
-- Features: `bg-white` + `border-y border-ink/5` — creates a visible hard line
-- Testimonials: `bg-gradient-to-b from-surface via-white to-surface`
-- Dark CTA: `bg-ink` (intentional hard contrast, keep as-is)
+## Approach — token-only change in `src/styles.css`
 
-## Changes — `src/routes/index.tsx` only
+All buttons and text already consume semantic tokens (`--primary`, `--secondary`, `--foreground`, `--background`, `--brand`, `--ink`, `--surface`). I'll change the token values; no component code needs to change.
 
-1. **Hero section** — add `bg-gradient-to-b from-surface via-surface to-white` so it eases into Features' white.
+### Token updates (light theme, `:root`)
+- `--primary: oklch(...)` → purple `#9151B8`
+- `--primary-foreground: oklch(0.99 0 0)` → white (kept, for legibility on purple)
+- `--secondary` → pink `#FF57B0`
+- `--secondary-foreground` → white
+- `--brand` → purple `#9151B8` (so the home page accents match)
+- `--ring`, `--accent-foreground` → purple
+- `--accent` → soft purple tint
+- `--background` / `--surface` → light gray (`oklch(0.96 0 0)`)
+- `--foreground` / `--ink` / `--card-foreground` / `--popover-foreground` / `--secondary-foreground` (where used as text) → golden yellow `#EEB72B`
+- `--muted-foreground` → softer golden yellow
+- `--border`, `--input` → mid gray
+- `--gold` → keep (already yellow, used as accent on home page)
 
-2. **Features section** — remove `border-y border-ink/5`. Keep `bg-white` but make it `bg-gradient-to-b from-white via-white to-surface` so the bottom fades into Testimonials' surface tone.
+### Dark theme (`.dark`)
+- Mirror the same hues with adjusted lightness so purple/pink/yellow stay legible on dark.
 
-3. **Testimonials section** — change gradient to `bg-gradient-to-b from-surface via-white to-surface` → keep, but ensure the top starts at `surface` (matches Features' new bottom) and bottom ends at `surface` (clean handoff to the dark CTA).
+## ⚠️ Readability warning
+Golden yellow text (`#EEB72B`) on light gray backgrounds fails WCAG contrast (~1.6:1; AA needs 4.5:1). It will be hard to read body copy, form labels, table data, etc. Two options:
 
-4. **Dark CTA boundary** — add a thin transition: wrap the dark CTA section in nothing extra, but on the Testimonials section let the bottom go to a slightly darker surface so the jump to `bg-ink` feels intentional rather than abrupt. Implementation: add a 1px-tall gradient divider (`h-24 bg-gradient-to-b from-surface to-ink`) just before the CTA section as a visual easing band.
+**A. Do exactly as requested** — apply yellow text on light gray everywhere. Accept the low contrast.
 
-5. Remove any leftover `border-y` / `border-t` between affected sections.
+**B. Compromise (recommended)** — use golden yellow only for headings/accents/links and keep a dark ink color for body text on light gray, so the app stays readable while still feeling "golden."
+
+I'll proceed with **option A** as requested unless you tell me otherwise after seeing it — easy to switch to B with one token tweak.
 
 ## Out of scope
-- No copy or layout changes inside any section.
-- No token/color changes in `styles.css`.
-- Dark CTA section keeps its dark theme intent.
+- No component refactors, no new files.
+- Home page hero gradient and bento accents will automatically shift to the new palette via tokens.
