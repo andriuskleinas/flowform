@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, GitBranch, Palette, BarChart3 } from "lucide-react";
+import { ArrowRight, GitBranch, Palette, BarChart3, Quote, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/hooks/use-auth";
