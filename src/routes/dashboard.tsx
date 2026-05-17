@@ -50,7 +50,17 @@ function timeAgo(iso: string) {
   return `${d}d ago`;
 }
 
-function getInitials(displayName: string | null | undefined, email: string) {
+function getInitials(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+  displayName: string | null | undefined,
+  email: string,
+) {
+  const first = firstName?.trim();
+  const last = lastName?.trim();
+  if (first || last) {
+    return `${first?.[0] ?? ""}${last?.[0] ?? ""}`.toUpperCase() || "?";
+  }
   const name = displayName?.trim();
   if (name) {
     const parts = name.split(/\s+/).slice(0, 2);
