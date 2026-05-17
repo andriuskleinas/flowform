@@ -392,7 +392,14 @@ function TestimonialsCarousel() {
   );
 }
 
-const features = [
+type FeatureAccent = "brand" | "gold";
+
+const features: Array<{
+  icon: typeof GitBranch;
+  title: string;
+  body: string;
+  accent?: FeatureAccent;
+}> = [
   {
     icon: GitBranch,
     title: "Logic that adapts.",
@@ -402,6 +409,7 @@ const features = [
     icon: Palette,
     title: "Design that owns the room.",
     body: "Pixel-perfect themes, your typography, your palette. A form that looks like it belongs on your homepage.",
+    accent: "gold",
   },
   {
     icon: BarChart3,
@@ -409,6 +417,35 @@ const features = [
     body: "Drop-off heatmaps, completion velocity, and live response streams — the signal behind every answer.",
   },
 ];
+
+const featureAccentStyles: Record<
+  FeatureAccent,
+  {
+    border: string;
+    iconBg: string;
+    iconText: string;
+    glow: string;
+    shadow: string;
+    bar: string;
+  }
+> = {
+  brand: {
+    border: "border-brand/10",
+    iconBg: "bg-brand/10",
+    iconText: "text-brand",
+    glow: "bg-brand/20",
+    shadow: "hover:shadow-[0_24px_60px_-20px_color-mix(in_oklch,var(--brand)_35%,transparent)]",
+    bar: "bg-brand/40",
+  },
+  gold: {
+    border: "border-gold/20",
+    iconBg: "bg-gold/10",
+    iconText: "text-gold",
+    glow: "bg-gold/25",
+    shadow: "hover:shadow-[0_24px_60px_-20px_color-mix(in_oklch,var(--gold)_35%,transparent)]",
+    bar: "bg-gold/50",
+  },
+};
 
 function Index() {
   const { session } = useAuth();
@@ -526,31 +563,68 @@ function Index() {
         </section>
 
         {/* Features */}
-        <section id="features" className="border-y border-ink/5 bg-white px-6 py-24 md:px-8 md:py-32">
-          <div className="mx-auto max-w-7xl">
+        <section
+          id="features"
+          className="relative overflow-hidden border-y border-ink/5 bg-white px-6 py-24 md:px-8 md:py-32"
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-32 -left-32 size-[480px] rounded-full bg-brand/5 blur-[120px]"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-32 -right-32 size-[460px] rounded-full bg-gold/5 blur-[120px]"
+          />
+
+          <div className="relative mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-extrabold tracking-tight text-balance md:text-5xl">
-                Built for the questions that matter.
+              <h2 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-5xl">
+                Built for the questions
+                <br />
+                <span className="text-brand">that matter.</span>
               </h2>
-              <p className="mx-auto mt-4 max-w-xl text-base text-ink/60 md:text-lg">
+              <p className="mx-auto mt-5 max-w-xl text-base text-ink/60 md:text-lg">
                 A precise toolkit for teams who treat every interaction
                 like a first impression.
               </p>
             </div>
 
-            <ul className="mt-16 grid gap-12 md:grid-cols-3">
-              {features.map(({ icon: Icon, title, body }) => (
-                <li key={title} className="space-y-5">
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-brand/10">
-                    <Icon className="size-5 text-brand" strokeWidth={2} />
-                  </div>
-                  <h3 className="text-xl font-bold tracking-tight md:text-2xl">{title}</h3>
-                  <p className="leading-relaxed text-ink/60">{body}</p>
-                </li>
-              ))}
+            <ul className="mt-16 grid gap-6 md:grid-cols-3 lg:gap-8">
+              {features.map(({ icon: Icon, title, body, accent = "brand" }) => {
+                const a = featureAccentStyles[accent];
+                return (
+                  <li
+                    key={title}
+                    className={`group relative rounded-[28px] border ${a.border} bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition-all duration-500 hover:-translate-y-1 ${a.shadow} lg:p-10`}
+                  >
+                    <div className="relative mb-8">
+                      <div
+                        aria-hidden
+                        className={`pointer-events-none absolute -top-6 -left-6 size-28 rounded-full ${a.glow} opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100`}
+                      />
+                      <div
+                        className={`relative flex size-14 items-center justify-center rounded-2xl ${a.iconBg} ${a.iconText} transition-transform duration-500 group-hover:scale-110`}
+                      >
+                        <Icon className="size-6" strokeWidth={2} />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-bold tracking-tight text-ink">
+                      {title}
+                    </h3>
+                    <p className="mt-4 text-base leading-relaxed text-ink/60 md:text-lg">
+                      {body}
+                    </p>
+                    <div
+                      aria-hidden
+                      className={`mt-8 h-px w-12 ${a.bar} opacity-0 transition-opacity duration-500 group-hover:opacity-100`}
+                    />
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </section>
+
 
         {/* Testimonials */}
         <section className="relative overflow-hidden bg-gradient-to-b from-surface via-white to-surface px-6 py-24 md:px-8 md:py-32">
