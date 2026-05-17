@@ -1,7 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { ArrowLeft, BarChart3, FileText, LogOut, Pencil, Plus, Share2 } from "lucide-react";
+import { BarChart3, FileText, Home, LogOut, Pencil, Plus, Share2 } from "lucide-react";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
