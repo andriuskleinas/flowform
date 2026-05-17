@@ -565,7 +565,7 @@ function Index() {
         {/* Features */}
         <section
           id="features"
-          className="relative overflow-hidden border-y border-ink/5 bg-white px-6 py-24 md:px-8 md:py-32"
+          className="relative overflow-hidden bg-gradient-to-b from-white via-white to-surface px-6 py-24 md:px-8 md:py-32"
         >
           <div
             aria-hidden
