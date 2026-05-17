@@ -148,14 +148,6 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };
-function getInitials(displayName: string | null | undefined, email: string) {
-  const name = displayName?.trim();
-  if (name) {
-    const parts = name.split(/\s+/).slice(0, 2);
-    return parts.map((p) => p[0]).join("").toUpperCase();
-  }
-  return (email.split("@")[0] || "?").slice(0, 2).toUpperCase();
-}
 
 
   return (
