@@ -152,7 +152,7 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("display_name")
+        .select("display_name, first_name, last_name")
         .eq("id", userId)
         .maybeSingle();
       if (error) throw error;
@@ -160,7 +160,11 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
     },
   });
 
-  const greetingName = profile?.display_name?.trim() || email;
+  const fullName = [profile?.first_name, profile?.last_name]
+    .map((p) => p?.trim())
+    .filter(Boolean)
+    .join(" ");
+  const greetingName = fullName || profile?.display_name?.trim() || email;
 
   const handleSignOut = async () => {
     signingOutRef.current = true;
