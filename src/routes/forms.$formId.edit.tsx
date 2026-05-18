@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowDown,
@@ -50,7 +50,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { QuestionRender, type Question, type QuestionType } from "@/components/question-render";
+import { type QuestionOptions, getRatingMax, getMcOptions } from "@/lib/form-utils";
 import { StatusPill } from "@/components/status-pill";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { Shell } from "@/components/shell";
 
 export const Route = createFileRoute("/forms/$formId/edit")({
   component: EditFormPage,
@@ -76,7 +79,7 @@ function EditFormPage() {
   return <EditFormAuthed formId={formId} userId={user.id} />;
 }
 
-const TYPE_DEFAULTS: Record<QuestionType, { label: string; options: any }> = {
+const TYPE_DEFAULTS: Record<QuestionType, { label: string; options: QuestionOptions }> = {
   text: { label: "Untitled question", options: null },
   multiple_choice: { label: "Untitled question", options: ["Option 1", "Option 2"] },
   rating: { label: "Untitled question", options: { max: 5 } },
@@ -141,6 +144,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   // Initialize / re-sync draft from server when (a) we don't have one yet,
   // or (b) the server snapshot changed AND the user has no unsaved changes.
@@ -177,7 +181,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
   const visibleDraftQuestions = draftQuestions.filter((q) => !q.isDeleted);
 
-  const isDirty = (() => {
+  const isDirty = useMemo(() => {
     if (!snapshot) return false;
     if (draftForm.title !== snapshot.form.title) return true;
     if ((draftForm.description ?? null) !== (snapshot.form.description ?? null)) return true;
@@ -192,14 +196,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       if (JSON.stringify(v.options ?? null) !== JSON.stringify(s.options ?? null)) return true;
     }
     return false;
-  })();
+  }, [draftForm, visibleDraftQuestions, snapshot]);
 
   // Block in-app navigation away while there are unsaved changes.
-  useBlocker({
-    shouldBlockFn: () => {
-      if (!isDirty) return false;
-      return !window.confirm("You have unsaved changes. Leave without saving?");
-    },
+  const blocker = useBlocker({
+    shouldBlockFn: () => isDirty,
     enableBeforeUnload: isDirty,
   });
 
@@ -207,7 +208,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
   const setDraftLabel = (id: string, label: string) =>
     setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, label } : q)));
-  const setDraftOptions = (id: string, options: any) =>
+  const setDraftOptions = (id: string, options: QuestionOptions) =>
     setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, options } : q)));
   const setDraftType = (id: string, type: QuestionType) =>
     setDraftQuestions((qs) =>
@@ -245,7 +246,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     mutationFn: async () => {
       if (!snapshot) throw new Error("Not loaded yet");
 
-      // 1. Form patch
+      // 1. Prepare form patch (runs concurrently with question ops below).
       const trimmedTitle = draftForm.title.trim() || "Untitled form";
       const trimmedDesc =
         draftForm.description && draftForm.description.trim() !== ""
@@ -255,42 +256,32 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       if (trimmedTitle !== snapshot.form.title) formPatch.title = trimmedTitle;
       if ((trimmedDesc ?? null) !== (snapshot.form.description ?? null))
         formPatch.description = trimmedDesc;
-      if (Object.keys(formPatch).length > 0) {
-        const { error } = await supabase.from("forms").update(formPatch).eq("id", formId);
-        if (error) throw error;
-      }
+      const formPatchOp =
+        Object.keys(formPatch).length > 0
+          ? supabase.from("forms").update(formPatch).eq("id", formId).then(({ error }) => {
+              if (error) throw error;
+            })
+          : Promise.resolve();
 
-      // 2. Deletes (existing rows the user removed)
-      const toDeleteIds = draftQuestions
-        .filter((q) => !q.isNew && q.isDeleted)
-        .map((q) => q.id);
-      if (toDeleteIds.length > 0) {
-        const { error } = await supabase.from("questions").delete().in("id", toDeleteIds);
-        if (error) throw error;
-      }
-
-      // 3. Inserts and updates, with positions matching the visible draft order.
+      // 2. Build inserts + updates (positions = visible draft order).
       const visible = draftQuestions.filter((q) => !q.isDeleted);
+      const newRows: {
+        form_id: string;
+        type: QuestionType;
+        label: string;
+        options: QuestionOptions;
+        position: number;
+      }[] = [];
+      const updateOps: Promise<void>[] = [];
+
       for (let i = 0; i < visible.length; i++) {
         const q = visible[i];
         const label = q.label.trim() || "Untitled question";
         if (q.isNew) {
-          const { error } = await supabase.from("questions").insert({
-            form_id: formId,
-            type: q.type,
-            label,
-            options: q.options ?? null,
-            position: i,
-          });
-          if (error) throw error;
+          newRows.push({ form_id: formId, type: q.type, label, options: q.options ?? null, position: i });
         } else {
           const orig = snapshot.questions.find((o) => o.id === q.id);
-          const patch: {
-            position: number;
-            type?: QuestionType;
-            label?: string;
-            options?: any;
-          } = { position: i };
+          const patch: { position: number; type?: QuestionType; label?: string; options?: QuestionOptions } = { position: i };
           if (orig) {
             if (orig.type !== q.type) patch.type = q.type;
             if (orig.label !== label) patch.label = label;
@@ -301,9 +292,29 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             patch.label = label;
             patch.options = q.options ?? null;
           }
-          const { error } = await supabase.from("questions").update(patch).eq("id", q.id);
-          if (error) throw error;
+          updateOps.push(
+            supabase.from("questions").update(patch).eq("id", q.id).then(({ error }) => {
+              if (error) throw error;
+            }),
+          );
         }
+      }
+
+      // Run form patch, batch insert, and all updates concurrently.
+      const insertOp =
+        newRows.length > 0
+          ? supabase.from("questions").insert(newRows).then(({ error }) => {
+              if (error) throw error;
+            })
+          : Promise.resolve();
+
+      await Promise.all([formPatchOp, insertOp, ...updateOps]);
+
+      // Deletes run last: if anything above fails, we haven't lost data yet.
+      const toDeleteIds = draftQuestions.filter((q) => !q.isNew && q.isDeleted).map((q) => q.id);
+      if (toDeleteIds.length > 0) {
+        const { error } = await supabase.from("questions").delete().in("id", toDeleteIds);
+        if (error) throw error;
       }
     },
     onSuccess: async () => {
@@ -321,11 +332,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const discard = () => {
+  const doDiscard = () => {
     if (!snapshot) return;
-    if (!window.confirm("Discard all unsaved changes?")) return;
     setDraftForm(snapshot.form);
     setDraftQuestions(snapshot.questions.map((q) => ({ ...q })));
+    setDiscardOpen(false);
   };
 
   /* -------------------------------- Publish -------------------------------- */
@@ -411,7 +422,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           {isDirty && (
             <button
               type="button"
-              onClick={discard}
+              onClick={() => setDiscardOpen(true)}
               disabled={saveAll.isPending}
               className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
             >
@@ -568,7 +579,9 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               </DialogDescription>
             ) : null}
             <p className="mt-2 text-xs uppercase tracking-wide text-ink/40">
-              Preview — this is what respondents will see
+              {isDirty
+                ? "Preview — includes unsaved changes"
+                : "Preview — this is what respondents will see"}
             </p>
           </DialogHeader>
 
@@ -607,6 +620,28 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={discardOpen}
+        title="Discard changes?"
+        description="All unsaved changes will be lost. This cannot be undone."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        destructive
+        onConfirm={doDiscard}
+        onCancel={() => setDiscardOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={blocker.status === "blocked"}
+        title="Leave without saving?"
+        description="You have unsaved changes that will be lost if you leave."
+        confirmLabel="Leave"
+        cancelLabel="Stay"
+        destructive
+        onConfirm={() => blocker.proceed()}
+        onCancel={() => blocker.reset()}
+      />
     </Shell>
   );
 }
@@ -628,7 +663,7 @@ function SortableQuestionCard({
   index: number;
   total: number;
   onChangeLabel: (label: string) => void;
-  onChangeOptions: (options: any) => void;
+  onChangeOptions: (options: QuestionOptions) => void;
   onChangeType: (type: QuestionType) => void;
   onDelete: () => void;
   onMoveUp: () => void;
@@ -707,7 +742,7 @@ function SortableQuestionCard({
       {question.type === "multiple_choice" && (
         <div className="mt-4">
           <OptionsEditor
-            options={Array.isArray(question.options) ? question.options : []}
+            options={getMcOptions(question.options)}
             onChange={onChangeOptions}
           />
         </div>
@@ -717,7 +752,7 @@ function SortableQuestionCard({
         <div className="mt-4 space-y-1.5">
           <Label className="text-xs">Max rating</Label>
           <select
-            value={question.options?.max ?? 5}
+            value={getRatingMax(question.options)}
             onChange={(e) => onChangeOptions({ max: Number(e.target.value) })}
             className="rounded-md border border-input bg-transparent px-3 py-1.5 text-sm"
           >
@@ -843,30 +878,21 @@ function OptionsEditor({
   options: string[];
   onChange: (next: string[]) => void;
 }) {
-  const [draft, setDraft] = useState(options);
-  useEffect(() => setDraft(options), [options.join("\u0001")]);
-
-  const commit = (next: string[]) => {
-    setDraft(next);
-    onChange(next);
-  };
-
   return (
     <div className="space-y-2">
       <Label className="text-xs">Options</Label>
-      {draft.map((opt, i) => (
+      {options.map((opt, i) => (
         <div key={i} className="flex items-center gap-2">
           <Input
             value={opt}
             autoComplete="off"
             data-1p-ignore
             data-lpignore="true"
-            onChange={(e) => setDraft(draft.map((o, j) => (j === i ? e.target.value : o)))}
-            onBlur={() => onChange(draft)}
+            onChange={(e) => onChange(options.map((o, j) => (j === i ? e.target.value : o)))}
           />
           <button
             type="button"
-            onClick={() => commit(draft.filter((_, j) => j !== i))}
+            onClick={() => onChange(options.filter((_, j) => j !== i))}
             className="rounded p-2 text-ink/50 hover:bg-ink/5"
             aria-label="Remove option"
           >
@@ -876,7 +902,7 @@ function OptionsEditor({
       ))}
       <button
         type="button"
-        onClick={() => commit([...draft, `Option ${draft.length + 1}`])}
+        onClick={() => onChange([...options, `Option ${options.length + 1}`])}
         className="text-sm font-medium text-brand hover:underline"
       >
         + Add option
@@ -909,14 +935,6 @@ function IconBtn({
     >
       {children}
     </button>
-  );
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-surface text-ink">
-      <main className="mx-auto max-w-6xl px-6 py-10 md:px-8 md:py-14">{children}</main>
-    </div>
   );
 }
 

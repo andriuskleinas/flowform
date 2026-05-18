@@ -13,10 +13,14 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  type TooltipProps,
 } from "recharts";
 
 import { supabase } from "@/integrations/supabase/client";
+import { getRatingMax, isAnswered } from "@/lib/form-utils";
 import { useAuth } from "@/hooks/use-auth";
+import { Shell } from "@/components/shell";
+import { ClientOnly } from "@/components/client-only";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StarRating, type Question } from "@/components/question-render";
@@ -36,6 +40,7 @@ function ResponsesPage() {
   const { formId } = Route.useParams();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [responseLimit, setResponseLimit] = useState(100);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -73,13 +78,14 @@ function ResponsesPage() {
 
   const responsesQ = useQuery({
     enabled: !!user,
-    queryKey: ["responses", formId],
+    queryKey: ["responses", formId, responseLimit],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("responses")
         .select("id, submitted_at, started_at, answers")
         .eq("form_id", formId)
-        .order("submitted_at", { ascending: false });
+        .order("submitted_at", { ascending: false })
+        .limit(responseLimit + 1); // fetch one extra to detect if more exist
       if (error) throw error;
       return (data ?? []) as ResponseRow[];
     },
@@ -87,7 +93,7 @@ function ResponsesPage() {
 
   if (loading || formQ.isLoading) {
     return (
-      <Shell>
+      <Shell width="md">
         <Skeleton className="h-10 w-64" />
       </Shell>
     );
@@ -95,7 +101,7 @@ function ResponsesPage() {
 
   if (!formQ.data || (user && formQ.data.user_id !== user.id)) {
     return (
-      <Shell>
+      <Shell width="md">
         <h1 className="text-2xl font-bold">Form not found</h1>
         <Link to="/dashboard" className="mt-6 inline-block text-brand underline">
           Back to dashboard
@@ -105,10 +111,12 @@ function ResponsesPage() {
   }
 
   const questions = questionsQ.data ?? [];
-  const responses = responsesQ.data ?? [];
+  const rawResponses = responsesQ.data ?? [];
+  const hasMore = rawResponses.length > responseLimit;
+  const responses = hasMore ? rawResponses.slice(0, responseLimit) : rawResponses;
 
   return (
-    <Shell>
+    <Shell width="md">
       <Link
         to="/dashboard"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 hover:text-ink"
@@ -120,7 +128,8 @@ function ResponsesPage() {
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{formQ.data.title}</h1>
           <p className="mt-1 text-ink/60">
-            {responses.length} {responses.length === 1 ? "response" : "responses"}
+            {hasMore ? `${responses.length}+` : responses.length}{" "}
+            {responses.length === 1 && !hasMore ? "response" : "responses"}
           </p>
         </div>
       </header>
@@ -132,18 +141,31 @@ function ResponsesPage() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <Overview questions={questions} responses={responses} />
+          <Overview questions={questions} responses={responses} hasMore={hasMore} />
         </TabsContent>
 
         <TabsContent value="individual" className="mt-6">
-          <IndividualList questions={questions} responses={responses} />
+          <IndividualList
+            questions={questions}
+            responses={responses}
+            hasMore={hasMore}
+            onLoadMore={() => setResponseLimit((l) => l + 100)}
+          />
         </TabsContent>
       </Tabs>
     </Shell>
   );
 }
 
-function Overview({ questions, responses }: { questions: Question[]; responses: ResponseRow[] }) {
+function Overview({
+  questions,
+  responses,
+  hasMore,
+}: {
+  questions: Question[];
+  responses: ResponseRow[];
+  hasMore: boolean;
+}) {
   const stats = useMemo(() => {
     const total = responses.length;
     const now = Date.now();
@@ -190,6 +212,12 @@ function Overview({ questions, responses }: { questions: Question[]; responses: 
         />
         <StatCard label="Completion rate" value={`${stats.completionRate}%`} />
       </div>
+
+      {hasMore && (
+        <p className="text-xs text-ink/50">
+          Stats are based on the most recent {responses.length} responses.
+        </p>
+      )}
 
       <Card title="Responses over time" subtitle="Last 30 days">
         <div className="h-56 w-full">
@@ -241,7 +269,7 @@ function QuestionAnalytics({
 }) {
   const data = useMemo(() => {
     if (question.type === "multiple_choice") {
-      const opts: string[] = Array.isArray(question.options) ? question.options : [];
+      const opts: string[] = Array.isArray(question.options) ? (question.options as string[]) : [];
       const counts = new Map<string, number>(opts.map((o) => [o, 0]));
       for (const r of responses) {
         const v = r.answers?.[question.id];
@@ -251,7 +279,7 @@ function QuestionAnalytics({
       return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
     }
     if (question.type === "rating") {
-      const max = question.options?.max ?? 5;
+      const max = getRatingMax(question.options);
       const counts = new Map<number, number>(
         Array.from({ length: max }, (_, i) => [i + 1, 0]),
       );
@@ -354,9 +382,13 @@ function QuestionAnalytics({
 function IndividualList({
   questions,
   responses,
+  hasMore,
+  onLoadMore,
 }: {
   questions: Question[];
   responses: ResponseRow[];
+  hasMore: boolean;
+  onLoadMore: () => void;
 }) {
   if (responses.length === 0) {
     return (
@@ -394,6 +426,18 @@ function IndividualList({
         );
       })}
     </ul>
+
+    {hasMore && (
+      <div className="mt-6 flex justify-center">
+        <button
+          type="button"
+          onClick={onLoadMore}
+          className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
+        >
+          Load more responses
+        </button>
+      </div>
+    )}
   );
 }
 
@@ -407,7 +451,7 @@ function AnswerView({ question, value }: { question: Question; value: any }) {
     return <span className="italic text-ink/40">No answer</span>;
   }
   if (question.type === "rating") {
-    return <StarRating max={question.options?.max ?? 5} value={Number(value)} disabled size={18} />;
+    return <StarRating max={getRatingMax(question.options)} value={Number(value)} disabled size={18} />;
   }
   if (Array.isArray(value)) {
     return <span>{value.join(", ")}</span>;
@@ -445,7 +489,7 @@ function Card({
   );
 }
 
-function MiniTooltip({ active, payload, label }: any) {
+function MiniTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border border-ink/10 bg-white px-2.5 py-1.5 text-xs shadow-md">
@@ -457,14 +501,6 @@ function MiniTooltip({ active, payload, label }: any) {
   );
 }
 
-function isAnswered(q: Question, v: any) {
-  if (v === undefined || v === null) return false;
-  if (q.type === "text") return typeof v === "string" && v.trim().length > 0;
-  if (q.type === "multiple_choice")
-    return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v.length > 0;
-  if (q.type === "rating") return typeof v === "number" && v > 0;
-  return false;
-}
 
 function buildTrend(responses: ResponseRow[], days: number) {
   const buckets = new Map<string, number>();
@@ -503,17 +539,3 @@ function truncate(s: string, n: number) {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
 
-function ClientOnly({ children, fallback }: { children: React.ReactNode; fallback?: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return <>{fallback ?? null}</>;
-  return <>{children}</>;
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-surface text-ink">
-      <main className="mx-auto max-w-5xl px-6 py-10 md:px-8 md:py-14">{children}</main>
-    </div>
-  );
-}
