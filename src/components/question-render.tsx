@@ -2,15 +2,16 @@ import { Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { type QuestionType, type QuestionOptions, getRatingMax } from "@/lib/form-utils";
 
-export type QuestionType = "text" | "multiple_choice" | "rating";
+export type { QuestionType, QuestionOptions };
 
 export type Question = {
   id: string;
   form_id: string;
   type: QuestionType;
   label: string;
-  options: any;
+  options: QuestionOptions;
   position: number;
 };
 
@@ -79,7 +80,7 @@ export function QuestionRender({ question, value, onChange, disabled }: Props) {
 
       {question.type === "rating" && (
         <StarRating
-          max={question.options?.max ?? 5}
+          max={getRatingMax(question.options)}
           value={typeof value === "number" ? value : 0}
           onChange={(n) => onChange?.(n)}
           disabled={disabled}

@@ -6,8 +6,10 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { isAnswered, validateAnswerLength, MAX_ANSWER_LENGTH } from "@/lib/form-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionRender, type Question } from "@/components/question-render";
+import { Shell } from "@/components/shell";
 
 export const Route = createFileRoute("/forms/$formId/")({
   component: PublicFormPage,
@@ -20,7 +22,11 @@ function PublicFormPage() {
   const { user } = useAuth();
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitted, setSubmitted] = useState(false);
-  const startedAtRef = useRef<string>(new Date().toISOString());
+  // Set on first interaction, not page load, so fill-time reflects actual engagement.
+  const startedAtRef = useRef<string | null>(null);
+  const recordStart = () => {
+    if (!startedAtRef.current) startedAtRef.current = new Date().toISOString();
+  };
 
   const formQ = useQuery({
     queryKey: ["public-form", formId],
@@ -50,6 +56,10 @@ function PublicFormPage() {
 
   const submit = useMutation({
     mutationFn: async () => {
+      for (const [, v] of Object.entries(answers)) {
+        if (!validateAnswerLength(v))
+          throw new Error(`An answer exceeds the ${MAX_ANSWER_LENGTH}-character limit.`);
+      }
       const { error } = await supabase
         .from("responses")
         .insert({ form_id: formId, answers, started_at: startedAtRef.current });
@@ -60,17 +70,13 @@ function PublicFormPage() {
   });
 
   const questions = questionsQ.data ?? [];
-  const allAnswered = questions.every((q) => {
-    const v = answers[q.id];
-    if (q.type === "text") return typeof v === "string" && v.trim().length > 0;
-    if (q.type === "multiple_choice") return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v.length > 0;
-    if (q.type === "rating") return typeof v === "number" && v > 0;
-    return false;
-  });
+  const allAnswered =
+    questions.every((q) => isAnswered(q, answers[q.id])) &&
+    Object.values(answers).every(validateAnswerLength);
 
   if (formQ.isLoading) {
     return (
-      <Shell>
+      <Shell width="sm">
         <Skeleton className="h-10 w-2/3" />
         <Skeleton className="mt-3 h-5 w-1/2" />
       </Shell>
@@ -79,7 +85,7 @@ function PublicFormPage() {
 
   if (!formQ.data) {
     return (
-      <Shell>
+      <Shell width="sm">
         <h1 className="text-3xl font-extrabold tracking-tight">Form not found</h1>
         <p className="mt-3 text-ink/60">This form may have been deleted or the link is incorrect.</p>
         <Link to="/" className="mt-6 inline-block text-brand underline">
@@ -126,7 +132,7 @@ function PublicFormPage() {
 
   if (isDraft && !isOwner) {
     return (
-      <Shell>
+      <Shell width="sm">
         <h1 className="text-3xl font-extrabold tracking-tight">This form isn't published yet</h1>
         <p className="mt-3 text-ink/60">The owner hasn't published this form. Check back later.</p>
         <Link to="/" className="mt-6 inline-block text-brand underline">
@@ -138,7 +144,7 @@ function PublicFormPage() {
 
   if (submitted) {
     return (
-      <Shell>
+      <Shell width="sm">
         {ownerNav}
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
@@ -150,7 +156,7 @@ function PublicFormPage() {
   }
 
   return (
-    <Shell>
+    <Shell width="sm">
       {ownerNav}
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{formQ.data.title}</h1>
@@ -180,7 +186,10 @@ function PublicFormPage() {
             <QuestionRender
               question={q}
               value={answers[q.id]}
-              onChange={(v) => setAnswers((a) => ({ ...a, [q.id]: v }))}
+              onChange={(v) => {
+                recordStart();
+                setAnswers((a) => ({ ...a, [q.id]: v }));
+              }}
             />
           </div>
         ))}
@@ -198,13 +207,5 @@ function PublicFormPage() {
         )}
       </form>
     </Shell>
-  );
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-surface text-ink">
-      <main className="mx-auto max-w-2xl px-6 py-12 md:px-8 md:py-16">{children}</main>
-    </div>
   );
 }

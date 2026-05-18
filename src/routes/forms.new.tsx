@@ -6,19 +6,17 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { type QuestionType, type QuestionOptions } from "@/lib/form-utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type QType = "text" | "multiple_choice" | "rating";
-
 type DraftQuestion = {
   key: string;
-  type: QType;
+  type: QuestionType;
   label: string;
-  options: string[]; // for multiple_choice
-  ratingMax: number; // for rating
+  options: QuestionOptions;
 };
 
 export const Route = createFileRoute("/forms/new")({
@@ -31,13 +29,18 @@ export const Route = createFileRoute("/forms/new")({
   component: NewFormPage,
 });
 
+function defaultOptions(type: QuestionType): QuestionOptions {
+  if (type === "multiple_choice") return ["Option 1", "Option 2"];
+  if (type === "rating") return { max: 5 };
+  return null;
+}
+
 function makeQuestion(): DraftQuestion {
   return {
     key: crypto.randomUUID(),
     type: "text",
     label: "",
-    options: ["Option 1", "Option 2"],
-    ratingMax: 5,
+    options: null,
   };
 }
 
@@ -79,12 +82,11 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
   const createForm = useMutation({
     mutationFn: async () => {
-      // Validate
       if (!title.trim()) throw new Error("Title is required");
       for (const q of questions) {
         if (!q.label.trim()) throw new Error("Every question needs a label");
         if (q.type === "multiple_choice") {
-          const opts = q.options.map((o) => o.trim()).filter(Boolean);
+          const opts = (q.options as string[]).map((o) => o.trim()).filter(Boolean);
           if (opts.length < 2) throw new Error("Multiple-choice questions need at least 2 options");
         }
       }
@@ -107,10 +109,8 @@ function NewFormAuthed({ userId }: { userId: string }) {
         label: q.label.trim(),
         options:
           q.type === "multiple_choice"
-            ? q.options.map((o) => o.trim()).filter(Boolean)
-            : q.type === "rating"
-              ? { max: q.ratingMax }
-              : null,
+            ? (q.options as string[]).map((o) => o.trim()).filter(Boolean)
+            : q.options,
         position: i,
       }));
       const { error: qErr } = await supabase.from("questions").insert(rows);
@@ -214,127 +214,136 @@ function NewFormAuthed({ userId }: { userId: string }) {
             </div>
 
             <ul className="mt-5 space-y-4">
-              {questions.map((q, i) => (
-                <li
-                  key={q.key}
-                  className="rounded-xl border border-ink/10 bg-surface/40 p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="mt-2 text-xs font-semibold uppercase tracking-wide text-ink/50">
-                      Question {i + 1}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeQuestion(q.key)}
-                      disabled={questions.length === 1}
-                      aria-label="Remove question"
-                      className="rounded-lg p-2 text-ink/50 hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-
-                  <div className="mt-2 grid gap-3 md:grid-cols-[1fr_220px]">
-                    <div className="space-y-2">
-                      <Label htmlFor={`q-${q.key}-label`}>Question</Label>
-                      <Input
-                        id={`q-${q.key}-label`}
-                        value={q.label}
-                        onChange={(e) => updateQuestion(q.key, { label: e.target.value })}
-                        placeholder="Type your question…"
-                        maxLength={300}
-                        autoComplete="off"
-                        data-1p-ignore
-                        data-lpignore="true"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`q-${q.key}-type`}>Type</Label>
-                      <select
-                        id={`q-${q.key}-type`}
-                        value={q.type}
-                        onChange={(e) => updateQuestion(q.key, { type: e.target.value as QType })}
-                        className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      >
-                        <option value="text">Short answer</option>
-                        <option value="multiple_choice">Multiple choice</option>
-                        <option value="rating">Rating scale</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {q.type === "multiple_choice" && (
-                    <div className="mt-4 space-y-2">
-                      <Label>Options</Label>
-                      <ul className="space-y-2">
-                        {q.options.map((opt, idx) => (
-                          <li key={idx} className="flex items-center gap-2">
-                            <Input
-                              value={opt}
-                              onChange={(e) => {
-                                const next = [...q.options];
-                                next[idx] = e.target.value;
-                                updateQuestion(q.key, { options: next });
-                              }}
-                              placeholder={`Option ${idx + 1}`}
-                              maxLength={120}
-                              autoComplete="off"
-                              data-1p-ignore
-                              data-lpignore="true"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (q.options.length <= 2) return;
-                                updateQuestion(q.key, {
-                                  options: q.options.filter((_, j) => j !== idx),
-                                });
-                              }}
-                              disabled={q.options.length <= 2}
-                              aria-label="Remove option"
-                              className="rounded-lg p-2 text-ink/50 hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              <X className="size-4" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
+              {questions.map((q, i) => {
+                const mcOpts = Array.isArray(q.options) ? (q.options as string[]) : [];
+                const ratingMax = q.type === "rating" && q.options && !Array.isArray(q.options)
+                  ? (q.options as { max: number }).max
+                  : 5;
+                return (
+                  <li
+                    key={q.key}
+                    className="rounded-xl border border-ink/10 bg-surface/40 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="mt-2 text-xs font-semibold uppercase tracking-wide text-ink/50">
+                        Question {i + 1}
+                      </span>
                       <button
                         type="button"
-                        onClick={() =>
-                          updateQuestion(q.key, {
-                            options: [...q.options, `Option ${q.options.length + 1}`],
-                          })
-                        }
-                        className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/70 transition-colors hover:bg-ink/5"
+                        onClick={() => removeQuestion(q.key)}
+                        disabled={questions.length === 1}
+                        aria-label="Remove question"
+                        className="rounded-lg p-2 text-ink/50 hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        <Plus className="size-3.5" />
-                        Add option
+                        <Trash2 className="size-4" />
                       </button>
                     </div>
-                  )}
 
-                  {q.type === "rating" && (
-                    <div className="mt-4 space-y-2">
-                      <Label htmlFor={`q-${q.key}-max`}>Max stars</Label>
-                      <select
-                        id={`q-${q.key}-max`}
-                        value={q.ratingMax}
-                        onChange={(e) =>
-                          updateQuestion(q.key, { ratingMax: Number(e.target.value) })
-                        }
-                        className="flex h-9 w-32 rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      >
-                        {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="mt-2 grid gap-3 md:grid-cols-[1fr_220px]">
+                      <div className="space-y-2">
+                        <Label htmlFor={`q-${q.key}-label`}>Question</Label>
+                        <Input
+                          id={`q-${q.key}-label`}
+                          value={q.label}
+                          onChange={(e) => updateQuestion(q.key, { label: e.target.value })}
+                          placeholder="Type your question…"
+                          maxLength={300}
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`q-${q.key}-type`}>Type</Label>
+                        <select
+                          id={`q-${q.key}-type`}
+                          value={q.type}
+                          onChange={(e) => {
+                            const next = e.target.value as QuestionType;
+                            updateQuestion(q.key, { type: next, options: defaultOptions(next) });
+                          }}
+                          className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        >
+                          <option value="text">Short answer</option>
+                          <option value="multiple_choice">Multiple choice</option>
+                          <option value="rating">Rating scale</option>
+                        </select>
+                      </div>
                     </div>
-                  )}
-                </li>
-              ))}
+
+                    {q.type === "multiple_choice" && (
+                      <div className="mt-4 space-y-2">
+                        <Label>Options</Label>
+                        <ul className="space-y-2">
+                          {mcOpts.map((opt, idx) => (
+                            <li key={idx} className="flex items-center gap-2">
+                              <Input
+                                value={opt}
+                                onChange={(e) => {
+                                  const next = [...mcOpts];
+                                  next[idx] = e.target.value;
+                                  updateQuestion(q.key, { options: next });
+                                }}
+                                placeholder={`Option ${idx + 1}`}
+                                maxLength={120}
+                                autoComplete="off"
+                                data-1p-ignore
+                                data-lpignore="true"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (mcOpts.length <= 2) return;
+                                  updateQuestion(q.key, {
+                                    options: mcOpts.filter((_, j) => j !== idx),
+                                  });
+                                }}
+                                disabled={mcOpts.length <= 2}
+                                aria-label="Remove option"
+                                className="rounded-lg p-2 text-ink/50 hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <X className="size-4" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateQuestion(q.key, {
+                              options: [...mcOpts, `Option ${mcOpts.length + 1}`],
+                            })
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/70 transition-colors hover:bg-ink/5"
+                        >
+                          <Plus className="size-3.5" />
+                          Add option
+                        </button>
+                      </div>
+                    )}
+
+                    {q.type === "rating" && (
+                      <div className="mt-4 space-y-2">
+                        <Label htmlFor={`q-${q.key}-max`}>Max stars</Label>
+                        <select
+                          id={`q-${q.key}-max`}
+                          value={ratingMax}
+                          onChange={(e) =>
+                            updateQuestion(q.key, { options: { max: Number(e.target.value) } })
+                          }
+                          className="flex h-9 w-32 rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        >
+                          {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
 
             <button

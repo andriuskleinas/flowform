@@ -31,6 +31,9 @@ let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
+// Lazy Proxy: the real client (and env-var validation) is initialized on first
+// property access, not at import time. If env vars are missing, the error will
+// surface at the first supabase.from/auth/... call rather than at module load.
 export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>, {
   get(_, prop, receiver) {
     if (!_supabase) _supabase = createSupabaseClient();

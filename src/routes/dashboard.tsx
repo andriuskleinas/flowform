@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BarChart3, FileText, LogOut, Pencil, Plus, Share2, User } from "lucide-react";
 
 import {
@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusPill } from "@/components/status-pill";
@@ -112,7 +113,7 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
   });
 
   const { data: responseCounts = {} } = useQuery({
-    queryKey: ["response-counts", userId, forms.map((f) => f.id).join(",")],
+    queryKey: ["response-counts", userId, [...forms.map((f) => f.id)].sort().join(",")],
     enabled: forms.length > 0,
     queryFn: async () => {
       const ids = forms.map((f) => f.id);
@@ -130,7 +131,7 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
   });
 
   const { data: questionCounts = {} } = useQuery({
-    queryKey: ["question-counts", userId, forms.map((f) => f.id).join(",")],
+    queryKey: ["question-counts", userId, [...forms.map((f) => f.id)].sort().join(",")],
     enabled: forms.length > 0,
     queryFn: async () => {
       const ids = forms.map((f) => f.id);
@@ -166,10 +167,31 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
     .join(" ");
   const greetingName = fullName || profile?.display_name?.trim() || email;
 
+  const [pendingPublish, setPendingPublish] = useState<string | null>(null);
+
   const handleSignOut = async () => {
     signingOutRef.current = true;
     await supabase.auth.signOut();
+    queryClient.clear();
     navigate({ to: "/" });
+  };
+
+  const doPublishAndCopy = async (formId: string) => {
+    setPendingPublish(null);
+    const url = `${PUBLIC_SITE_ORIGIN}/forms/${formId}`;
+    try {
+      const { error } = await supabase
+        .from("forms")
+        .update({ status: "published" })
+        .eq("id", formId)
+        .eq("user_id", userId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["forms", userId] });
+      await navigator.clipboard.writeText(url);
+      toast.success("Form published and link copied");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not publish form");
+    }
   };
 
 
@@ -282,21 +304,16 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
                 const qCount = questionCounts[f.id] ?? 0;
                 const isPublished = f.status === "published";
                 const copyShareLink = async () => {
+                  if (!isPublished) {
+                    setPendingPublish(f.id);
+                    return;
+                  }
                   const url = `${PUBLIC_SITE_ORIGIN}/forms/${f.id}`;
                   try {
-                    if (!isPublished) {
-                      const { error } = await supabase
-                        .from("forms")
-                        .update({ status: "published" })
-                        .eq("id", f.id)
-                        .eq("user_id", userId);
-                      if (error) throw error;
-                      await queryClient.invalidateQueries({ queryKey: ["forms", userId] });
-                    }
                     await navigator.clipboard.writeText(url);
-                    toast.success(isPublished ? "Link copied" : "Form published and link copied");
-                  } catch (error) {
-                    toast.error(error instanceof Error ? error.message : "Could not copy link");
+                    toast.success("Link copied");
+                  } catch {
+                    toast.error("Could not copy link");
                   }
                 };
                 return (
@@ -363,6 +380,14 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
         </section>
       </main>
 
+      <ConfirmDialog
+        open={pendingPublish !== null}
+        title="Publish this form?"
+        description="This will make the form visible to anyone with the link. You can unpublish it later from the editor."
+        confirmLabel="Publish and copy link"
+        onConfirm={() => pendingPublish && doPublishAndCopy(pendingPublish)}
+        onCancel={() => setPendingPublish(null)}
+      />
     </div>
   );
 }

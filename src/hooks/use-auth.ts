@@ -7,12 +7,9 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // onAuthStateChange fires INITIAL_SESSION on setup, so getSession() is redundant.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      setLoading(false);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
       setLoading(false);
     });
     return () => subscription.unsubscribe();
