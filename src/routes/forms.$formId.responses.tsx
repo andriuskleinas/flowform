@@ -398,6 +398,7 @@ function IndividualList({
     );
   }
   return (
+    <>
     <ul className="space-y-4">
       {responses.map((r) => {
         const dur =
@@ -438,6 +439,7 @@ function IndividualList({
         </button>
       </div>
     )}
+    </>
   );
 }
 
