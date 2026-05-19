@@ -79,7 +79,13 @@ function SignupPage() {
           </button>
           <p className="text-center text-sm text-ink/60">
             Already have an account?{" "}
-            <Link to="/login" className="font-semibold text-brand hover:underline">Log in</Link>
+            <Link
+              to="/login"
+              search={{ redirect: "/dashboard" }}
+              className="font-semibold text-brand hover:underline"
+            >
+              Log in
+            </Link>
           </p>
         </form>
       </main>
