@@ -6,7 +6,12 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { isAnswered, validateAnswerLength, MAX_ANSWER_LENGTH } from "@/lib/form-utils";
+import {
+  isAnswered,
+  validateAnswerLength,
+  MAX_ANSWER_LENGTH,
+  type Answers,
+} from "@/lib/form-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionRender, type Question } from "@/components/question-render";
 import { Shell } from "@/components/shell";
@@ -15,12 +20,18 @@ export const Route = createFileRoute("/forms/$formId/")({
   component: PublicFormPage,
 });
 
-type FormRow = { id: string; title: string; description: string | null; user_id: string; status: "draft" | "published" };
+type FormRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  user_id: string;
+  status: "draft" | "published";
+};
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
   const { user } = useAuth();
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [answers, setAnswers] = useState<Answers>({});
   const [submitted, setSubmitted] = useState(false);
   // Set on first interaction, not page load, so fill-time reflects actual engagement.
   const startedAtRef = useRef<string | null>(null);
@@ -87,7 +98,9 @@ function PublicFormPage() {
     return (
       <Shell width="sm">
         <h1 className="text-3xl font-extrabold tracking-tight">Form not found</h1>
-        <p className="mt-3 text-ink/60">This form may have been deleted or the link is incorrect.</p>
+        <p className="mt-3 text-ink/60">
+          This form may have been deleted or the link is incorrect.
+        </p>
         <Link to="/" className="mt-6 inline-block text-brand underline">
           Go home
         </Link>

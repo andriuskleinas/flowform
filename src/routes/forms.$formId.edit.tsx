@@ -1,16 +1,7 @@
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  ArrowDown,
-  ArrowUp,
-  Eye,
-  GripVertical,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ArrowLeft, ArrowDown, ArrowUp, Eye, GripVertical, Plus, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -50,7 +41,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { QuestionRender, type Question, type QuestionType } from "@/components/question-render";
-import { type QuestionOptions, getRatingMax, getMcOptions } from "@/lib/form-utils";
+import {
+  type QuestionOptions,
+  type Answers,
+  getRatingMax,
+  getMcOptions,
+  questionOptionsEqual,
+} from "@/lib/form-utils";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Shell } from "@/components/shell";
@@ -65,7 +62,8 @@ function EditFormPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login", search: { redirect: `/forms/${formId}/edit` } });
+    if (!loading && !user)
+      navigate({ to: "/login", search: { redirect: `/forms/${formId}/edit` } });
   }, [loading, user, navigate, formId]);
 
   if (loading || !user) {
@@ -143,7 +141,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   });
   const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
+  const [previewAnswers, setPreviewAnswers] = useState<Answers>({});
   const [discardOpen, setDiscardOpen] = useState(false);
 
   // Initialize / re-sync draft from server when (a) we don't have one yet,
@@ -193,15 +191,18 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       if (v.id !== s.id) return true;
       if (v.type !== s.type) return true;
       if (v.label !== s.label) return true;
-      if (JSON.stringify(v.options ?? null) !== JSON.stringify(s.options ?? null)) return true;
+      if (!questionOptionsEqual(v.options ?? null, s.options ?? null)) return true;
     }
     return false;
   }, [draftForm, visibleDraftQuestions, snapshot]);
 
   // Block in-app navigation away while there are unsaved changes.
+  // `withResolver: true` returns { status, proceed, reset } so we can drive
+  // the confirm dialog below; without it the hook returns void.
   const blocker = useBlocker({
     shouldBlockFn: () => isDirty,
     enableBeforeUnload: isDirty,
+    withResolver: true,
   });
 
   /* ----------------------------- Local mutators ---------------------------- */
@@ -213,9 +214,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const setDraftType = (id: string, type: QuestionType) =>
     setDraftQuestions((qs) =>
       qs.map((q) =>
-        q.id === id && q.type !== type
-          ? { ...q, type, options: TYPE_DEFAULTS[type].options }
-          : q,
+        q.id === id && q.type !== type ? { ...q, type, options: TYPE_DEFAULTS[type].options } : q,
       ),
     );
   const addDraftQuestion = (type: QuestionType) =>
@@ -256,11 +255,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       if (trimmedTitle !== snapshot.form.title) formPatch.title = trimmedTitle;
       if ((trimmedDesc ?? null) !== (snapshot.form.description ?? null))
         formPatch.description = trimmedDesc;
-      const formPatchOp =
+      const formPatchOp: Promise<void> =
         Object.keys(formPatch).length > 0
-          ? supabase.from("forms").update(formPatch).eq("id", formId).then(({ error }) => {
+          ? (async () => {
+              const { error } = await supabase.from("forms").update(formPatch).eq("id", formId);
               if (error) throw error;
-            })
+            })()
           : Promise.resolve();
 
       // 2. Build inserts + updates (positions = visible draft order).
@@ -278,14 +278,25 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         const q = visible[i];
         const label = q.label.trim() || "Untitled question";
         if (q.isNew) {
-          newRows.push({ form_id: formId, type: q.type, label, options: q.options ?? null, position: i });
+          newRows.push({
+            form_id: formId,
+            type: q.type,
+            label,
+            options: q.options ?? null,
+            position: i,
+          });
         } else {
           const orig = snapshot.questions.find((o) => o.id === q.id);
-          const patch: { position: number; type?: QuestionType; label?: string; options?: QuestionOptions } = { position: i };
+          const patch: {
+            position: number;
+            type?: QuestionType;
+            label?: string;
+            options?: QuestionOptions;
+          } = { position: i };
           if (orig) {
             if (orig.type !== q.type) patch.type = q.type;
             if (orig.label !== label) patch.label = label;
-            if (JSON.stringify(orig.options ?? null) !== JSON.stringify(q.options ?? null))
+            if (!questionOptionsEqual(orig.options ?? null, q.options ?? null))
               patch.options = q.options ?? null;
           } else {
             patch.type = q.type;
@@ -293,19 +304,21 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             patch.options = q.options ?? null;
           }
           updateOps.push(
-            supabase.from("questions").update(patch).eq("id", q.id).then(({ error }) => {
+            (async () => {
+              const { error } = await supabase.from("questions").update(patch).eq("id", q.id);
               if (error) throw error;
-            }),
+            })(),
           );
         }
       }
 
       // Run form patch, batch insert, and all updates concurrently.
-      const insertOp =
+      const insertOp: Promise<void> =
         newRows.length > 0
-          ? supabase.from("questions").insert(newRows).then(({ error }) => {
+          ? (async () => {
+              const { error } = await supabase.from("questions").insert(newRows);
               if (error) throw error;
-            })
+            })()
           : Promise.resolve();
 
       await Promise.all([formPatchOp, insertOp, ...updateOps]);
@@ -325,6 +338,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         qc.invalidateQueries({ queryKey: ["public-form", formId] }),
         qc.invalidateQueries({ queryKey: ["public-questions", formId] }),
         qc.invalidateQueries({ queryKey: ["forms"] }),
+        // Dashboard now uses an aggregated RPC under a separate query key.
+        qc.invalidateQueries({ queryKey: ["dashboard-forms"] }),
       ]);
       // Force draft to re-sync from fresh server data on the next effect tick.
       setSnapshot(null);
@@ -350,6 +365,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       toast.success(next === "published" ? "Form published" : "Moved back to draft");
       qc.invalidateQueries({ queryKey: ["form", formId] });
       qc.invalidateQueries({ queryKey: ["forms"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
       qc.invalidateQueries({ queryKey: ["public-form", formId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -444,7 +460,9 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex-1 min-w-0 space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="form-title-edit" className="text-xs">Title</Label>
+              <Label htmlFor="form-title-edit" className="text-xs">
+                Title
+              </Label>
               <DebouncedInput
                 value={draftForm.title}
                 onChange={(v) => setDraftForm((f) => ({ ...f, title: v }))}
@@ -486,9 +504,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             <button
               type="button"
               onClick={() => togglePublish.mutate("published")}
-              disabled={
-                togglePublish.isPending || visibleDraftQuestions.length === 0 || isDirty
-              }
+              disabled={togglePublish.isPending || visibleDraftQuestions.length === 0 || isDirty}
               title={
                 isDirty
                   ? "Save your changes first"
@@ -508,10 +524,15 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         <section>
           <h2 className="text-lg font-bold">Questions</h2>
           <p className="mt-1 text-xs text-ink/50">
-            Drag the handle to reorder. Click <span className="font-semibold">Save</span> to keep your changes.
+            Drag the handle to reorder. Click <span className="font-semibold">Save</span> to keep
+            your changes.
           </p>
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
             <SortableContext
               items={visibleDraftQuestions.map((q) => q.id)}
               strategy={verticalListSortingStrategy}
@@ -639,8 +660,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         confirmLabel="Leave"
         cancelLabel="Stay"
         destructive
-        onConfirm={() => blocker.proceed()}
-        onCancel={() => blocker.reset()}
+        onConfirm={() => blocker.proceed?.()}
+        onCancel={() => blocker.reset?.()}
       />
     </Shell>
   );
@@ -741,10 +762,7 @@ function SortableQuestionCard({
 
       {question.type === "multiple_choice" && (
         <div className="mt-4">
-          <OptionsEditor
-            options={getMcOptions(question.options)}
-            onChange={onChangeOptions}
-          />
+          <OptionsEditor options={getMcOptions(question.options)} onChange={onChangeOptions} />
         </div>
       )}
 
@@ -770,11 +788,7 @@ function SortableQuestionCard({
 
 /* ----------------------------- Debounced input ----------------------------- */
 
-function useDebouncedLocal(
-  value: string,
-  onChange: (v: string) => void,
-  delay = 600,
-) {
+function useDebouncedLocal(value: string, onChange: (v: string) => void, delay = 600) {
   const [local, setLocal] = useState(value);
   const lastExternal = useRef(value);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -937,4 +951,3 @@ function IconBtn({
     </button>
   );
 }
-

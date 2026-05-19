@@ -178,7 +178,8 @@ function ProfileAuthed({
         <p className="mt-3 text-base text-ink/60 md:text-lg">Manage your account details.</p>
 
         <p className="mt-2 text-sm text-ink/50">
-          Account created on <span className="font-medium text-ink/70">{formatDate(createdAt)}</span>
+          Account created on{" "}
+          <span className="font-medium text-ink/70">{formatDate(createdAt)}</span>
         </p>
 
         <form

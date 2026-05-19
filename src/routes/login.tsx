@@ -64,14 +64,31 @@ function LoginPage() {
             Create an account
           </Link>
         </p>
-        <form onSubmit={onSubmit} className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
+        <form
+          onSubmit={onSubmit}
+          className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
+        >
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            <Input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+            <Input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
           </div>
           <button
             type="submit"
@@ -81,7 +98,6 @@ function LoginPage() {
             {submitting ? "Logging in…" : "Log in"}
           </button>
         </form>
-
       </main>
     </div>
   );

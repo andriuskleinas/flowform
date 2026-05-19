@@ -2,9 +2,14 @@ import { Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { type QuestionType, type QuestionOptions, getRatingMax } from "@/lib/form-utils";
+import {
+  type QuestionType,
+  type QuestionOptions,
+  type AnswerValue,
+  getRatingMax,
+} from "@/lib/form-utils";
 
-export type { QuestionType, QuestionOptions };
+export type { QuestionType, QuestionOptions, AnswerValue };
 
 export type Question = {
   id: string;
@@ -17,8 +22,8 @@ export type Question = {
 
 type Props = {
   question: Question;
-  value: any;
-  onChange?: (v: any) => void;
+  value: AnswerValue | undefined;
+  onChange?: (v: AnswerValue) => void;
   disabled?: boolean;
 };
 
@@ -33,50 +38,49 @@ export function QuestionRender({ question, value, onChange, disabled }: Props) {
       {question.type === "text" && (
         <Input
           id={id}
-          value={value ?? ""}
+          value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
           placeholder="Your answer"
         />
       )}
 
-      {question.type === "multiple_choice" && (() => {
-        const selected: string[] = Array.isArray(value)
-          ? value
-          : typeof value === "string" && value.length > 0
-            ? [value]
-            : [];
-        const opts = Array.isArray(question.options) ? question.options : [];
-        if (opts.length === 0) {
-          return <p className="text-sm text-ink/40">No options yet</p>;
-        }
-        return (
-          <div className="space-y-2">
-            {opts.map((opt: string, i: number) => {
-              const checked = selected.includes(opt);
-              return (
-                <div key={i} className="flex items-center gap-3">
-                  <Checkbox
-                    id={`${id}-${i}`}
-                    checked={checked}
-                    disabled={disabled}
-                    onCheckedChange={(c) => {
-                      if (!onChange) return;
-                      const next = c
-                        ? [...selected, opt]
-                        : selected.filter((x) => x !== opt);
-                      onChange(next);
-                    }}
-                  />
-                  <Label htmlFor={`${id}-${i}`} className="font-normal">
-                    {opt || <span className="italic text-ink/40">Option {i + 1}</span>}
-                  </Label>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
+      {question.type === "multiple_choice" &&
+        (() => {
+          const selected: string[] = Array.isArray(value)
+            ? value
+            : typeof value === "string" && value.length > 0
+              ? [value]
+              : [];
+          const opts = Array.isArray(question.options) ? question.options : [];
+          if (opts.length === 0) {
+            return <p className="text-sm text-ink/40">No options yet</p>;
+          }
+          return (
+            <div className="space-y-2">
+              {opts.map((opt: string, i: number) => {
+                const checked = selected.includes(opt);
+                return (
+                  <div key={i} className="flex items-center gap-3">
+                    <Checkbox
+                      id={`${id}-${i}`}
+                      checked={checked}
+                      disabled={disabled}
+                      onCheckedChange={(c) => {
+                        if (!onChange) return;
+                        const next = c ? [...selected, opt] : selected.filter((x) => x !== opt);
+                        onChange(next);
+                      }}
+                    />
+                    <Label htmlFor={`${id}-${i}`} className="font-normal">
+                      {opt || <span className="italic text-ink/40">Option {i + 1}</span>}
+                    </Label>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
       {question.type === "rating" && (
         <StarRating
