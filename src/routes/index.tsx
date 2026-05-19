@@ -473,6 +473,7 @@ function Index() {
               <>
                 <Link
                   to="/login"
+                  search={{ redirect: "/dashboard" }}
                   className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
                 >
                   Log in
