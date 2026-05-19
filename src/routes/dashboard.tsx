@@ -69,10 +69,20 @@ function DashboardPage() {
     );
   }
 
-  return <DashboardAuthed userId={user.id} email={user.email ?? ""} signingOutRef={signingOutRef} />;
+  return (
+    <DashboardAuthed userId={user.id} email={user.email ?? ""} signingOutRef={signingOutRef} />
+  );
 }
 
-function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; email: string; signingOutRef: React.MutableRefObject<boolean> }) {
+function DashboardAuthed({
+  userId,
+  email,
+  signingOutRef,
+}: {
+  userId: string;
+  email: string;
+  signingOutRef: React.MutableRefObject<boolean>;
+}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -85,9 +95,7 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
   // auto-generated Database["public"]["Functions"] type. The function is
   // defined in migration 20260519141500 but the generated types haven't
   // been refreshed yet, so we cast at the call site only.
-  const callDashboardRpc = supabase.rpc as (
-    fn: "get_dashboard_forms",
-  ) => PromiseLike<{
+  const callDashboardRpc = supabase.rpc as (fn: "get_dashboard_forms") => PromiseLike<{
     data: DashboardFormRow[] | null;
     error: { message: string } | null;
   }>;
@@ -169,7 +177,6 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
     }
   };
 
-
   return (
     <div className="min-h-screen bg-surface text-ink">
       <header className="border-b border-ink/5">
@@ -185,7 +192,12 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
               aria-label="Open account menu"
               className="flex size-9 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand outline-none transition-all hover:bg-brand/15 focus-visible:ring-2 focus-visible:ring-brand/40"
             >
-              {getInitialsFromProfile(profile?.first_name, profile?.last_name, profile?.display_name, email)}
+              {getInitialsFromProfile(
+                profile?.first_name,
+                profile?.last_name,
+                profile?.display_name,
+                email,
+              )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               <div className="px-2 py-2">
@@ -307,14 +319,19 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
                         </span>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate text-base font-bold tracking-tight md:text-lg">{f.title}</h3>
+                            <h3 className="truncate text-base font-bold tracking-tight md:text-lg">
+                              {f.title}
+                            </h3>
                             <StatusPill status={f.status} />
                           </div>
                           {f.description && (
-                            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">{f.description}</p>
+                            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">
+                              {f.description}
+                            </p>
                           )}
                           <p className="mt-2 text-xs font-medium text-ink/50">
-                            {qCount} {qCount === 1 ? "question" : "questions"} · {rCount} {rCount === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
+                            {qCount} {qCount === 1 ? "question" : "questions"} · {rCount}{" "}
+                            {rCount === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
                           </p>
                         </div>
                       </Link>
@@ -331,7 +348,9 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
                         <button
                           type="button"
                           onClick={copyShareLink}
-                          aria-label={isPublished ? "Copy public link" : "Publish and copy public link"}
+                          aria-label={
+                            isPublished ? "Copy public link" : "Publish and copy public link"
+                          }
                           title={isPublished ? "Copy public link" : "Publish and copy public link"}
                           className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
                         >

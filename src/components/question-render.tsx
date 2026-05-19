@@ -45,43 +45,42 @@ export function QuestionRender({ question, value, onChange, disabled }: Props) {
         />
       )}
 
-      {question.type === "multiple_choice" && (() => {
-        const selected: string[] = Array.isArray(value)
-          ? value
-          : typeof value === "string" && value.length > 0
-            ? [value]
-            : [];
-        const opts = Array.isArray(question.options) ? question.options : [];
-        if (opts.length === 0) {
-          return <p className="text-sm text-ink/40">No options yet</p>;
-        }
-        return (
-          <div className="space-y-2">
-            {opts.map((opt: string, i: number) => {
-              const checked = selected.includes(opt);
-              return (
-                <div key={i} className="flex items-center gap-3">
-                  <Checkbox
-                    id={`${id}-${i}`}
-                    checked={checked}
-                    disabled={disabled}
-                    onCheckedChange={(c) => {
-                      if (!onChange) return;
-                      const next = c
-                        ? [...selected, opt]
-                        : selected.filter((x) => x !== opt);
-                      onChange(next);
-                    }}
-                  />
-                  <Label htmlFor={`${id}-${i}`} className="font-normal">
-                    {opt || <span className="italic text-ink/40">Option {i + 1}</span>}
-                  </Label>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
+      {question.type === "multiple_choice" &&
+        (() => {
+          const selected: string[] = Array.isArray(value)
+            ? value
+            : typeof value === "string" && value.length > 0
+              ? [value]
+              : [];
+          const opts = Array.isArray(question.options) ? question.options : [];
+          if (opts.length === 0) {
+            return <p className="text-sm text-ink/40">No options yet</p>;
+          }
+          return (
+            <div className="space-y-2">
+              {opts.map((opt: string, i: number) => {
+                const checked = selected.includes(opt);
+                return (
+                  <div key={i} className="flex items-center gap-3">
+                    <Checkbox
+                      id={`${id}-${i}`}
+                      checked={checked}
+                      disabled={disabled}
+                      onCheckedChange={(c) => {
+                        if (!onChange) return;
+                        const next = c ? [...selected, opt] : selected.filter((x) => x !== opt);
+                        onChange(next);
+                      }}
+                    />
+                    <Label htmlFor={`${id}-${i}`} className="font-normal">
+                      {opt || <span className="italic text-ink/40">Option {i + 1}</span>}
+                    </Label>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
       {question.type === "rating" && (
         <StarRating

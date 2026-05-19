@@ -1,16 +1,7 @@
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  ArrowDown,
-  ArrowUp,
-  Eye,
-  GripVertical,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ArrowLeft, ArrowDown, ArrowUp, Eye, GripVertical, Plus, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -71,7 +62,8 @@ function EditFormPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login", search: { redirect: `/forms/${formId}/edit` } });
+    if (!loading && !user)
+      navigate({ to: "/login", search: { redirect: `/forms/${formId}/edit` } });
   }, [loading, user, navigate, formId]);
 
   if (loading || !user) {
@@ -222,9 +214,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const setDraftType = (id: string, type: QuestionType) =>
     setDraftQuestions((qs) =>
       qs.map((q) =>
-        q.id === id && q.type !== type
-          ? { ...q, type, options: TYPE_DEFAULTS[type].options }
-          : q,
+        q.id === id && q.type !== type ? { ...q, type, options: TYPE_DEFAULTS[type].options } : q,
       ),
     );
   const addDraftQuestion = (type: QuestionType) =>
@@ -268,10 +258,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       const formPatchOp: Promise<void> =
         Object.keys(formPatch).length > 0
           ? (async () => {
-              const { error } = await supabase
-                .from("forms")
-                .update(formPatch)
-                .eq("id", formId);
+              const { error } = await supabase.from("forms").update(formPatch).eq("id", formId);
               if (error) throw error;
             })()
           : Promise.resolve();
@@ -291,10 +278,21 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         const q = visible[i];
         const label = q.label.trim() || "Untitled question";
         if (q.isNew) {
-          newRows.push({ form_id: formId, type: q.type, label, options: q.options ?? null, position: i });
+          newRows.push({
+            form_id: formId,
+            type: q.type,
+            label,
+            options: q.options ?? null,
+            position: i,
+          });
         } else {
           const orig = snapshot.questions.find((o) => o.id === q.id);
-          const patch: { position: number; type?: QuestionType; label?: string; options?: QuestionOptions } = { position: i };
+          const patch: {
+            position: number;
+            type?: QuestionType;
+            label?: string;
+            options?: QuestionOptions;
+          } = { position: i };
           if (orig) {
             if (orig.type !== q.type) patch.type = q.type;
             if (orig.label !== label) patch.label = label;
@@ -307,10 +305,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           }
           updateOps.push(
             (async () => {
-              const { error } = await supabase
-                .from("questions")
-                .update(patch)
-                .eq("id", q.id);
+              const { error } = await supabase.from("questions").update(patch).eq("id", q.id);
               if (error) throw error;
             })(),
           );
@@ -465,7 +460,9 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex-1 min-w-0 space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="form-title-edit" className="text-xs">Title</Label>
+              <Label htmlFor="form-title-edit" className="text-xs">
+                Title
+              </Label>
               <DebouncedInput
                 value={draftForm.title}
                 onChange={(v) => setDraftForm((f) => ({ ...f, title: v }))}
@@ -507,9 +504,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             <button
               type="button"
               onClick={() => togglePublish.mutate("published")}
-              disabled={
-                togglePublish.isPending || visibleDraftQuestions.length === 0 || isDirty
-              }
+              disabled={togglePublish.isPending || visibleDraftQuestions.length === 0 || isDirty}
               title={
                 isDirty
                   ? "Save your changes first"
@@ -529,10 +524,15 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         <section>
           <h2 className="text-lg font-bold">Questions</h2>
           <p className="mt-1 text-xs text-ink/50">
-            Drag the handle to reorder. Click <span className="font-semibold">Save</span> to keep your changes.
+            Drag the handle to reorder. Click <span className="font-semibold">Save</span> to keep
+            your changes.
           </p>
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
             <SortableContext
               items={visibleDraftQuestions.map((q) => q.id)}
               strategy={verticalListSortingStrategy}
@@ -762,10 +762,7 @@ function SortableQuestionCard({
 
       {question.type === "multiple_choice" && (
         <div className="mt-4">
-          <OptionsEditor
-            options={getMcOptions(question.options)}
-            onChange={onChangeOptions}
-          />
+          <OptionsEditor options={getMcOptions(question.options)} onChange={onChangeOptions} />
         </div>
       )}
 
@@ -791,11 +788,7 @@ function SortableQuestionCard({
 
 /* ----------------------------- Debounced input ----------------------------- */
 
-function useDebouncedLocal(
-  value: string,
-  onChange: (v: string) => void,
-  delay = 600,
-) {
+function useDebouncedLocal(value: string, onChange: (v: string) => void, delay = 600) {
   const [local, setLocal] = useState(value);
   const lastExternal = useRef(value);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -958,4 +951,3 @@ function IconBtn({
     </button>
   );
 }
-

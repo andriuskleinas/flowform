@@ -22,19 +22,12 @@ export type AnswerValue = string | string[] | number;
  */
 export type Answers = Record<string, AnswerValue | undefined>;
 
-export function isAnswered(
-  question: { type: QuestionType },
-  value: unknown,
-): boolean {
+export function isAnswered(question: { type: QuestionType }, value: unknown): boolean {
   if (value === undefined || value === null) return false;
-  if (question.type === "text")
-    return typeof value === "string" && value.trim().length > 0;
+  if (question.type === "text") return typeof value === "string" && value.trim().length > 0;
   if (question.type === "multiple_choice")
-    return Array.isArray(value)
-      ? value.length > 0
-      : typeof value === "string" && value.length > 0;
-  if (question.type === "rating")
-    return typeof value === "number" && value > 0;
+    return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value.length > 0;
+  if (question.type === "rating") return typeof value === "number" && value > 0;
   return false;
 }
 
