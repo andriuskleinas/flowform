@@ -47,11 +47,7 @@ export const Route = createFileRoute("/demo")({
 });
 
 const feedbackSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Please enter your name")
-    .max(80, "Keep it under 80 characters"),
+  name: z.string().trim().min(1, "Please enter your name").max(80, "Keep it under 80 characters"),
   rating: z.enum(["1", "2", "3", "4", "5"], {
     message: "Pick a rating from 1 to 5",
   }),
@@ -98,12 +94,10 @@ function DemoPage() {
               <div className="mb-5 flex size-14 items-center justify-center rounded-full bg-brand/10">
                 <CheckCircle2 className="size-7 text-brand" strokeWidth={2} />
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Thanks for your feedback!
-              </h1>
+              <h1 className="text-2xl font-semibold tracking-tight">Thanks for your feedback!</h1>
               <p className="mt-2 max-w-sm text-sm text-ink/60">
-                We appreciate you taking a moment. Your responses are not stored —
-                this is a demo form.
+                We appreciate you taking a moment. Your responses are not stored — this is a demo
+                form.
               </p>
               <div className="mt-8 flex gap-3">
                 <Button variant="outline" onClick={reset}>
@@ -116,9 +110,7 @@ function DemoPage() {
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Share your feedback
-              </h1>
+              <h1 className="text-2xl font-semibold tracking-tight">Share your feedback</h1>
               <p className="mt-2 text-sm text-ink/60">
                 Four quick questions. Takes under a minute.
               </p>
@@ -157,11 +149,7 @@ function DemoPage() {
                                 htmlFor={`rating-${v}`}
                                 className="flex flex-1 cursor-pointer items-center justify-center rounded-xl border border-ink/10 bg-white py-3 text-sm font-medium transition hover:border-brand/40 has-[[data-state=checked]]:border-brand has-[[data-state=checked]]:bg-brand/5 has-[[data-state=checked]]:text-brand"
                               >
-                                <RadioGroupItem
-                                  value={v}
-                                  id={`rating-${v}`}
-                                  className="sr-only"
-                                />
+                                <RadioGroupItem value={v} id={`rating-${v}`} className="sr-only" />
                                 {v}
                               </Label>
                             ))}
@@ -215,7 +203,10 @@ function DemoPage() {
                     )}
                   />
 
-                  <Button type="submit" className="w-full bg-brand text-brand-foreground hover:bg-brand/90">
+                  <Button
+                    type="submit"
+                    className="w-full bg-brand text-brand-foreground hover:bg-brand/90"
+                  >
                     Submit feedback
                   </Button>
                 </form>

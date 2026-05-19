@@ -20,6 +20,14 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Local-only audit / report artifacts
+report.html
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

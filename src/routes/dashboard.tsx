@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusPill } from "@/components/status-pill";
+import { getInitialsFromProfile, timeAgo } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -40,35 +41,11 @@ type FormRow = {
   status: "draft" | "published";
 };
 
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
-}
-
-function getInitials(
-  firstName: string | null | undefined,
-  lastName: string | null | undefined,
-  displayName: string | null | undefined,
-  email: string,
-) {
-  const first = firstName?.trim();
-  const last = lastName?.trim();
-  if (first || last) {
-    return `${first?.[0] ?? ""}${last?.[0] ?? ""}`.toUpperCase() || "?";
-  }
-  const name = displayName?.trim();
-  if (name) {
-    const parts = name.split(/\s+/).slice(0, 2);
-    return parts.map((p) => p[0]).join("").toUpperCase();
-  }
-  return (email.split("@")[0] || "?").slice(0, 2).toUpperCase();
-}
+/** Row shape returned by the `get_dashboard_forms` Postgres RPC. */
+type DashboardFormRow = FormRow & {
+  response_count: number;
+  question_count: number;
+};
 
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -92,61 +69,59 @@ function DashboardPage() {
     );
   }
 
-  return <DashboardAuthed userId={user.id} email={user.email ?? ""} signingOutRef={signingOutRef} />;
+  return (
+    <DashboardAuthed userId={user.id} email={user.email ?? ""} signingOutRef={signingOutRef} />
+  );
 }
 
-function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; email: string; signingOutRef: React.MutableRefObject<boolean> }) {
+function DashboardAuthed({
+  userId,
+  email,
+  signingOutRef,
+}: {
+  userId: string;
+  email: string;
+  signingOutRef: React.MutableRefObject<boolean>;
+}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: forms = [], isLoading } = useQuery({
-    queryKey: ["forms", userId],
+  // Single round-trip: the `get_dashboard_forms` Postgres RPC returns each
+  // owned form alongside its response_count and question_count. Previously
+  // this required three .select() round-trips that transferred entire
+  // form_id columns just to count them client-side.
+  //
+  // The supabase-js client expects the RPC name to be a key of the
+  // auto-generated Database["public"]["Functions"] type. The function is
+  // defined in migration 20260519141500 but the generated types haven't
+  // been refreshed yet, so we cast at the call site only.
+  const callDashboardRpc = supabase.rpc as (fn: "get_dashboard_forms") => PromiseLike<{
+    data: DashboardFormRow[] | null;
+    error: { message: string } | null;
+  }>;
+
+  const { data: dashboardForms = [], isLoading } = useQuery({
+    queryKey: ["dashboard-forms", userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("forms")
-        .select("id, title, description, created_at, status")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await callDashboardRpc("get_dashboard_forms");
       if (error) throw error;
-      return data as FormRow[];
+      // `bigint` columns may come back as strings from PostgREST for very
+      // large counts; coerce to numbers so the render path stays simple.
+      return (data ?? []).map((r) => ({
+        ...r,
+        response_count: Number(r.response_count),
+        question_count: Number(r.question_count),
+      }));
     },
   });
 
-  const { data: responseCounts = {} } = useQuery({
-    queryKey: ["response-counts", userId, [...forms.map((f) => f.id)].sort().join(",")],
-    enabled: forms.length > 0,
-    queryFn: async () => {
-      const ids = forms.map((f) => f.id);
-      const { data, error } = await supabase
-        .from("responses")
-        .select("form_id")
-        .in("form_id", ids);
-      if (error) throw error;
-      const counts: Record<string, number> = {};
-      for (const row of data ?? []) {
-        counts[row.form_id] = (counts[row.form_id] ?? 0) + 1;
-      }
-      return counts;
-    },
-  });
-
-  const { data: questionCounts = {} } = useQuery({
-    queryKey: ["question-counts", userId, [...forms.map((f) => f.id)].sort().join(",")],
-    enabled: forms.length > 0,
-    queryFn: async () => {
-      const ids = forms.map((f) => f.id);
-      const { data, error } = await supabase
-        .from("questions")
-        .select("form_id")
-        .in("form_id", ids);
-      if (error) throw error;
-      const counts: Record<string, number> = {};
-      for (const row of data ?? []) {
-        counts[row.form_id] = (counts[row.form_id] ?? 0) + 1;
-      }
-      return counts;
-    },
-  });
+  const forms: FormRow[] = dashboardForms;
+  const responseCounts: Record<string, number> = Object.fromEntries(
+    dashboardForms.map((f) => [f.id, f.response_count]),
+  );
+  const questionCounts: Record<string, number> = Object.fromEntries(
+    dashboardForms.map((f) => [f.id, f.question_count]),
+  );
 
   const { data: profile } = useQuery({
     queryKey: ["profile", userId],
@@ -171,7 +146,15 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
 
   const handleSignOut = async () => {
     signingOutRef.current = true;
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (err) {
+      signingOutRef.current = false;
+      const message = err instanceof Error ? err.message : "Could not sign out.";
+      toast.error(message);
+      return;
+    }
     queryClient.clear();
     navigate({ to: "/" });
   };
@@ -186,14 +169,13 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
         .eq("id", formId)
         .eq("user_id", userId);
       if (error) throw error;
-      await queryClient.invalidateQueries({ queryKey: ["forms", userId] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
       await navigator.clipboard.writeText(url);
       toast.success("Form published and link copied");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not publish form");
     }
   };
-
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -210,7 +192,12 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
               aria-label="Open account menu"
               className="flex size-9 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand outline-none transition-all hover:bg-brand/15 focus-visible:ring-2 focus-visible:ring-brand/40"
             >
-              {getInitials(profile?.first_name, profile?.last_name, profile?.display_name, email)}
+              {getInitialsFromProfile(
+                profile?.first_name,
+                profile?.last_name,
+                profile?.display_name,
+                email,
+              )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               <div className="px-2 py-2">
@@ -332,14 +319,19 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
                         </span>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate text-base font-bold tracking-tight md:text-lg">{f.title}</h3>
+                            <h3 className="truncate text-base font-bold tracking-tight md:text-lg">
+                              {f.title}
+                            </h3>
                             <StatusPill status={f.status} />
                           </div>
                           {f.description && (
-                            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">{f.description}</p>
+                            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">
+                              {f.description}
+                            </p>
                           )}
                           <p className="mt-2 text-xs font-medium text-ink/50">
-                            {qCount} {qCount === 1 ? "question" : "questions"} · {rCount} {rCount === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
+                            {qCount} {qCount === 1 ? "question" : "questions"} · {rCount}{" "}
+                            {rCount === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
                           </p>
                         </div>
                       </Link>
@@ -356,7 +348,9 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
                         <button
                           type="button"
                           onClick={copyShareLink}
-                          aria-label={isPublished ? "Copy public link" : "Publish and copy public link"}
+                          aria-label={
+                            isPublished ? "Copy public link" : "Publish and copy public link"
+                          }
                           title={isPublished ? "Copy public link" : "Publish and copy public link"}
                           className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
                         >
