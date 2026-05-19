@@ -17,7 +17,12 @@ import {
 } from "recharts";
 
 import { supabase } from "@/integrations/supabase/client";
-import { getRatingMax, isAnswered } from "@/lib/form-utils";
+import {
+  getRatingMax,
+  isAnswered,
+  type Answers,
+  type AnswerValue,
+} from "@/lib/form-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Shell } from "@/components/shell";
 import { ClientOnly } from "@/components/client-only";
@@ -33,7 +38,7 @@ type ResponseRow = {
   id: string;
   submitted_at: string;
   started_at: string | null;
-  answers: Record<string, any>;
+  answers: Answers;
 };
 
 function ResponsesPage() {
@@ -269,11 +274,16 @@ function QuestionAnalytics({
 }) {
   const data = useMemo(() => {
     if (question.type === "multiple_choice") {
-      const opts: string[] = Array.isArray(question.options) ? (question.options as string[]) : [];
+      const opts: string[] = Array.isArray(question.options) ? question.options : [];
       const counts = new Map<string, number>(opts.map((o) => [o, 0]));
       for (const r of responses) {
         const v = r.answers?.[question.id];
-        const list = Array.isArray(v) ? v : v ? [v] : [];
+        // multiple_choice answers are string[]; some legacy rows may be a single string.
+        const list: string[] = Array.isArray(v)
+          ? v.filter((x): x is string => typeof x === "string")
+          : typeof v === "string" && v.length > 0
+            ? [v]
+            : [];
         for (const item of list) counts.set(item, (counts.get(item) ?? 0) + 1);
       }
       return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
@@ -443,7 +453,13 @@ function IndividualList({
   );
 }
 
-function AnswerView({ question, value }: { question: Question; value: any }) {
+function AnswerView({
+  question,
+  value,
+}: {
+  question: Question;
+  value: AnswerValue | undefined;
+}) {
   if (
     value === undefined ||
     value === null ||

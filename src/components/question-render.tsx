@@ -2,9 +2,14 @@ import { Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { type QuestionType, type QuestionOptions, getRatingMax } from "@/lib/form-utils";
+import {
+  type QuestionType,
+  type QuestionOptions,
+  type AnswerValue,
+  getRatingMax,
+} from "@/lib/form-utils";
 
-export type { QuestionType, QuestionOptions };
+export type { QuestionType, QuestionOptions, AnswerValue };
 
 export type Question = {
   id: string;
@@ -17,8 +22,8 @@ export type Question = {
 
 type Props = {
   question: Question;
-  value: any;
-  onChange?: (v: any) => void;
+  value: AnswerValue | undefined;
+  onChange?: (v: AnswerValue) => void;
   disabled?: boolean;
 };
 
@@ -33,7 +38,7 @@ export function QuestionRender({ question, value, onChange, disabled }: Props) {
       {question.type === "text" && (
         <Input
           id={id}
-          value={value ?? ""}
+          value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
           placeholder="Your answer"
