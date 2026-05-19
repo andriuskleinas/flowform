@@ -2,6 +2,26 @@ export type QuestionType = "text" | "multiple_choice" | "rating";
 
 export type QuestionOptions = string[] | { max: number } | null;
 
+/**
+ * The value submitted for a single question.
+ *
+ * Runtime mapping (enforced by `isAnswered`, `validateAnswerLength`, and the
+ * branches inside `QuestionRender`):
+ *   - "text"            → string
+ *   - "multiple_choice" → string[]   (some legacy responses may also be a
+ *                                     single string; the renderer normalises)
+ *   - "rating"          → number
+ */
+export type AnswerValue = string | string[] | number;
+
+/**
+ * Map of question.id → submitted answer.
+ * Values are optional because a respondent may not have answered every
+ * question yet (during in-progress form filling) or skipped questions in
+ * already-submitted responses.
+ */
+export type Answers = Record<string, AnswerValue | undefined>;
+
 export function isAnswered(
   question: { type: QuestionType },
   value: unknown,

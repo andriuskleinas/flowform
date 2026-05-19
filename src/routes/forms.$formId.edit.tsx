@@ -50,7 +50,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { QuestionRender, type Question, type QuestionType } from "@/components/question-render";
-import { type QuestionOptions, getRatingMax, getMcOptions } from "@/lib/form-utils";
+import {
+  type QuestionOptions,
+  type Answers,
+  getRatingMax,
+  getMcOptions,
+} from "@/lib/form-utils";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Shell } from "@/components/shell";
@@ -143,7 +148,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   });
   const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
+  const [previewAnswers, setPreviewAnswers] = useState<Answers>({});
   const [discardOpen, setDiscardOpen] = useState(false);
 
   // Initialize / re-sync draft from server when (a) we don't have one yet,
