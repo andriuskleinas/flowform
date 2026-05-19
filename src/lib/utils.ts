@@ -23,7 +23,10 @@ export function getInitialsFromProfile(
   const name = displayName?.trim();
   if (name) {
     const parts = name.split(/\s+/).slice(0, 2);
-    return parts.map((p) => p[0]).join("").toUpperCase();
+    return parts
+      .map((p) => p[0])
+      .join("")
+      .toUpperCase();
   }
   return (email.split("@")[0] || "?").slice(0, 2).toUpperCase();
 }

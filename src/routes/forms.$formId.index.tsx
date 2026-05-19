@@ -20,7 +20,13 @@ export const Route = createFileRoute("/forms/$formId/")({
   component: PublicFormPage,
 });
 
-type FormRow = { id: string; title: string; description: string | null; user_id: string; status: "draft" | "published" };
+type FormRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  user_id: string;
+  status: "draft" | "published";
+};
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
@@ -92,7 +98,9 @@ function PublicFormPage() {
     return (
       <Shell width="sm">
         <h1 className="text-3xl font-extrabold tracking-tight">Form not found</h1>
-        <p className="mt-3 text-ink/60">This form may have been deleted or the link is incorrect.</p>
+        <p className="mt-3 text-ink/60">
+          This form may have been deleted or the link is incorrect.
+        </p>
         <Link to="/" className="mt-6 inline-block text-brand underline">
           Go home
         </Link>

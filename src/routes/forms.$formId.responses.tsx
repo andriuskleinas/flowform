@@ -17,12 +17,7 @@ import {
 } from "recharts";
 
 import { supabase } from "@/integrations/supabase/client";
-import {
-  getRatingMax,
-  isAnswered,
-  type Answers,
-  type AnswerValue,
-} from "@/lib/form-utils";
+import { getRatingMax, isAnswered, type Answers, type AnswerValue } from "@/lib/form-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Shell } from "@/components/shell";
 import { ClientOnly } from "@/components/client-only";
@@ -180,9 +175,7 @@ function Overview({
 
     const durations = responses
       .filter((r) => r.started_at)
-      .map(
-        (r) => (new Date(r.submitted_at).getTime() - new Date(r.started_at!).getTime()) / 1000,
-      )
+      .map((r) => (new Date(r.submitted_at).getTime() - new Date(r.started_at!).getTime()) / 1000)
       .filter((s) => s > 0 && s < 2 * 3600);
     const avgDuration =
       durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : null;
@@ -200,7 +193,9 @@ function Overview({
   if (responses.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-ink/15 bg-white/50 p-10 text-center">
-        <p className="text-ink/60">No responses yet. Share your form to start collecting answers.</p>
+        <p className="text-ink/60">
+          No responses yet. Share your form to start collecting answers.
+        </p>
       </div>
     );
   }
@@ -290,9 +285,7 @@ function QuestionAnalytics({
     }
     if (question.type === "rating") {
       const max = getRatingMax(question.options);
-      const counts = new Map<number, number>(
-        Array.from({ length: max }, (_, i) => [i + 1, 0]),
-      );
+      const counts = new Map<number, number>(Array.from({ length: max }, (_, i) => [i + 1, 0]));
       const vals: number[] = [];
       for (const r of responses) {
         const v = r.answers?.[question.id];
@@ -317,13 +310,19 @@ function QuestionAnalytics({
     const answered = responses.filter((r) => isAnswered(question, r.answers?.[question.id]));
     const recent = answered.slice(0, 5);
     return (
-      <Card title={question.label || "Untitled question"} subtitle={`${answered.length} answered · ${responses.length - answered.length} skipped`}>
+      <Card
+        title={question.label || "Untitled question"}
+        subtitle={`${answered.length} answered · ${responses.length - answered.length} skipped`}
+      >
         {recent.length === 0 ? (
           <p className="text-sm text-ink/40">No answers yet.</p>
         ) : (
           <ul className="space-y-2">
             {recent.map((r) => (
-              <li key={r.id} className="rounded-lg border border-ink/5 bg-surface/50 px-3 py-2 text-sm text-ink/80">
+              <li
+                key={r.id}
+                className="rounded-lg border border-ink/5 bg-surface/50 px-3 py-2 text-sm text-ink/80"
+              >
                 {truncate(String(r.answers[question.id]), 160)}
               </li>
             ))}
@@ -343,10 +342,27 @@ function QuestionAnalytics({
           <div className="h-56 w-full">
             <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
               <ResponsiveContainer>
-                <BarChart data={arr} layout="vertical" margin={{ top: 4, right: 12, left: 8, bottom: 0 }}>
+                <BarChart
+                  data={arr}
+                  layout="vertical"
+                  margin={{ top: 4, right: 12, left: 8, bottom: 0 }}
+                >
                   <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
-                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
+                  <XAxis
+                    type="number"
+                    allowDecimals={false}
+                    tick={{ fontSize: 11 }}
+                    stroke="currentColor"
+                    className="text-ink/50"
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={110}
+                    tick={{ fontSize: 11 }}
+                    stroke="currentColor"
+                    className="text-ink/50"
+                  />
                   <Tooltip content={<MiniTooltip />} />
                   <Bar dataKey="count" fill="var(--primary)" radius={[0, 6, 6, 0]} />
                 </BarChart>
@@ -370,8 +386,18 @@ function QuestionAnalytics({
             <ResponsiveContainer>
               <BarChart data={d.bars} margin={{ top: 4, right: 12, left: -16, bottom: 0 }}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="currentColor" className="text-ink/50" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11 }}
+                  stroke="currentColor"
+                  className="text-ink/50"
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 11 }}
+                  stroke="currentColor"
+                  className="text-ink/50"
+                />
                 <Tooltip content={<MiniTooltip />} />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                   {d.bars.map((_, i) => (
@@ -409,57 +435,53 @@ function IndividualList({
   }
   return (
     <>
-    <ul className="space-y-4">
-      {responses.map((r) => {
-        const dur =
-          r.started_at != null
-            ? (new Date(r.submitted_at).getTime() - new Date(r.started_at).getTime()) / 1000
-            : null;
-        return (
-          <li key={r.id} className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink/40">
-              {new Date(r.submitted_at).toLocaleString()}
-              {dur != null && dur > 0 && dur < 2 * 3600 && (
-                <span className="ml-2 text-ink/60 normal-case">· filled in {formatDuration(dur)}</span>
-              )}
-            </p>
-            <dl className="mt-4 space-y-4">
-              {questions.map((q) => (
-                <div key={q.id}>
-                  <dt className="text-sm font-semibold text-ink">{q.label}</dt>
-                  <dd className="mt-1 text-sm text-ink/70">
-                    <AnswerView question={q} value={r.answers?.[q.id]} />
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </li>
-        );
-      })}
-    </ul>
+      <ul className="space-y-4">
+        {responses.map((r) => {
+          const dur =
+            r.started_at != null
+              ? (new Date(r.submitted_at).getTime() - new Date(r.started_at).getTime()) / 1000
+              : null;
+          return (
+            <li key={r.id} className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink/40">
+                {new Date(r.submitted_at).toLocaleString()}
+                {dur != null && dur > 0 && dur < 2 * 3600 && (
+                  <span className="ml-2 text-ink/60 normal-case">
+                    · filled in {formatDuration(dur)}
+                  </span>
+                )}
+              </p>
+              <dl className="mt-4 space-y-4">
+                {questions.map((q) => (
+                  <div key={q.id}>
+                    <dt className="text-sm font-semibold text-ink">{q.label}</dt>
+                    <dd className="mt-1 text-sm text-ink/70">
+                      <AnswerView question={q} value={r.answers?.[q.id]} />
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </li>
+          );
+        })}
+      </ul>
 
-    {hasMore && (
-      <div className="mt-6 flex justify-center">
-        <button
-          type="button"
-          onClick={onLoadMore}
-          className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
-        >
-          Load more responses
-        </button>
-      </div>
-    )}
+      {hasMore && (
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
+          >
+            Load more responses
+          </button>
+        </div>
+      )}
     </>
   );
 }
 
-function AnswerView({
-  question,
-  value,
-}: {
-  question: Question;
-  value: AnswerValue | undefined;
-}) {
+function AnswerView({ question, value }: { question: Question; value: AnswerValue | undefined }) {
   if (
     value === undefined ||
     value === null ||
@@ -469,7 +491,9 @@ function AnswerView({
     return <span className="italic text-ink/40">No answer</span>;
   }
   if (question.type === "rating") {
-    return <StarRating max={getRatingMax(question.options)} value={Number(value)} disabled size={18} />;
+    return (
+      <StarRating max={getRatingMax(question.options)} value={Number(value)} disabled size={18} />
+    );
   }
   if (Array.isArray(value)) {
     return <span>{value.join(", ")}</span>;
@@ -519,7 +543,6 @@ function MiniTooltip({ active, payload, label }: TooltipProps<number, string>) {
   );
 }
 
-
 function buildTrend(responses: ResponseRow[], days: number) {
   const buckets = new Map<string, number>();
   const today = new Date();
@@ -556,4 +579,3 @@ function formatDuration(seconds: number) {
 function truncate(s: string, n: number) {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
-

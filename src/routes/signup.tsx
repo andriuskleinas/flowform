@@ -61,14 +61,32 @@ function SignupPage() {
       <main className="mx-auto flex max-w-md flex-col px-6 pb-24 pt-16 md:px-8">
         <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Create your account</h1>
         <p className="mt-2 text-ink/60">Start building forms in seconds.</p>
-        <form onSubmit={onSubmit} className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
+        <form
+          onSubmit={onSubmit}
+          className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
+        >
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            <Input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+            <Input
+              id="password"
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+            />
           </div>
           <button
             type="submit"

@@ -217,14 +217,12 @@ function NewFormAuthed({ userId }: { userId: string }) {
             <ul className="mt-5 space-y-4">
               {questions.map((q, i) => {
                 const mcOpts = Array.isArray(q.options) ? (q.options as string[]) : [];
-                const ratingMax = q.type === "rating" && q.options && !Array.isArray(q.options)
-                  ? (q.options as { max: number }).max
-                  : 5;
+                const ratingMax =
+                  q.type === "rating" && q.options && !Array.isArray(q.options)
+                    ? (q.options as { max: number }).max
+                    : 5;
                 return (
-                  <li
-                    key={q.key}
-                    className="rounded-xl border border-ink/10 bg-surface/40 p-4"
-                  >
+                  <li key={q.key} className="rounded-xl border border-ink/10 bg-surface/40 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <span className="mt-2 text-xs font-semibold uppercase tracking-wide text-ink/50">
                         Question {i + 1}

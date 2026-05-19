@@ -60,7 +60,12 @@ export function UserMenu({ userId, email }: { userId: string; email: string }) {
         aria-label="Open account menu"
         className="flex size-9 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand outline-none transition-all hover:bg-brand/15 focus-visible:ring-2 focus-visible:ring-brand/40"
       >
-        {getInitialsFromProfile(profile?.first_name, profile?.last_name, profile?.display_name, email)}
+        {getInitialsFromProfile(
+          profile?.first_name,
+          profile?.last_name,
+          profile?.display_name,
+          email,
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <div className="px-2 py-2">
