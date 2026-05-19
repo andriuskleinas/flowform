@@ -55,6 +55,7 @@ import {
   type Answers,
   getRatingMax,
   getMcOptions,
+  questionOptionsEqual,
 } from "@/lib/form-utils";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -198,15 +199,18 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       if (v.id !== s.id) return true;
       if (v.type !== s.type) return true;
       if (v.label !== s.label) return true;
-      if (JSON.stringify(v.options ?? null) !== JSON.stringify(s.options ?? null)) return true;
+      if (!questionOptionsEqual(v.options ?? null, s.options ?? null)) return true;
     }
     return false;
   }, [draftForm, visibleDraftQuestions, snapshot]);
 
   // Block in-app navigation away while there are unsaved changes.
+  // `withResolver: true` returns { status, proceed, reset } so we can drive
+  // the confirm dialog below; without it the hook returns void.
   const blocker = useBlocker({
     shouldBlockFn: () => isDirty,
     enableBeforeUnload: isDirty,
+    withResolver: true,
   });
 
   /* ----------------------------- Local mutators ---------------------------- */
@@ -261,11 +265,15 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       if (trimmedTitle !== snapshot.form.title) formPatch.title = trimmedTitle;
       if ((trimmedDesc ?? null) !== (snapshot.form.description ?? null))
         formPatch.description = trimmedDesc;
-      const formPatchOp =
+      const formPatchOp: Promise<void> =
         Object.keys(formPatch).length > 0
-          ? supabase.from("forms").update(formPatch).eq("id", formId).then(({ error }) => {
+          ? (async () => {
+              const { error } = await supabase
+                .from("forms")
+                .update(formPatch)
+                .eq("id", formId);
               if (error) throw error;
-            })
+            })()
           : Promise.resolve();
 
       // 2. Build inserts + updates (positions = visible draft order).
@@ -290,7 +298,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           if (orig) {
             if (orig.type !== q.type) patch.type = q.type;
             if (orig.label !== label) patch.label = label;
-            if (JSON.stringify(orig.options ?? null) !== JSON.stringify(q.options ?? null))
+            if (!questionOptionsEqual(orig.options ?? null, q.options ?? null))
               patch.options = q.options ?? null;
           } else {
             patch.type = q.type;
@@ -298,19 +306,24 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             patch.options = q.options ?? null;
           }
           updateOps.push(
-            supabase.from("questions").update(patch).eq("id", q.id).then(({ error }) => {
+            (async () => {
+              const { error } = await supabase
+                .from("questions")
+                .update(patch)
+                .eq("id", q.id);
               if (error) throw error;
-            }),
+            })(),
           );
         }
       }
 
       // Run form patch, batch insert, and all updates concurrently.
-      const insertOp =
+      const insertOp: Promise<void> =
         newRows.length > 0
-          ? supabase.from("questions").insert(newRows).then(({ error }) => {
+          ? (async () => {
+              const { error } = await supabase.from("questions").insert(newRows);
               if (error) throw error;
-            })
+            })()
           : Promise.resolve();
 
       await Promise.all([formPatchOp, insertOp, ...updateOps]);
@@ -330,6 +343,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         qc.invalidateQueries({ queryKey: ["public-form", formId] }),
         qc.invalidateQueries({ queryKey: ["public-questions", formId] }),
         qc.invalidateQueries({ queryKey: ["forms"] }),
+        // Dashboard now uses an aggregated RPC under a separate query key.
+        qc.invalidateQueries({ queryKey: ["dashboard-forms"] }),
       ]);
       // Force draft to re-sync from fresh server data on the next effect tick.
       setSnapshot(null);
@@ -355,6 +370,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       toast.success(next === "published" ? "Form published" : "Moved back to draft");
       qc.invalidateQueries({ queryKey: ["form", formId] });
       qc.invalidateQueries({ queryKey: ["forms"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
       qc.invalidateQueries({ queryKey: ["public-form", formId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -644,8 +660,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         confirmLabel="Leave"
         cancelLabel="Stay"
         destructive
-        onConfirm={() => blocker.proceed()}
-        onCancel={() => blocker.reset()}
+        onConfirm={() => blocker.proceed?.()}
+        onCancel={() => blocker.reset?.()}
       />
     </Shell>
   );

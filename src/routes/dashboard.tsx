@@ -41,6 +41,12 @@ type FormRow = {
   status: "draft" | "published";
 };
 
+/** Row shape returned by the `get_dashboard_forms` Postgres RPC. */
+type DashboardFormRow = FormRow & {
+  response_count: number;
+  question_count: number;
+};
+
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -70,54 +76,44 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: forms = [], isLoading } = useQuery({
-    queryKey: ["forms", userId],
+  // Single round-trip: the `get_dashboard_forms` Postgres RPC returns each
+  // owned form alongside its response_count and question_count. Previously
+  // this required three .select() round-trips that transferred entire
+  // form_id columns just to count them client-side.
+  //
+  // The supabase-js client expects the RPC name to be a key of the
+  // auto-generated Database["public"]["Functions"] type. The function is
+  // defined in migration 20260519141500 but the generated types haven't
+  // been refreshed yet, so we cast at the call site only.
+  const callDashboardRpc = supabase.rpc as (
+    fn: "get_dashboard_forms",
+  ) => PromiseLike<{
+    data: DashboardFormRow[] | null;
+    error: { message: string } | null;
+  }>;
+
+  const { data: dashboardForms = [], isLoading } = useQuery({
+    queryKey: ["dashboard-forms", userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("forms")
-        .select("id, title, description, created_at, status")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await callDashboardRpc("get_dashboard_forms");
       if (error) throw error;
-      return data as FormRow[];
+      // `bigint` columns may come back as strings from PostgREST for very
+      // large counts; coerce to numbers so the render path stays simple.
+      return (data ?? []).map((r) => ({
+        ...r,
+        response_count: Number(r.response_count),
+        question_count: Number(r.question_count),
+      }));
     },
   });
 
-  const { data: responseCounts = {} } = useQuery({
-    queryKey: ["response-counts", userId, [...forms.map((f) => f.id)].sort().join(",")],
-    enabled: forms.length > 0,
-    queryFn: async () => {
-      const ids = forms.map((f) => f.id);
-      const { data, error } = await supabase
-        .from("responses")
-        .select("form_id")
-        .in("form_id", ids);
-      if (error) throw error;
-      const counts: Record<string, number> = {};
-      for (const row of data ?? []) {
-        counts[row.form_id] = (counts[row.form_id] ?? 0) + 1;
-      }
-      return counts;
-    },
-  });
-
-  const { data: questionCounts = {} } = useQuery({
-    queryKey: ["question-counts", userId, [...forms.map((f) => f.id)].sort().join(",")],
-    enabled: forms.length > 0,
-    queryFn: async () => {
-      const ids = forms.map((f) => f.id);
-      const { data, error } = await supabase
-        .from("questions")
-        .select("form_id")
-        .in("form_id", ids);
-      if (error) throw error;
-      const counts: Record<string, number> = {};
-      for (const row of data ?? []) {
-        counts[row.form_id] = (counts[row.form_id] ?? 0) + 1;
-      }
-      return counts;
-    },
-  });
+  const forms: FormRow[] = dashboardForms;
+  const responseCounts: Record<string, number> = Object.fromEntries(
+    dashboardForms.map((f) => [f.id, f.response_count]),
+  );
+  const questionCounts: Record<string, number> = Object.fromEntries(
+    dashboardForms.map((f) => [f.id, f.question_count]),
+  );
 
   const { data: profile } = useQuery({
     queryKey: ["profile", userId],
@@ -165,7 +161,7 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
         .eq("id", formId)
         .eq("user_id", userId);
       if (error) throw error;
-      await queryClient.invalidateQueries({ queryKey: ["forms", userId] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
       await navigator.clipboard.writeText(url);
       toast.success("Form published and link copied");
     } catch (error) {
