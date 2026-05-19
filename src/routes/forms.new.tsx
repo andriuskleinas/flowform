@@ -121,6 +121,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
     onSuccess: (newId) => {
       toast.success("Form created");
       qc.invalidateQueries({ queryKey: ["forms", userId] });
+      qc.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
       navigate({ to: "/forms/$formId/edit", params: { formId: newId } });
     },
     onError: (err: Error) => toast.error(err.message || "Could not save form"),

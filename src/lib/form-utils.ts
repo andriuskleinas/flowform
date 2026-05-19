@@ -43,6 +43,25 @@ export function getRatingMax(options: QuestionOptions): number {
   return (options as { max: number }).max;
 }
 
+/**
+ * Structural equality for QuestionOptions. Much cheaper than two
+ * JSON.stringify calls and not sensitive to key ordering — used on hot
+ * paths like the editor's `isDirty` memo where it runs on every keystroke.
+ */
+export function questionOptionsEqual(a: QuestionOptions, b: QuestionOptions): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return a == null && b == null;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }
+  if (!Array.isArray(a) && !Array.isArray(b) && typeof a === "object" && typeof b === "object") {
+    return a.max === b.max;
+  }
+  return false;
+}
+
 export function getMcOptions(options: QuestionOptions): string[] {
   return Array.isArray(options) ? options : [];
 }
