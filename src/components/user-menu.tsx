@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 import { LogOut, User } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   DropdownMenu,
@@ -11,25 +12,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { getInitialsFromProfile } from "@/lib/utils";
 
-export function getInitials(
-  firstName: string | null | undefined,
-  lastName: string | null | undefined,
-  displayName: string | null | undefined,
-  email: string,
-) {
-  const first = firstName?.trim();
-  const last = lastName?.trim();
-  if (first || last) {
-    return `${first?.[0] ?? ""}${last?.[0] ?? ""}`.toUpperCase() || "?";
-  }
-  const name = displayName?.trim();
-  if (name) {
-    const parts = name.split(/\s+/).slice(0, 2);
-    return parts.map((p) => p[0]).join("").toUpperCase();
-  }
-  return (email.split("@")[0] || "?").slice(0, 2).toUpperCase();
-}
+// Re-exported for backwards compatibility with existing imports.
+// Prefer importing `getInitialsFromProfile` from "@/lib/utils" directly.
+export const getInitials = getInitialsFromProfile;
 
 export function UserMenu({ userId, email }: { userId: string; email: string }) {
   const navigate = useNavigate();
@@ -55,7 +42,15 @@ export function UserMenu({ userId, email }: { userId: string; email: string }) {
 
   const handleSignOut = async () => {
     signingOutRef.current = true;
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (err) {
+      signingOutRef.current = false;
+      const message = err instanceof Error ? err.message : "Could not sign out.";
+      toast.error(message);
+      return;
+    }
     navigate({ to: "/" });
   };
 
@@ -65,7 +60,7 @@ export function UserMenu({ userId, email }: { userId: string; email: string }) {
         aria-label="Open account menu"
         className="flex size-9 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand outline-none transition-all hover:bg-brand/15 focus-visible:ring-2 focus-visible:ring-brand/40"
       >
-        {getInitials(profile?.first_name, profile?.last_name, profile?.display_name, email)}
+        {getInitialsFromProfile(profile?.first_name, profile?.last_name, profile?.display_name, email)}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <div className="px-2 py-2">
