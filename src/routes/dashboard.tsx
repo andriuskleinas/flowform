@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusPill } from "@/components/status-pill";
+import { getInitialsFromProfile, timeAgo } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -39,36 +40,6 @@ type FormRow = {
   created_at: string;
   status: "draft" | "published";
 };
-
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
-}
-
-function getInitials(
-  firstName: string | null | undefined,
-  lastName: string | null | undefined,
-  displayName: string | null | undefined,
-  email: string,
-) {
-  const first = firstName?.trim();
-  const last = lastName?.trim();
-  if (first || last) {
-    return `${first?.[0] ?? ""}${last?.[0] ?? ""}`.toUpperCase() || "?";
-  }
-  const name = displayName?.trim();
-  if (name) {
-    const parts = name.split(/\s+/).slice(0, 2);
-    return parts.map((p) => p[0]).join("").toUpperCase();
-  }
-  return (email.split("@")[0] || "?").slice(0, 2).toUpperCase();
-}
 
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -171,7 +142,15 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
 
   const handleSignOut = async () => {
     signingOutRef.current = true;
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (err) {
+      signingOutRef.current = false;
+      const message = err instanceof Error ? err.message : "Could not sign out.";
+      toast.error(message);
+      return;
+    }
     queryClient.clear();
     navigate({ to: "/" });
   };
@@ -210,7 +189,7 @@ function DashboardAuthed({ userId, email, signingOutRef }: { userId: string; ema
               aria-label="Open account menu"
               className="flex size-9 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand outline-none transition-all hover:bg-brand/15 focus-visible:ring-2 focus-visible:ring-brand/40"
             >
-              {getInitials(profile?.first_name, profile?.last_name, profile?.display_name, email)}
+              {getInitialsFromProfile(profile?.first_name, profile?.last_name, profile?.display_name, email)}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               <div className="px-2 py-2">

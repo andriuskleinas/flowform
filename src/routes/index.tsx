@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/user-menu";
+import { getInitialsFromName } from "@/lib/utils";
 import logoNorthwind from "@/assets/logo-northwind.png";
 import logoLumen from "@/assets/logo-lumen.png";
 import logoAxiom from "@/assets/logo-axiom.png";
@@ -283,15 +284,6 @@ const testimonials = [
   },
 ];
 
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
 function TestimonialsCarousel() {
   const [api, setApi] = useState<CarouselApi>();
@@ -358,7 +350,7 @@ function TestimonialsCarousel() {
                 {/* Footer */}
                 <div className="relative mt-10 flex items-center gap-4 border-t border-ink/5 pt-6">
                   <div className="grid size-12 shrink-0 place-items-center rounded-full bg-brand/10 text-sm font-bold text-brand">
-                    {getInitials(t.name)}
+                    {getInitialsFromName(t.name)}
                   </div>
                   <div className="min-w-0">
                     <div className="truncate font-bold text-ink">{t.name}</div>
