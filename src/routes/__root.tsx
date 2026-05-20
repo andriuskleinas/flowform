@@ -115,6 +115,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "https://storage.googleapis.com/gpt-engineer-file-uploads/waerhwQzcCMyhgXa2ZHKevKeZJv2/social-images/social-1778580486196-Screenshot_2026-05-12_at_13.07.54.webp",
       },
+      { name: "description", content: "Killer of typeform" },
+      { property: "og:description", content: "Killer of typeform" },
+      { name: "twitter:description", content: "Killer of typeform" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/86a6fdb1-52f0-401e-88aa-2aa167c23b95" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/86a6fdb1-52f0-401e-88aa-2aa167c23b95" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
