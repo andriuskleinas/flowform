@@ -106,6 +106,35 @@ export type Database = {
           },
         ]
       }
+      response_submission_log: {
+        Row: {
+          form_id: string
+          id: number
+          ip_hash: string
+          submitted_at: string
+        }
+        Insert: {
+          form_id: string
+          id?: number
+          ip_hash: string
+          submitted_at?: string
+        }
+        Update: {
+          form_id?: string
+          id?: number
+          ip_hash?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "response_submission_log_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       responses: {
         Row: {
           answers: Json
@@ -143,7 +172,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_dashboard_forms: {
+        Args: never
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+          question_count: number
+          response_count: number
+          status: string
+          title: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
