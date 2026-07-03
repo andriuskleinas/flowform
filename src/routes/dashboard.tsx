@@ -31,8 +31,6 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
-const PUBLIC_SITE_ORIGIN = "https://flowformapp.lovable.app";
-
 type FormRow = {
   id: string;
   title: string;
@@ -161,7 +159,7 @@ function DashboardAuthed({
 
   const doPublishAndCopy = async (formId: string) => {
     setPendingPublish(null);
-    const url = `${PUBLIC_SITE_ORIGIN}/forms/${formId}`;
+    const url = `${window.location.origin}/forms/${formId}`;
     try {
       const { error } = await supabase
         .from("forms")
@@ -295,7 +293,7 @@ function DashboardAuthed({
                     setPendingPublish(f.id);
                     return;
                   }
-                  const url = `${PUBLIC_SITE_ORIGIN}/forms/${f.id}`;
+                  const url = `${window.location.origin}/forms/${f.id}`;
                   try {
                     await navigator.clipboard.writeText(url);
                     toast.success("Link copied");
