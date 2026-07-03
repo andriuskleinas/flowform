@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { ArrowLeft, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { ArrowLeft, Loader2, Plus, Sparkles, Trash2, WandSparkles, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { suggestQuestions, type SuggestedQuestion } from "@/lib/suggest-questions";
 import { useAuth } from "@/hooks/use-auth";
 import { type QuestionType, type QuestionOptions } from "@/lib/form-utils";
 import { Input } from "@/components/ui/input";
@@ -70,6 +71,37 @@ function NewFormAuthed({ userId }: { userId: string }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState<DraftQuestion[]>([makeQuestion()]);
+
+  const [suggestions, setSuggestions] = useState<SuggestedQuestion[]>([]);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [isSuggesting, startSuggesting] = useTransition();
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+
+  const handleSuggest = () => {
+    setSuggestError(null);
+    startSuggesting(async () => {
+      try {
+        const results = await suggestQuestions({ data: { title, description } });
+        setSuggestions(results);
+        setAddedIds(new Set());
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Could not get suggestions. Please try again.";
+        setSuggestError(message);
+      }
+    });
+  };
+
+  const addSuggestion = (s: SuggestedQuestion) => {
+    setQuestions((qs) => {
+      const newQ = { key: crypto.randomUUID(), type: s.type, label: s.label, options: s.options };
+      // If the only question is the default empty placeholder, replace it rather
+      // than appending — so the AI flow doesn't leave a blank question behind.
+      if (qs.length === 1 && qs[0].label.trim() === "") return [newQ];
+      return [...qs, newQ];
+    });
+    setAddedIds((prev) => new Set(prev).add(s.id));
+  };
 
   const updateQuestion = (key: string, patch: Partial<DraftQuestion>) => {
     setQuestions((qs) => qs.map((q) => (q.key === key ? { ...q, ...patch } : q)));
@@ -203,6 +235,85 @@ function NewFormAuthed({ userId }: { userId: string }) {
                 />
               </div>
             </div>
+          </section>
+
+          {/* AI Suggest Questions */}
+          <section className="rounded-2xl border border-ink/5 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="flex items-center gap-1.5 text-lg font-bold tracking-tight">
+                  <Sparkles className="size-4 text-brand" />
+                  Suggest questions with AI
+                </h2>
+                <p className="mt-0.5 text-xs text-ink/50">
+                  Based on your form title and description
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSuggest}
+                disabled={isSuggesting || !title.trim()}
+                title={!title.trim() ? "Add a title first" : undefined}
+                className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSuggesting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Thinking…
+                  </>
+                ) : (
+                  <>
+                    <WandSparkles className="size-4" />
+                    Suggest questions
+                  </>
+                )}
+              </button>
+            </div>
+
+            {suggestError && (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {suggestError}
+              </p>
+            )}
+
+            {suggestions.length > 0 && (
+              <ul className="mt-4 space-y-2">
+                {suggestions.map((s) => {
+                  const added = addedIds.has(s.id);
+                  return (
+                    <li
+                      key={s.id}
+                      className="flex items-start justify-between gap-3 rounded-xl border border-ink/10 bg-surface/40 px-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-snug text-ink">{s.label}</p>
+                        <p className="mt-0.5 text-xs text-ink/50">
+                          {s.type === "text" && "Short answer"}
+                          {s.type === "multiple_choice" && "Multiple choice"}
+                          {s.type === "rating" &&
+                            `Rating scale (1–${(s.options as { max: number })?.max ?? 5})`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addSuggestion(s)}
+                        disabled={added}
+                        className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-brand hover:bg-brand/5 hover:text-brand disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
+                      >
+                        {added ? (
+                          "Added"
+                        ) : (
+                          <>
+                            <Plus className="size-3" />
+                            Add
+                          </>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
 
           {/* Questions */}
