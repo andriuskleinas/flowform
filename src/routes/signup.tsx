@@ -31,19 +31,26 @@ function SignupPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    const redirectUrl = `${window.location.origin}/dashboard`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: redirectUrl },
-    });
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const redirectUrl = `${window.location.origin}/dashboard`;
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: redirectUrl },
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Welcome to Flowform");
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not create account. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
     }
-    toast.success("Welcome to Flowform");
-    navigate({ to: "/dashboard" });
   };
 
   return (
