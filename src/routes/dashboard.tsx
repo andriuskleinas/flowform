@@ -88,16 +88,6 @@ function DashboardAuthed({
   // owned form alongside its response_count and question_count. Previously
   // this required three .select() round-trips that transferred entire
   // form_id columns just to count them client-side.
-  //
-  // The supabase-js client expects the RPC name to be a key of the
-  // auto-generated Database["public"]["Functions"] type. The function is
-  // defined in migration 20260519141500 but the generated types haven't
-  // been refreshed yet, so we cast at the call site only.
-  const callDashboardRpc = supabase.rpc as (fn: "get_dashboard_forms") => PromiseLike<{
-    data: DashboardFormRow[] | null;
-    error: { message: string } | null;
-  }>;
-
   const {
     data: dashboardForms = [],
     isLoading,
@@ -105,13 +95,20 @@ function DashboardAuthed({
     refetch: refetchDashboardForms,
   } = useQuery({
     queryKey: ["dashboard-forms", userId],
+    // The global 30s staleTime is fine for most queries, but this is the
+    // primary landing view for data that changes from other tabs/devices
+    // (creating or publishing a form elsewhere doesn't invalidate this
+    // query's cache here). Always treat it as stale so window focus and
+    // remounts refetch instead of silently showing an outdated list.
+    staleTime: 0,
     queryFn: async () => {
-      const { data, error } = await callDashboardRpc("get_dashboard_forms");
+      const { data, error } = await supabase.rpc("get_dashboard_forms");
       if (error) throw error;
       // `bigint` columns may come back as strings from PostgREST for very
       // large counts; coerce to numbers so the render path stays simple.
       return (data ?? []).map((r) => ({
         ...r,
+        status: r.status as "draft" | "published",
         response_count: Number(r.response_count),
         question_count: Number(r.question_count),
       }));
