@@ -1,7 +1,8 @@
 // Two responsibilities in this module:
 //
-// 1. Capture the original Error out-of-band so server.ts can recover the stack
-//    when h3 has already swallowed the throw into a generic 500 Response.
+// 1. Capture the original Error out-of-band so nitro-error-handler.ts can
+//    recover the stack when h3 has already swallowed the throw into a
+//    generic 500 Response.
 // 2. Provide a pluggable `reportError` indirection so we can drop in Sentry
 //    (or any other reporter) later without touching call sites. Default
 //    implementation logs to console — install a real reporter at app boot
