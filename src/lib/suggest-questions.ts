@@ -20,11 +20,7 @@ const RawSuggestionSchema = z.object({
   label: z.string().min(1).max(300),
   type: z.enum(["text", "multiple_choice", "rating"]),
   options: z
-    .union([
-      z.array(z.string()),
-      z.object({ max: z.number().int().min(3).max(10) }),
-      z.null(),
-    ])
+    .union([z.array(z.string()), z.object({ max: z.number().int().min(3).max(10) }), z.null()])
     .optional()
     .nullable(),
 });
