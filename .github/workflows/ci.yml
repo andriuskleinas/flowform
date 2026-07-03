@@ -39,8 +39,8 @@ jobs:
 
       - name: Build
         # Supabase env vars are not required at build time — the client uses a
-        # lazy proxy. Production builds on Cloudflare get real env values from
-        # wrangler secrets at runtime.
+        # lazy proxy. Production builds on Vercel get real env values from
+        # Vercel project environment variables at runtime.
         run: bun run build
         env:
           VITE_SUPABASE_URL: https://example.supabase.co
