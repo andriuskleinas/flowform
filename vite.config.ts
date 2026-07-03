@@ -21,7 +21,8 @@ export default defineConfig({
       routeRules: {
         "/**": {
           headers: {
-            "Content-Security-Policy": "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+            "Content-Security-Policy":
+              "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
             "X-Frame-Options": "DENY",
             "X-Content-Type-Options": "nosniff",
             "Referrer-Policy": "strict-origin-when-cross-origin",
