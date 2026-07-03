@@ -98,7 +98,12 @@ function DashboardAuthed({
     error: { message: string } | null;
   }>;
 
-  const { data: dashboardForms = [], isLoading } = useQuery({
+  const {
+    data: dashboardForms = [],
+    isLoading,
+    isError,
+    refetch: refetchDashboardForms,
+  } = useQuery({
     queryKey: ["dashboard-forms", userId],
     queryFn: async () => {
       const { data, error } = await callDashboardRpc("get_dashboard_forms");
@@ -236,7 +241,7 @@ function DashboardAuthed({
               <h2 id="forms-list-heading" className="text-lg font-bold tracking-tight">
                 All forms
               </h2>
-              {!isLoading && (
+              {!isLoading && !isError && (
                 <span className="inline-flex items-center rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink/70">
                   {forms.length} {forms.length === 1 ? "form" : "forms"}
                 </span>
@@ -264,7 +269,27 @@ function DashboardAuthed({
                 </li>
               ))}
 
-            {!isLoading && forms.length === 0 && (
+            {!isLoading && isError && (
+              <li className="flex flex-col items-center rounded-2xl border border-dashed border-red-200 bg-red-50/50 px-6 py-14 text-center">
+                <span className="flex size-14 items-center justify-center rounded-full bg-red-100 text-red-600">
+                  <FileText className="size-7" />
+                </span>
+                <h3 className="mt-5 text-xl font-bold tracking-tight">Couldn't load your forms</h3>
+                <p className="mt-2 max-w-sm text-sm text-ink/60">
+                  Something went wrong fetching your forms. Your forms are safe — this is just a
+                  loading issue.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => refetchDashboardForms()}
+                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25"
+                >
+                  Try again
+                </button>
+              </li>
+            )}
+
+            {!isLoading && !isError && forms.length === 0 && (
               <li className="flex flex-col items-center rounded-2xl border border-dashed border-ink/15 bg-white/50 px-6 py-14 text-center">
                 <span className="flex size-14 items-center justify-center rounded-full bg-brand/10 text-brand">
                   <FileText className="size-7" />
@@ -284,6 +309,7 @@ function DashboardAuthed({
             )}
 
             {!isLoading &&
+              !isError &&
               forms.map((f) => {
                 const rCount = responseCounts[f.id] ?? 0;
                 const qCount = questionCounts[f.id] ?? 0;
