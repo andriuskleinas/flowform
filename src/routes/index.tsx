@@ -279,6 +279,13 @@ const testimonials = [
     company: "Axiom",
     logo: logoAxiom,
   },
+  {
+    // TODO: placeholder — replace with a real customer quote before launch.
+    quote: "Setup took an afternoon. Our reply rate hasn't dropped below 60% since.",
+    name: "Jordan Blake",
+    role: "Ops Lead",
+    company: "Fernbridge",
+  },
 ];
 
 function TestimonialsCarousel() {
@@ -309,7 +316,7 @@ function TestimonialsCarousel() {
         {testimonials.map((t, i) => {
           const isActive = i === selected;
           return (
-            <CarouselItem key={t.name} className="pl-6 md:basis-1/2">
+            <CarouselItem key={t.name} className="pl-6 md:basis-1/2 lg:basis-1/3">
               <article
                 className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border bg-white p-10 transition-all duration-300 hover:-translate-y-1 ${
                   isActive
