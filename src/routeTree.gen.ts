@@ -9,8 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -20,6 +22,11 @@ import { Route as FormsFormIdIndexRouteImport } from './routes/forms.$formId.ind
 import { Route as FormsFormIdResponsesRouteImport } from './routes/forms.$formId.responses'
 import { Route as FormsFormIdEditRouteImport } from './routes/forms.$formId.edit'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -28,6 +35,11 @@ const SignupRoute = SignupRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -76,8 +88,10 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
   '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
@@ -88,8 +102,10 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
   '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
@@ -101,8 +117,10 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
   '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
@@ -115,8 +133,10 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/demo'
     | '/login'
+    | '/privacy'
     | '/profile'
     | '/signup'
+    | '/terms'
     | '/forms/new'
     | '/forms/$formId/edit'
     | '/forms/$formId/responses'
@@ -127,8 +147,10 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/demo'
     | '/login'
+    | '/privacy'
     | '/profile'
     | '/signup'
+    | '/terms'
     | '/forms/new'
     | '/forms/$formId/edit'
     | '/forms/$formId/responses'
@@ -139,8 +161,10 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/demo'
     | '/login'
+    | '/privacy'
     | '/profile'
     | '/signup'
+    | '/terms'
     | '/forms/new'
     | '/forms/$formId/edit'
     | '/forms/$formId/responses'
@@ -152,8 +176,10 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   DemoRoute: typeof DemoRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   SignupRoute: typeof SignupRoute
+  TermsRoute: typeof TermsRoute
   FormsNewRoute: typeof FormsNewRoute
   FormsFormIdEditRoute: typeof FormsFormIdEditRoute
   FormsFormIdResponsesRoute: typeof FormsFormIdResponsesRoute
@@ -162,6 +188,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -174,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -240,8 +280,10 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   SignupRoute: SignupRoute,
+  TermsRoute: TermsRoute,
   FormsNewRoute: FormsNewRoute,
   FormsFormIdEditRoute: FormsFormIdEditRoute,
   FormsFormIdResponsesRoute: FormsFormIdResponsesRoute,
