@@ -1,13 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, GitBranch, Palette, BarChart3, Quote, Star } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Check,
+  GitBranch,
+  LineChart,
+  Palette,
+  PenLine,
+  Quote,
+  Send,
+  Sparkles,
+  Star,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/user-menu";
 import { getInitialsFromName } from "@/lib/utils";
-import logoNorthwind from "@/assets/logo-northwind.png";
-import logoLumen from "@/assets/logo-lumen.png";
-import logoAxiom from "@/assets/logo-axiom.png";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Carousel,
   CarouselContent,
@@ -32,7 +47,7 @@ function PrimaryCTA({
 }) {
   const { session } = useAuth();
   const to = session ? "/dashboard" : "/signup";
-  const sizing = size === "lg" ? "px-8 py-4 text-base" : "px-5 py-2.5 text-sm";
+  const sizing = size === "lg" ? "px-8 py-4 text-base" : "px-4 py-2 text-sm sm:px-5 sm:py-2.5";
   const variantClass =
     variant === "brand"
       ? "bg-brand text-brand-foreground hover:shadow-lg hover:shadow-brand/25"
@@ -41,7 +56,7 @@ function PrimaryCTA({
     <Link
       to={to}
       data-cta="get-started"
-      className={`inline-flex items-center gap-2 rounded-full font-semibold transition-all ${sizing} ${variantClass}`}
+      className={`inline-flex items-center gap-2 rounded-full font-semibold whitespace-nowrap transition-all ${sizing} ${variantClass}`}
     >
       {children}
       <ArrowRight className="size-4" />
@@ -257,30 +272,31 @@ function HeroPreview() {
   );
 }
 
-const testimonials = [
+const testimonials: Array<{
+  quote: string;
+  name: string;
+  role: string;
+  company: string;
+}> = [
   {
     quote: "We replaced three survey tools with one Flowform. Response rates doubled in a week.",
     name: "Maya Chen",
     role: "Head of Research",
     company: "Northwind",
-    logo: logoNorthwind,
   },
   {
     quote: "It finally looks like our brand. Customers actually finish the form.",
     name: "Daniel Ortiz",
     role: "Design Lead",
     company: "Lumen",
-    logo: logoLumen,
   },
   {
     quote: "The drop-off insights are surgical. We rewrote our onboarding in an afternoon.",
     name: "Priya Raman",
     role: "Growth",
     company: "Axiom",
-    logo: logoAxiom,
   },
   {
-    // TODO: placeholder — replace with a real customer quote before launch.
     quote: "Setup took an afternoon. Our reply rate hasn't dropped below 60% since.",
     name: "Jordan Blake",
     role: "Ops Lead",
@@ -292,6 +308,8 @@ function TestimonialsCarousel() {
   const [api, setApi] = useState<CarouselApi>();
   const [selected, setSelected] = useState(0);
   const [count, setCount] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [interacted, setInteracted] = useState(false);
 
   useEffect(() => {
     if (!api) return;
@@ -300,17 +318,24 @@ function TestimonialsCarousel() {
     api.on("select", () => setSelected(api.selectedScrollSnap()));
   }, [api]);
 
+  // Autoplay pauses while hovered/focused and stops for good once the
+  // user takes over (WCAG 2.2.2 — no unstoppable auto-updating content).
   useEffect(() => {
-    if (!api) return;
+    if (!api || paused || interacted) return;
     const id = setInterval(() => api.scrollNext(), 6000);
     return () => clearInterval(id);
-  }, [api]);
+  }, [api, paused, interacted]);
 
   return (
     <Carousel
       setApi={setApi}
       opts={{ loop: true, align: "center" }}
       className="mx-auto w-full max-w-6xl"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+      onPointerDown={() => setInteracted(true)}
     >
       <CarouselContent className="-ml-6">
         {testimonials.map((t, i) => {
@@ -389,6 +414,12 @@ const features: Array<{
   accent?: FeatureAccent;
 }> = [
   {
+    icon: Sparkles,
+    title: "AI that drafts your questions.",
+    body: "Describe what you want to learn and Flowform suggests sharp, well-worded questions — powered by Claude. Accept, edit, or riff.",
+    accent: "gold",
+  },
+  {
     icon: GitBranch,
     title: "Logic that adapts.",
     body: "Branch, skip, and personalize in real time. Every respondent gets a path built just for them — no spreadsheets required.",
@@ -397,12 +428,65 @@ const features: Array<{
     icon: Palette,
     title: "Design that owns the room.",
     body: "Pixel-perfect themes, your typography, your palette. A form that looks like it belongs on your homepage.",
-    accent: "gold",
   },
   {
     icon: BarChart3,
     title: "Insight, not just data.",
     body: "Drop-off heatmaps, completion velocity, and live response streams — the signal behind every answer.",
+    accent: "gold",
+  },
+];
+
+const HOW_IT_WORKS: Array<{
+  icon: typeof PenLine;
+  step: string;
+  title: string;
+  body: string;
+}> = [
+  {
+    icon: PenLine,
+    step: "1",
+    title: "Build",
+    body: "Start from a blank canvas, add questions in the drag-and-drop editor, or let AI draft them from a one-line goal.",
+  },
+  {
+    icon: Send,
+    step: "2",
+    title: "Share",
+    body: "Publish to a link your audience can open anywhere. No accounts, no downloads — one question at a time.",
+  },
+  {
+    icon: LineChart,
+    step: "3",
+    title: "Learn",
+    body: "Watch responses stream into your dashboard the moment they arrive, and spot where people drop off.",
+  },
+];
+
+const FAQS: Array<{ q: string; a: string }> = [
+  {
+    q: "Is Flowform really free?",
+    a: "Yes. Flowform is free while in early access — every feature included, no credit card required. If that ever changes, you'll hear about it well in advance.",
+  },
+  {
+    q: "Do my respondents need an account?",
+    a: "No. You share a link and it opens straight in the browser, on any device. Respondents answer one question at a time and they're done — no sign-up, no app.",
+  },
+  {
+    q: "How do the AI question suggestions work?",
+    a: "Describe what you're trying to learn and Flowform — powered by Anthropic's Claude — drafts well-worded questions for you. You stay in control: accept them as-is, edit them, or use them as a starting point.",
+  },
+  {
+    q: "Can I see responses as they come in?",
+    a: "Yes. Every response appears in your dashboard in real time, per form, so you can act on feedback the moment it lands instead of waiting for a weekly export.",
+  },
+  {
+    q: "How is this different from a classic survey tool?",
+    a: "Classic surveys show a wall of questions and most people bail. Flowform shows one question at a time, like a conversation — which keeps people engaged all the way to the last answer.",
+  },
+  {
+    q: "Where is my data stored?",
+    a: "Your forms and responses are stored securely in a managed Postgres database (Supabase), protected with row-level security so only you can access your data. We don't sell or share it.",
   },
 ];
 
@@ -435,51 +519,88 @@ const featureAccentStyles: Record<
   },
 };
 
+const NAV_LINKS = [
+  { href: "#features", label: "Features" },
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#pricing", label: "Pricing" },
+  { href: "#faq", label: "FAQ" },
+];
+
+function SiteHeader() {
+  const { session } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <header
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "border-b border-ink/5 bg-surface/85 shadow-[0_4px_20px_rgb(0,0,0,0.04)] backdrop-blur-md"
+          : "border-b border-transparent bg-transparent"
+      }`}
+    >
+      <nav
+        className={`mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 transition-[padding] duration-300 sm:px-6 md:px-8 ${
+          scrolled ? "py-3.5" : "py-6"
+        }`}
+      >
+        <a href="/" className="flex shrink-0 items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
+            <span className="size-3 rounded-sm bg-white" />
+          </span>
+          <span className="text-xl font-bold tracking-tight">Flowform</span>
+        </a>
+        <div className="flex items-center gap-3 sm:gap-6 md:gap-8">
+          <div className="hidden items-center gap-6 md:flex">
+            {NAV_LINKS.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                className="text-sm font-medium text-ink/60 transition-colors hover:text-ink"
+              >
+                {l.label}
+              </a>
+            ))}
+          </div>
+          {session ? (
+            <>
+              <Link
+                to="/dashboard"
+                className="text-sm font-medium text-ink/60 transition-colors hover:text-ink"
+              >
+                Dashboard
+              </Link>
+              <UserMenu userId={session.user.id} email={session.user.email ?? ""} />
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                search={{ redirect: "/dashboard" }}
+                className="text-sm font-medium text-ink/60 transition-colors hover:text-ink"
+              >
+                Log in
+              </Link>
+              <PrimaryCTA>Get started</PrimaryCTA>
+            </>
+          )}
+        </div>
+      </nav>
+    </header>
+  );
+}
+
 function Index() {
   const { session } = useAuth();
   return (
     <div className="min-h-screen bg-surface text-ink">
-      {/* Nav */}
-      <header>
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 md:px-8">
-          <a href="/" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
-              <span className="size-3 rounded-sm bg-white" />
-            </span>
-            <span className="text-xl font-bold tracking-tight">Flowform</span>
-          </a>
-          <div className="flex items-center gap-6 md:gap-8">
-            <a
-              href="#features"
-              className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
-            >
-              Features
-            </a>
-            {session ? (
-              <>
-                <Link
-                  to="/dashboard"
-                  className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
-                >
-                  Dashboard
-                </Link>
-                <UserMenu userId={session.user.id} email={session.user.email ?? ""} />
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  search={{ redirect: "/dashboard" }}
-                  className="hidden text-sm font-medium text-ink/60 transition-colors hover:text-ink sm:inline"
-                >
-                  Log in
-                </Link>
-                <PrimaryCTA>Get started</PrimaryCTA>
-              </>
-            )}
-          </div>
-        </nav>
-      </header>
+      <SiteHeader />
 
       <main>
         {/* Hero */}
@@ -515,34 +636,32 @@ function Index() {
             }}
           />
           <div className="relative mx-auto max-w-4xl text-center">
-            <h1
-              className="text-5xl font-extrabold leading-[1.05] tracking-tight text-balance transition-transform duration-200 ease-out md:text-7xl"
-              style={{
-                transform:
-                  "translate3d(calc(var(--px, 0) * -0.025px), calc(var(--py, 0) * -0.025px), 0)",
-              }}
-            >
+            <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-7xl">
               Forms people <span className="text-brand">actually finish.</span>
             </h1>
-            <p
-              className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 transition-transform duration-200 ease-out md:mt-8 md:text-xl"
-              style={{
-                transform:
-                  "translate3d(calc(var(--px, 0) * -0.015px), calc(var(--py, 0) * -0.015px), 0)",
-              }}
-            >
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 md:mt-8 md:text-xl">
               Craft beautifully simple, one-question-at-a-time experiences that feel less like a
               survey and more like a conversation worth having.
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4 md:mt-12">
               <PrimaryCTA size="lg">Start building</PrimaryCTA>
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-ink/70 transition-colors hover:text-ink"
-              >
-                Go to dashboard
-                <ArrowRight className="size-4" />
-              </Link>
+              {session ? (
+                <Link
+                  to="/dashboard"
+                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-ink/70 transition-colors hover:text-ink"
+                >
+                  Go to dashboard
+                  <ArrowRight className="size-4" />
+                </Link>
+              ) : (
+                <Link
+                  to="/demo"
+                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-ink/70 transition-colors hover:text-ink"
+                >
+                  See it in action
+                  <ArrowRight className="size-4" />
+                </Link>
+              )}
             </div>
 
             {/* Preview */}
@@ -576,7 +695,7 @@ function Index() {
               </p>
             </div>
 
-            <ul className="mt-16 grid gap-6 md:grid-cols-3 lg:gap-8">
+            <ul className="mx-auto mt-16 grid max-w-5xl gap-6 md:grid-cols-2 lg:gap-8">
               {features.map(({ icon: Icon, title, body, accent = "brand" }) => {
                 const a = featureAccentStyles[accent];
                 return (
@@ -599,12 +718,59 @@ function Index() {
                     <p className="mt-4 text-base leading-relaxed text-ink/60 md:text-lg">{body}</p>
                     <div
                       aria-hidden
-                      className={`mt-8 h-px w-12 ${a.bar} opacity-0 transition-opacity duration-500 group-hover:opacity-100`}
+                      className={`mt-8 h-px w-12 ${a.bar} opacity-60 transition-all duration-500 group-hover:w-20 group-hover:opacity-100`}
                     />
                   </li>
                 );
               })}
             </ul>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section
+          id="how-it-works"
+          className="relative overflow-hidden bg-surface px-6 py-24 md:px-8 md:py-32"
+        >
+          <div className="relative mx-auto max-w-7xl">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-5xl">
+                Live in <span className="text-brand">three steps.</span>
+              </h2>
+              <p className="mx-auto mt-5 max-w-xl text-base text-ink/60 md:text-lg">
+                From blank page to answers rolling in — without reading a manual.
+              </p>
+            </div>
+
+            <ol className="relative mx-auto mt-16 grid max-w-5xl gap-10 md:grid-cols-3 md:gap-8">
+              {/* Connecting line (desktop) */}
+              <div
+                aria-hidden
+                className="absolute top-7 right-[16%] left-[16%] hidden h-px bg-gradient-to-r from-brand/10 via-brand/30 to-brand/10 md:block"
+              />
+              {HOW_IT_WORKS.map(({ icon: Icon, step, title, body }) => (
+                <li key={step} className="relative flex flex-col items-center text-center">
+                  <div className="relative z-10 grid size-14 place-items-center rounded-2xl border border-brand/15 bg-white text-brand shadow-sm">
+                    <Icon className="size-6" strokeWidth={2} />
+                  </div>
+                  <span className="mt-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand/70">
+                    Step {step}
+                  </span>
+                  <h3 className="mt-2 text-xl font-bold tracking-tight text-ink">{title}</h3>
+                  <p className="mt-3 max-w-xs text-base leading-relaxed text-ink/60">{body}</p>
+                </li>
+              ))}
+            </ol>
+
+            <div className="mt-14 flex justify-center">
+              <Link
+                to="/demo"
+                className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white px-6 py-3 text-sm font-semibold text-ink transition-all hover:border-brand/30 hover:text-brand"
+              >
+                Try a live example form
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -620,11 +786,14 @@ function Index() {
           />
           <div className="relative mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand/70">
+                Early access feedback
+              </span>
               <h2 className="mt-5 text-3xl font-extrabold tracking-tight text-balance md:text-5xl">
                 Loved by teams who ask better questions.
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base text-ink/60 md:text-lg">
-                Real words from teams who replaced clunky surveys with conversations their customers
+                What early users say after swapping clunky surveys for conversations their customers
                 actually finish.
               </p>
             </div>
@@ -632,6 +801,84 @@ function Index() {
             <div className="mt-16">
               <TestimonialsCarousel />
             </div>
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section
+          id="pricing"
+          className="relative overflow-hidden bg-gradient-to-b from-surface to-white px-6 py-24 md:px-8 md:py-32"
+        >
+          <div className="relative mx-auto max-w-7xl">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-5xl">
+                Pricing that's easy to say <span className="text-brand">yes to.</span>
+              </h2>
+              <p className="mx-auto mt-5 max-w-xl text-base text-ink/60 md:text-lg">
+                One plan while we're in early access: everything, for everyone, for free.
+              </p>
+            </div>
+
+            <div className="mx-auto mt-14 max-w-md">
+              <div className="relative rounded-[28px] border border-brand/15 bg-white p-8 shadow-[0_24px_60px_-20px_color-mix(in_oklch,var(--brand)_25%,transparent)] md:p-10">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-brand">
+                  <Sparkles className="size-3" />
+                  Early access
+                </span>
+                <div className="mt-6 flex items-baseline gap-2">
+                  <span className="text-6xl font-extrabold tracking-tight text-ink">$0</span>
+                  <span className="text-sm font-medium text-ink/50">/ month</span>
+                </div>
+                <p className="mt-3 text-sm text-ink/60">
+                  Free forever for early users. No credit card required.
+                </p>
+                <ul className="mt-8 space-y-3">
+                  {[
+                    "Every feature included",
+                    "AI question suggestions",
+                    "Real-time response dashboard",
+                    "One-question-at-a-time forms",
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-3 text-sm text-ink/80">
+                      <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
+                        <Check className="size-3" strokeWidth={3} />
+                      </span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-8">
+                  <PrimaryCTA size="lg">Claim your free account</PrimaryCTA>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="relative overflow-hidden bg-white px-6 py-24 md:px-8 md:py-32">
+          <div className="relative mx-auto max-w-3xl">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-5xl">
+                Questions? <span className="text-brand">Answered.</span>
+              </h2>
+              <p className="mx-auto mt-5 max-w-xl text-base text-ink/60 md:text-lg">
+                The things people usually want to know before their first form.
+              </p>
+            </div>
+
+            <Accordion type="single" collapsible className="mt-12">
+              {FAQS.map(({ q, a }) => (
+                <AccordionItem key={q} value={q} className="border-ink/10">
+                  <AccordionTrigger className="py-5 text-left text-base font-semibold text-ink hover:no-underline md:text-lg">
+                    {q}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 text-base leading-relaxed text-ink/60">
+                    {a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </div>
         </section>
 
@@ -656,15 +903,84 @@ function Index() {
         </section>
       </main>
 
-      <footer className="border-t border-white/5 bg-ink px-6 py-10 md:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-white/40 sm:flex-row">
-          <a href="/" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
-              <span className="size-3 rounded-sm bg-white" />
-            </span>
-            <span className="text-xl font-bold tracking-tight text-white">Flowform</span>
-          </a>
-          <span>&copy; {new Date().getFullYear()} Flowform</span>
+      <footer className="border-t border-white/5 bg-ink px-6 pt-16 pb-10 md:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <a href="/" className="flex items-center gap-2">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
+                  <span className="size-3 rounded-sm bg-white" />
+                </span>
+                <span className="text-xl font-bold tracking-tight text-white">Flowform</span>
+              </a>
+              <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/40">
+                One-question-at-a-time forms that feel like a conversation — and get finished.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">
+                Product
+              </h3>
+              <ul className="mt-4 space-y-3 text-sm">
+                {[...NAV_LINKS, { href: "/demo", label: "Live demo" }].map((l) => (
+                  <li key={l.href}>
+                    <a href={l.href} className="text-white/60 transition-colors hover:text-white">
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">
+                Account
+              </h3>
+              <ul className="mt-4 space-y-3 text-sm">
+                <li>
+                  <Link
+                    to="/login"
+                    search={{ redirect: "/dashboard" }}
+                    className="text-white/60 transition-colors hover:text-white"
+                  >
+                    Log in
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/signup" className="text-white/60 transition-colors hover:text-white">
+                    Sign up
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/dashboard"
+                    className="text-white/60 transition-colors hover:text-white"
+                  >
+                    Dashboard
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">
+                Legal
+              </h3>
+              <ul className="mt-4 space-y-3 text-sm">
+                <li>
+                  <Link to="/privacy" className="text-white/60 transition-colors hover:text-white">
+                    Privacy policy
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/terms" className="text-white/60 transition-colors hover:text-white">
+                    Terms of service
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-14 border-t border-white/10 pt-8 text-center text-sm text-white/40 sm:text-left">
+            &copy; {new Date().getFullYear()} Flowform. All rights reserved.
+          </div>
         </div>
       </footer>
     </div>
