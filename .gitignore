@@ -37,3 +37,6 @@ report.html
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code local session config
+.claude/

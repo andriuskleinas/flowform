@@ -88,46 +88,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Build engaging, one-question-at-a-time forms that people actually enjoy filling out.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://flowformapp.vercel.app" },
+      { property: "og:site_name", content: "Flowform" },
+      { property: "og:image", content: "https://flowformapp.vercel.app/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Flowform — Forms that feel like a conversation" },
       {
-        name: "description",
-        content:
-          "Form Creator Hub is a powerful, intuitive form builder for creating beautiful, interactive surveys and forms.",
-      },
-      {
-        property: "og:description",
-        content:
-          "Form Creator Hub is a powerful, intuitive form builder for creating beautiful, interactive surveys and forms.",
-      },
-      {
         name: "twitter:description",
         content:
-          "Form Creator Hub is a powerful, intuitive form builder for creating beautiful, interactive surveys and forms.",
+          "Build engaging, one-question-at-a-time forms that people actually enjoy filling out.",
       },
-      {
-        property: "og:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/waerhwQzcCMyhgXa2ZHKevKeZJv2/social-images/social-1778580486196-Screenshot_2026-05-12_at_13.07.54.webp",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/waerhwQzcCMyhgXa2ZHKevKeZJv2/social-images/social-1778580486196-Screenshot_2026-05-12_at_13.07.54.webp",
-      },
-      { name: "description", content: "Killer of typeform" },
-      { property: "og:description", content: "Killer of typeform" },
-      { name: "twitter:description", content: "Killer of typeform" },
-      {
-        property: "og:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/86a6fdb1-52f0-401e-88aa-2aa167c23b95",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/86a6fdb1-52f0-401e-88aa-2aa167c23b95",
-      },
+      { name: "twitter:image", content: "https://flowformapp.vercel.app/og-image.png" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
