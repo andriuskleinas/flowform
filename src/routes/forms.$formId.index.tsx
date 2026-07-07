@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { ArrowLeft, CheckCircle2, Pencil } from "lucide-react";
+import { ArrowLeft, CheckCircle2, CircleSlash, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -11,12 +11,40 @@ import {
   validateAnswerLength,
   MAX_ANSWER_LENGTH,
   type Answers,
+  type FormStatus,
 } from "@/lib/form-utils";
+import { getPublicFormMeta } from "@/lib/form-meta";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionRender, type Question } from "@/components/question-render";
 import { Shell } from "@/components/shell";
 
 export const Route = createFileRoute("/forms/$formId/")({
+  // Loader exists solely to feed head(): per-form OG/meta tags rendered
+  // during SSR so shared links preview with the form's own title.
+  loader: async ({ params }) => {
+    try {
+      return await getPublicFormMeta({ data: { formId: params.formId } });
+    } catch {
+      return null;
+    }
+  },
+  head: ({ loaderData }) => {
+    const title = loaderData?.title ? `${loaderData.title} — Flowform` : "Flowform";
+    const description =
+      loaderData?.description?.trim() ||
+      (loaderData?.title
+        ? `Share your answers to "${loaderData.title}" — it only takes a minute.`
+        : "A form built with Flowform.");
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+      ],
+    };
+  },
   component: PublicFormPage,
 });
 
@@ -25,7 +53,7 @@ type FormRow = {
   title: string;
   description: string | null;
   user_id: string;
-  status: "draft" | "published";
+  status: FormStatus;
 };
 
 function PublicFormPage() {
@@ -77,7 +105,15 @@ function PublicFormPage() {
       if (error) throw error;
     },
     onSuccess: () => setSubmitted(true),
-    onError: (e: Error) => toast.error(e.message || "Could not submit"),
+    onError: (e: Error) => {
+      // An RLS violation here means the form stopped accepting responses
+      // (closed/unpublished) after the respondent loaded the page. Surface
+      // that instead of the raw Postgres policy error.
+      const msg = /row-level security/i.test(e.message)
+        ? "This form is no longer accepting responses."
+        : e.message || "Could not submit";
+      toast.error(msg);
+    },
   });
 
   const questions = questionsQ.data ?? [];
@@ -108,8 +144,8 @@ function PublicFormPage() {
     );
   }
 
+  const status = formQ.data.status;
   const isOwner = !!user && !!formQ.data && user.id === formQ.data.user_id;
-  const isDraft = formQ.data.status !== "published";
   const ownerNav = isOwner ? (
     <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
@@ -119,9 +155,12 @@ function PublicFormPage() {
         <div className="text-sm">
           <p className="font-semibold text-ink">You're viewing the public version of this form.</p>
           <p className="text-ink/60">
-            {isDraft
-              ? "Draft — respondents can't see this yet. Publish from the editor to share it."
-              : "This is what respondents see. To change questions, open the editor."}
+            {status === "draft" &&
+              "Draft — respondents can't see this yet. Publish from the editor to share it."}
+            {status === "published" &&
+              "This is what respondents see. To change questions, open the editor."}
+            {status === "closed" &&
+              "Closed — respondents see this notice. Reopen from the editor to accept more responses."}
           </p>
         </div>
       </div>
@@ -143,7 +182,25 @@ function PublicFormPage() {
     </div>
   ) : null;
 
-  if (isDraft && !isOwner) {
+  if (status === "closed") {
+    return (
+      <Shell width="sm">
+        {ownerNav}
+        <div className="flex flex-col items-center text-center">
+          <span className="flex size-14 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+            <CircleSlash className="size-7" />
+          </span>
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">This survey is closed</h1>
+          <p className="mt-3 max-w-sm text-ink/60">
+            <span className="font-semibold text-ink">{formQ.data.title}</span> is no longer
+            accepting responses. Thanks to everyone who took part.
+          </p>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (status === "draft" && !isOwner) {
     return (
       <Shell width="sm">
         <h1 className="text-3xl font-extrabold tracking-tight">This form isn't published yet</h1>

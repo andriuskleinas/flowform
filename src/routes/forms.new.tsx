@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { suggestQuestions, type SuggestedQuestion } from "@/lib/suggest-questions";
 import { useAuth } from "@/hooks/use-auth";
-import { type QuestionType, type QuestionOptions } from "@/lib/form-utils";
+import { type QuestionType, type QuestionOptions, RATING_MAX_CHOICES } from "@/lib/form-utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -443,7 +443,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
                           }
                           className="flex h-9 w-32 rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                         >
-                          {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                          {RATING_MAX_CHOICES.map((n) => (
                             <option key={n} value={n}>
                               {n}
                             </option>

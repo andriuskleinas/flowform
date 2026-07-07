@@ -44,12 +44,15 @@ import { QuestionRender, type Question, type QuestionType } from "@/components/q
 import {
   type QuestionOptions,
   type Answers,
+  type FormStatus,
+  RATING_MAX_CHOICES,
   getRatingMax,
   getMcOptions,
   questionOptionsEqual,
 } from "@/lib/form-utils";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { DeleteFormDialog } from "@/components/delete-form-dialog";
 import { Shell } from "@/components/shell";
 
 export const Route = createFileRoute("/forms/$formId/edit")({
@@ -103,6 +106,7 @@ function snapshotKey(
 
 function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const formQ = useQuery({
     queryKey: ["form", formId],
@@ -143,6 +147,10 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewAnswers, setPreviewAnswers] = useState<Answers>({});
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  // Once the form is deleted, unsaved-changes blocking must not trap the
+  // redirect to the dashboard.
+  const deletedRef = useRef(false);
 
   // Initialize / re-sync draft from server when (a) we don't have one yet,
   // or (b) the server snapshot changed AND the user has no unsaved changes.
@@ -200,7 +208,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   // `withResolver: true` returns { status, proceed, reset } so we can drive
   // the confirm dialog below; without it the hook returns void.
   const blocker = useBlocker({
-    shouldBlockFn: () => isDirty,
+    shouldBlockFn: () => isDirty && !deletedRef.current,
     enableBeforeUnload: isDirty,
     withResolver: true,
   });
@@ -354,21 +362,56 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     setDiscardOpen(false);
   };
 
-  /* -------------------------------- Publish -------------------------------- */
+  /* ---------------------------- Status & delete ---------------------------- */
 
-  const togglePublish = useMutation({
-    mutationFn: async (next: "draft" | "published") => {
+  const setStatus = useMutation({
+    mutationFn: async (next: FormStatus) => {
       const { error } = await supabase.from("forms").update({ status: next }).eq("id", formId);
       if (error) throw error;
     },
     onSuccess: (_d, next) => {
-      toast.success(next === "published" ? "Form published" : "Moved back to draft");
+      toast.success(
+        next === "published"
+          ? "Form published"
+          : next === "closed"
+            ? "Form closed — no longer accepting responses"
+            : "Moved back to draft",
+      );
       qc.invalidateQueries({ queryKey: ["form", formId] });
       qc.invalidateQueries({ queryKey: ["forms"] });
       qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
       qc.invalidateQueries({ queryKey: ["public-form", formId] });
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Response count powers the delete-dialog warning ("…and its 32 responses").
+  const responseCountQ = useQuery({
+    queryKey: ["response-count", formId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("responses")
+        .select("id", { count: "exact", head: true })
+        .eq("form_id", formId);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  const deleteForm = useMutation({
+    mutationFn: async () => {
+      // Cascades to questions + responses via ON DELETE CASCADE.
+      const { error } = await supabase.from("forms").delete().eq("id", formId);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      deletedRef.current = true;
+      setDeleteOpen(false);
+      toast.success("Form deleted");
+      qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
+      await navigate({ to: "/dashboard" });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not delete form"),
   });
 
   const sensors = useSensors(
@@ -482,7 +525,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <StatusPill status={form.status as "draft" | "published"} />
+            <StatusPill status={form.status as FormStatus} />
             {isDirty && (
               <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
                 Unsaved changes
@@ -490,21 +533,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             )}
           </div>
         </div>
-        <div className="mt-4">
-          {form.status === "published" ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {form.status === "draft" && (
             <button
               type="button"
-              onClick={() => togglePublish.mutate("draft")}
-              disabled={togglePublish.isPending}
-              className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
-            >
-              Unpublish
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => togglePublish.mutate("published")}
-              disabled={togglePublish.isPending || visibleDraftQuestions.length === 0 || isDirty}
+              onClick={() => setStatus.mutate("published")}
+              disabled={setStatus.isPending || visibleDraftQuestions.length === 0 || isDirty}
               title={
                 isDirty
                   ? "Save your changes first"
@@ -516,6 +550,43 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             >
               Publish form
             </button>
+          )}
+          {form.status === "published" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setStatus.mutate("closed")}
+                disabled={setStatus.isPending}
+                title="Stop accepting responses. The link keeps working and shows a closed notice."
+                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+              >
+                Close form
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatus.mutate("draft")}
+                disabled={setStatus.isPending}
+                title="Take the form offline entirely — the link shows an unpublished notice."
+                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+              >
+                Unpublish
+              </button>
+            </>
+          )}
+          {form.status === "closed" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setStatus.mutate("published")}
+                disabled={setStatus.isPending}
+                className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25 disabled:opacity-50"
+              >
+                Reopen form
+              </button>
+              <span className="text-xs text-ink/50">
+                Closed — the link shows "this survey is closed" and no new responses are accepted.
+              </span>
+            </>
           )}
         </div>
       </header>
@@ -580,7 +651,36 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             </DropdownMenu>
           </div>
         </section>
+
+        <section className="mt-12 rounded-2xl border border-destructive/20 bg-destructive/[0.03] p-5">
+          <h2 className="text-sm font-bold text-destructive">Danger zone</h2>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-ink/60">
+              Permanently delete this form
+              {(responseCountQ.data ?? 0) > 0
+                ? ` and its ${responseCountQ.data} ${responseCountQ.data === 1 ? "response" : "responses"}`
+                : ""}
+              .
+            </p>
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-white px-4 py-2 text-sm font-semibold text-destructive hover:bg-destructive/5"
+            >
+              <Trash2 className="size-4" /> Delete form
+            </button>
+          </div>
+        </section>
       </div>
+
+      <DeleteFormDialog
+        open={deleteOpen}
+        formTitle={form.title}
+        responseCount={responseCountQ.data}
+        pending={deleteForm.isPending}
+        onConfirm={() => deleteForm.mutate()}
+        onCancel={() => setDeleteOpen(false)}
+      />
 
       <Dialog
         open={previewOpen}
@@ -739,10 +839,7 @@ function SortableQuestionCard({
           <Label className="text-xs">Question</Label>
           <DebouncedInput
             value={question.label}
-            onChange={(v) => {
-              const trimmed = v.trim();
-              if (trimmed && trimmed !== question.label) onChangeLabel(trimmed);
-            }}
+            onChange={onChangeLabel}
             placeholder="Type your question…"
           />
         </div>
@@ -774,7 +871,7 @@ function SortableQuestionCard({
             onChange={(e) => onChangeOptions({ max: Number(e.target.value) })}
             className="rounded-md border border-input bg-transparent px-3 py-1.5 text-sm"
           >
-            {[3, 5, 7, 10].map((n) => (
+            {RATING_MAX_CHOICES.map((n) => (
               <option key={n} value={n}>
                 {n}
               </option>

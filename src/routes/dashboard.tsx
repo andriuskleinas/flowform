@@ -1,7 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { BarChart3, FileText, LogOut, Pencil, Plus, Share2, User } from "lucide-react";
+import {
+  BarChart3,
+  CircleSlash,
+  CirclePlay,
+  FileText,
+  LogOut,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Share2,
+  Trash2,
+  User,
+} from "lucide-react";
 
 import {
   DropdownMenu,
@@ -14,10 +26,12 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { DeleteFormDialog } from "@/components/delete-form-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusPill } from "@/components/status-pill";
 import { getInitialsFromProfile, timeAgo } from "@/lib/utils";
+import type { FormStatus } from "@/lib/form-utils";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -36,7 +50,7 @@ type FormRow = {
   title: string;
   description: string | null;
   created_at: string;
-  status: "draft" | "published";
+  status: FormStatus;
 };
 
 /** Row shape returned by the `get_dashboard_forms` Postgres RPC. */
@@ -108,7 +122,7 @@ function DashboardAuthed({
       // large counts; coerce to numbers so the render path stays simple.
       return (data ?? []).map((r) => ({
         ...r,
-        status: r.status as "draft" | "published",
+        status: r.status as FormStatus,
         response_count: Number(r.response_count),
         question_count: Number(r.question_count),
       }));
@@ -143,6 +157,44 @@ function DashboardAuthed({
   const greetingName = fullName || profile?.display_name?.trim() || email;
 
   const [pendingPublish, setPendingPublish] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<DashboardFormRow | null>(null);
+
+  const deleteForm = useMutation({
+    mutationFn: async (formId: string) => {
+      // Cascades to questions + responses via ON DELETE CASCADE.
+      const { error } = await supabase
+        .from("forms")
+        .delete()
+        .eq("id", formId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setPendingDelete(null);
+      toast.success("Form deleted");
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not delete form"),
+  });
+
+  const setFormStatus = useMutation({
+    mutationFn: async ({ formId, status }: { formId: string; status: FormStatus }) => {
+      const { error } = await supabase
+        .from("forms")
+        .update({ status })
+        .eq("id", formId)
+        .eq("user_id", userId);
+      if (error) throw error;
+      return status;
+    },
+    onSuccess: async (status) => {
+      toast.success(
+        status === "closed" ? "Form closed — no longer accepting responses" : "Form reopened",
+      );
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not update form"),
+  });
 
   const handleSignOut = async () => {
     signingOutRef.current = true;
@@ -386,6 +438,47 @@ function DashboardAuthed({
                         >
                           <BarChart3 className="size-4" />
                         </Link>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            aria-label="More actions"
+                            title="More actions"
+                            className="rounded-lg p-2 text-ink/60 outline-none hover:bg-ink/5 hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40"
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52">
+                            {f.status === "published" && (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setFormStatus.mutate({ formId: f.id, status: "closed" })
+                                }
+                              >
+                                <CircleSlash className="size-4" />
+                                Close form
+                              </DropdownMenuItem>
+                            )}
+                            {f.status === "closed" && (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setFormStatus.mutate({ formId: f.id, status: "published" })
+                                }
+                              >
+                                <CirclePlay className="size-4" />
+                                Reopen form
+                              </DropdownMenuItem>
+                            )}
+                            {f.status !== "draft" && <DropdownMenuSeparator />}
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setPendingDelete(dashboardForms.find((d) => d.id === f.id) ?? null)
+                              }
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="size-4" />
+                              Delete form
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </li>
@@ -394,6 +487,15 @@ function DashboardAuthed({
           </ul>
         </section>
       </main>
+
+      <DeleteFormDialog
+        open={pendingDelete !== null}
+        formTitle={pendingDelete?.title ?? ""}
+        responseCount={pendingDelete?.response_count}
+        pending={deleteForm.isPending}
+        onConfirm={() => pendingDelete && deleteForm.mutate(pendingDelete.id)}
+        onCancel={() => setPendingDelete(null)}
+      />
 
       <ConfirmDialog
         open={pendingPublish !== null}

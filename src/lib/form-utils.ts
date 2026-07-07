@@ -1,5 +1,11 @@
 export type QuestionType = "text" | "multiple_choice" | "rating";
 
+/** Form lifecycle: draft (owner-only) → published (live) → closed (visible, not accepting). */
+export type FormStatus = "draft" | "published" | "closed";
+
+/** Rating scales offered in the builders. Keep create + edit pages in sync. */
+export const RATING_MAX_CHOICES = [3, 4, 5, 6, 7, 8, 9, 10] as const;
+
 export type QuestionOptions = string[] | { max: number } | null;
 
 /**

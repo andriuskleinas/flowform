@@ -180,13 +180,16 @@ function Overview({
     const avgDuration =
       durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : null;
 
-    const answeredAll = responses.filter((r) =>
-      questions.every((q) => isAnswered(q, r.answers?.[q.id])),
+    // NOTE: a true completion rate (views → submits) arrives with funnel
+    // analytics; until then every submitted response necessarily answered
+    // everything, so we report volume instead of a fake 100% stat.
+    const last30 = responses.filter(
+      (r) => now - new Date(r.submitted_at).getTime() <= 30 * 24 * 3600 * 1000,
     ).length;
-    const completionRate = total > 0 ? Math.round((answeredAll / total) * 100) : 0;
+    const avgPerDay = last30 / 30;
 
-    return { total, last7, avgDuration, completionRate, durationsCount: durations.length };
-  }, [questions, responses]);
+    return { total, last7, avgDuration, avgPerDay, durationsCount: durations.length };
+  }, [responses]);
 
   const trend = useMemo(() => buildTrend(responses, 30), [responses]);
 
@@ -210,7 +213,13 @@ function Overview({
           value={stats.avgDuration != null ? formatDuration(stats.avgDuration) : "—"}
           hint={stats.avgDuration == null ? "Not enough data yet" : `${stats.durationsCount} timed`}
         />
-        <StatCard label="Completion rate" value={`${stats.completionRate}%`} />
+        <StatCard
+          label="Avg per day"
+          value={
+            stats.avgPerDay >= 10 ? String(Math.round(stats.avgPerDay)) : stats.avgPerDay.toFixed(1)
+          }
+          hint="Last 30 days"
+        />
       </div>
 
       {hasMore && (
