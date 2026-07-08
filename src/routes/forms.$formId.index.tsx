@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, CircleSlash, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -63,11 +63,45 @@ function PublicFormPage() {
   const [submitted, setSubmitted] = useState(false);
   // Only surface missing-required errors after a submit attempt.
   const [showErrors, setShowErrors] = useState(false);
+  // This device already submitted this form (localStorage flag).
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   // Set on first interaction, not page load, so fill-time reflects actual engagement.
   const startedAtRef = useRef<string | null>(null);
   const recordStart = () => {
     if (!startedAtRef.current) startedAtRef.current = new Date().toISOString();
   };
+
+  const draftKey = `flowform:draft:${formId}`;
+  const submittedKey = `flowform:submitted:${formId}`;
+  // Don't persist until the stored draft (if any) has been restored,
+  // otherwise the initial empty state would overwrite it.
+  const restoredRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(submittedKey)) setAlreadySubmitted(true);
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { answers?: Answers; startedAt?: string };
+        if (parsed?.answers && typeof parsed.answers === "object") {
+          setAnswers(parsed.answers);
+          if (typeof parsed.startedAt === "string") startedAtRef.current = parsed.startedAt;
+        }
+      }
+    } catch {
+      // Storage unavailable (private mode) or corrupt draft — start fresh.
+    }
+    restoredRef.current = true;
+  }, [draftKey, submittedKey]);
+
+  useEffect(() => {
+    if (!restoredRef.current || submitted || Object.keys(answers).length === 0) return;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({ answers, startedAt: startedAtRef.current }));
+    } catch {
+      // Best-effort only.
+    }
+  }, [answers, draftKey, submitted]);
 
   const formQ = useQuery({
     queryKey: ["public-form", formId],
@@ -106,7 +140,15 @@ function PublicFormPage() {
         .insert({ form_id: formId, answers, started_at: startedAtRef.current });
       if (error) throw error;
     },
-    onSuccess: () => setSubmitted(true),
+    onSuccess: () => {
+      setSubmitted(true);
+      try {
+        localStorage.setItem(submittedKey, new Date().toISOString());
+        localStorage.removeItem(draftKey);
+      } catch {
+        // Best-effort only.
+      }
+    },
     onError: (e: Error) => {
       // An RLS violation here means the form stopped accepting responses
       // (closed/unpublished) after the respondent loaded the page. Surface
@@ -220,6 +262,38 @@ function PublicFormPage() {
           <CheckCircle2 className="size-14 text-brand" />
           <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Thanks!</h1>
           <p className="mt-2 text-ink/60">Your response was recorded.</p>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (alreadySubmitted) {
+    return (
+      <Shell width="sm">
+        {ownerNav}
+        <div className="flex flex-col items-center text-center">
+          <CheckCircle2 className="size-14 text-brand" />
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">You've already responded</h1>
+          <p className="mt-2 max-w-sm text-ink/60">
+            Looks like this form was already submitted from this device.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                localStorage.removeItem(submittedKey);
+              } catch {
+                // Best-effort only.
+              }
+              setAlreadySubmitted(false);
+              setAnswers({});
+              setShowErrors(false);
+              startedAtRef.current = null;
+            }}
+            className="mt-6 inline-flex items-center justify-center rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
+          >
+            Submit another response
+          </button>
         </div>
       </Shell>
     );

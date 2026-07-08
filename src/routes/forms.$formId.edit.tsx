@@ -1,7 +1,17 @@
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowDown, ArrowUp, Eye, GripVertical, Plus, Trash2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowDown,
+  ArrowUp,
+  Eye,
+  GripVertical,
+  Plus,
+  Share2,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +66,7 @@ import { Switch } from "@/components/ui/switch";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DeleteFormDialog } from "@/components/delete-form-dialog";
+import { ShareFormDialog } from "@/components/share-form-dialog";
 import { Shell } from "@/components/shell";
 
 export const Route = createFileRoute("/forms/$formId/edit")({
@@ -146,6 +157,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const [previewAnswers, setPreviewAnswers] = useState<Answers>({});
   const [discardOpen, setDiscardOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   // Once the form is deleted, unsaved-changes blocking must not trap the
   // redirect to the dashboard.
   const deletedRef = useRef(false);
@@ -478,6 +490,15 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           <ArrowLeft className="size-4" /> Back to dashboard
         </Link>
         <div className="flex items-center gap-2">
+          {form.status === "published" && (
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
+            >
+              <Share2 className="size-4" /> Share
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setPreviewOpen(true)}
@@ -695,6 +716,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         pending={deleteForm.isPending}
         onConfirm={() => deleteForm.mutate()}
         onCancel={() => setDeleteOpen(false)}
+      />
+
+      <ShareFormDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        formId={formId}
+        formTitle={form.title}
       />
 
       <Dialog

@@ -5,6 +5,7 @@ import {
   BarChart3,
   CircleSlash,
   CirclePlay,
+  CopyPlus,
   FileText,
   LogOut,
   MoreHorizontal,
@@ -27,6 +28,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DeleteFormDialog } from "@/components/delete-form-dialog";
+import { ShareFormDialog } from "@/components/share-form-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusPill } from "@/components/status-pill";
@@ -158,6 +160,48 @@ function DashboardAuthed({
 
   const [pendingPublish, setPendingPublish] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DashboardFormRow | null>(null);
+  const [shareTarget, setShareTarget] = useState<FormRow | null>(null);
+
+  const duplicateForm = useMutation({
+    mutationFn: async (formId: string) => {
+      const { data: src, error: srcErr } = await supabase
+        .from("forms")
+        .select("title, description")
+        .eq("id", formId)
+        .single();
+      if (srcErr) throw srcErr;
+      const { data: qs, error: qErr } = await supabase
+        .from("questions")
+        .select("type, label, options, position, required")
+        .eq("form_id", formId)
+        .order("position", { ascending: true });
+      if (qErr) throw qErr;
+      const { data: created, error: insErr } = await supabase
+        .from("forms")
+        .insert({
+          // Stay under the 300-char title constraint even with the suffix.
+          title: `${src.title.slice(0, 290)} (copy)`,
+          description: src.description,
+          user_id: userId,
+        })
+        .select("id")
+        .single();
+      if (insErr) throw insErr;
+      if (qs && qs.length > 0) {
+        const { error: qInsErr } = await supabase
+          .from("questions")
+          .insert(qs.map((q) => ({ ...q, form_id: created.id })));
+        if (qInsErr) throw qInsErr;
+      }
+      return created.id as string;
+    },
+    onSuccess: async (newId) => {
+      toast.success("Form duplicated — opening the copy");
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
+      navigate({ to: "/forms/$formId/edit", params: { formId: newId } });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not duplicate form"),
+  });
 
   const deleteForm = useMutation({
     mutationFn: async (formId: string) => {
@@ -211,9 +255,8 @@ function DashboardAuthed({
     navigate({ to: "/" });
   };
 
-  const doPublishAndCopy = async (formId: string) => {
+  const doPublishAndShare = async (formId: string) => {
     setPendingPublish(null);
-    const url = `${window.location.origin}/forms/${formId}`;
     try {
       const { error } = await supabase
         .from("forms")
@@ -222,8 +265,9 @@ function DashboardAuthed({
         .eq("user_id", userId);
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
-      await navigator.clipboard.writeText(url);
-      toast.success("Form published and link copied");
+      toast.success("Form published");
+      const row = dashboardForms.find((f) => f.id === formId);
+      if (row) setShareTarget({ ...row, status: "published" });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not publish form");
     }
@@ -362,19 +406,13 @@ function DashboardAuthed({
               forms.map((f) => {
                 const rCount = responseCounts[f.id] ?? 0;
                 const qCount = questionCounts[f.id] ?? 0;
-                const isPublished = f.status === "published";
-                const copyShareLink = async () => {
-                  if (!isPublished) {
+                const isDraft = f.status === "draft";
+                const openShare = () => {
+                  if (isDraft) {
                     setPendingPublish(f.id);
                     return;
                   }
-                  const url = `${window.location.origin}/forms/${f.id}`;
-                  try {
-                    await navigator.clipboard.writeText(url);
-                    toast.success("Link copied");
-                  } catch {
-                    toast.error("Could not copy link");
-                  }
+                  setShareTarget(f);
                 };
                 return (
                   <li
@@ -420,11 +458,9 @@ function DashboardAuthed({
                         </Link>
                         <button
                           type="button"
-                          onClick={copyShareLink}
-                          aria-label={
-                            isPublished ? "Copy public link" : "Publish and copy public link"
-                          }
-                          title={isPublished ? "Copy public link" : "Publish and copy public link"}
+                          onClick={openShare}
+                          aria-label={isDraft ? "Publish and share" : "Share form"}
+                          title={isDraft ? "Publish and share" : "Share"}
                           className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
                         >
                           <Share2 className="size-4" />
@@ -447,6 +483,13 @@ function DashboardAuthed({
                             <MoreHorizontal className="size-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuItem
+                              disabled={duplicateForm.isPending}
+                              onClick={() => duplicateForm.mutate(f.id)}
+                            >
+                              <CopyPlus className="size-4" />
+                              Duplicate form
+                            </DropdownMenuItem>
                             {f.status === "published" && (
                               <DropdownMenuItem
                                 onClick={() =>
@@ -467,7 +510,7 @@ function DashboardAuthed({
                                 Reopen form
                               </DropdownMenuItem>
                             )}
-                            {f.status !== "draft" && <DropdownMenuSeparator />}
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() =>
                                 setPendingDelete(dashboardForms.find((d) => d.id === f.id) ?? null)
@@ -501,9 +544,16 @@ function DashboardAuthed({
         open={pendingPublish !== null}
         title="Publish this form?"
         description="This will make the form visible to anyone with the link. You can unpublish it later from the editor."
-        confirmLabel="Publish and copy link"
-        onConfirm={() => pendingPublish && doPublishAndCopy(pendingPublish)}
+        confirmLabel="Publish and share"
+        onConfirm={() => pendingPublish && doPublishAndShare(pendingPublish)}
         onCancel={() => setPendingPublish(null)}
+      />
+
+      <ShareFormDialog
+        open={shareTarget !== null}
+        onOpenChange={(open) => !open && setShareTarget(null)}
+        formId={shareTarget?.id ?? ""}
+        formTitle={shareTarget?.title ?? ""}
       />
     </div>
   );

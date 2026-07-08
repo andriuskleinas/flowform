@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Bar,
   BarChart,
@@ -17,6 +18,7 @@ import {
 } from "recharts";
 
 import { supabase } from "@/integrations/supabase/client";
+import { exportResponsesCsv } from "@/lib/export-csv";
 import {
   getChoiceConfig,
   getRatingMax,
@@ -47,6 +49,7 @@ function ResponsesPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [responseLimit, setResponseLimit] = useState(100);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -138,6 +141,29 @@ function ResponsesPage() {
             {responses.length === 1 && !hasMore ? "response" : "responses"}
           </p>
         </div>
+        <button
+          type="button"
+          disabled={exporting || responses.length === 0}
+          onClick={async () => {
+            setExporting(true);
+            try {
+              const count = await exportResponsesCsv(formId, formQ.data!.title, questions);
+              toast.success(`Exported ${count} ${count === 1 ? "response" : "responses"} to CSV`);
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Export failed");
+            } finally {
+              setExporting(false);
+            }
+          }}
+          className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {exporting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Download className="size-4" />
+          )}
+          {exporting ? "Exporting…" : "Export CSV"}
+        </button>
       </header>
 
       <Tabs defaultValue="overview" className="mt-8">
