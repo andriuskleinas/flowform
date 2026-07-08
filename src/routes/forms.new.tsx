@@ -50,6 +50,114 @@ function makeQuestion(): DraftQuestion {
   };
 }
 
+type Template = {
+  id: string;
+  emoji: string;
+  name: string;
+  blurb: string;
+  title: string;
+  description: string;
+  questions: Array<Pick<DraftQuestion, "type" | "label" | "options" | "required">>;
+};
+
+const TEMPLATES: Template[] = [
+  {
+    id: "customer-nps",
+    emoji: "💜",
+    name: "Customer feedback",
+    blurb: "NPS + satisfaction + open feedback",
+    title: "Customer feedback survey",
+    description: "Help us understand how we're doing and what to improve.",
+    questions: [
+      {
+        type: "nps",
+        label: "How likely are you to recommend us to a friend or colleague?",
+        options: null,
+        required: true,
+      },
+      {
+        type: "rating",
+        label: "How satisfied are you with the product overall?",
+        options: { max: 5 },
+        required: true,
+      },
+      {
+        type: "multiple_choice",
+        label: "How often do you use the product?",
+        options: { choices: ["Daily", "Weekly", "Monthly", "Rarely"], multi: false },
+        required: true,
+      },
+      { type: "long_text", label: "What could we do better?", options: null, required: false },
+    ],
+  },
+  {
+    id: "event-feedback",
+    emoji: "🎪",
+    name: "Event feedback",
+    blurb: "Rating, highlights, suggestions",
+    title: "Event feedback",
+    description: "Thanks for joining us — tell us how it went!",
+    questions: [
+      {
+        type: "rating",
+        label: "How would you rate the event overall?",
+        options: { max: 5 },
+        required: true,
+      },
+      { type: "yes_no", label: "Would you attend again?", options: null, required: true },
+      {
+        type: "multiple_choice",
+        label: "Which parts did you enjoy most?",
+        options: {
+          choices: ["Talks", "Workshops", "Networking", "Venue & catering"],
+          multi: true,
+        },
+        required: false,
+      },
+      {
+        type: "long_text",
+        label: "Any suggestions for next time?",
+        options: null,
+        required: false,
+      },
+    ],
+  },
+  {
+    id: "employee-pulse",
+    emoji: "🌡️",
+    name: "Employee pulse",
+    blurb: "Quick weekly team check-in",
+    title: "Team pulse check",
+    description: "A quick, anonymous check-in — it takes less than a minute.",
+    questions: [
+      {
+        type: "rating",
+        label: "How are you feeling at work this week?",
+        options: { max: 5 },
+        required: true,
+      },
+      {
+        type: "nps",
+        label: "How likely are you to recommend working here?",
+        options: null,
+        required: true,
+      },
+      {
+        type: "yes_no",
+        label: "Do you have what you need to do your best work?",
+        options: null,
+        required: true,
+      },
+      {
+        type: "long_text",
+        label: "Anything you'd like to share with the team?",
+        options: null,
+        required: false,
+      },
+    ],
+  },
+];
+
 function NewFormPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -187,6 +295,13 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
   const canSubmit = title.trim().length > 0 && !createForm.isPending;
 
+  const applyTemplate = (t: Template) => {
+    setTitle(t.title);
+    setDescription(t.description);
+    setQuestions(t.questions.map((q) => ({ ...q, key: crypto.randomUUID() })));
+    toast.success(`Template applied — tweak it to fit and hit Create`);
+  };
+
   return (
     <div className="min-h-screen bg-surface text-ink">
       <header className="border-b border-ink/5">
@@ -215,8 +330,31 @@ function NewFormAuthed({ userId }: { userId: string }) {
           </p>
         </div>
 
+        {/* Templates */}
+        <section className="mt-8">
+          <h2 className="text-sm font-semibold text-ink/70">Start from a template</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => applyTemplate(t)}
+                className="rounded-2xl border border-ink/10 bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md"
+              >
+                <span className="text-xl">{t.emoji}</span>
+                <p className="mt-2 text-sm font-bold text-ink">{t.name}</p>
+                <p className="mt-0.5 text-xs text-ink/50">{t.blurb}</p>
+                <p className="mt-2 text-xs text-ink/40">{t.questions.length} questions</p>
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-ink/40">
+            Applying a template replaces what you've entered below.
+          </p>
+        </section>
+
         <form
-          className="mt-10 space-y-6"
+          className="mt-8 space-y-6"
           autoComplete="off"
           onSubmit={(e) => {
             e.preventDefault();

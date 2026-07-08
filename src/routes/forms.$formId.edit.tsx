@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowDown,
   ArrowUp,
+  CopyPlus,
   Eye,
   GripVertical,
   Plus,
@@ -105,6 +106,7 @@ type DraftFormState = {
   title: string;
   description: string | null;
   display_mode: DisplayMode;
+  thank_you_message: string | null;
 };
 
 function snapshotKey(
@@ -115,6 +117,7 @@ function snapshotKey(
     title: form.title.trim(),
     description: (form.description ?? "").trim(),
     display_mode: form.display_mode,
+    thank_you_message: (form.thank_you_message ?? "").trim(),
     questions: questions.map((q) => ({
       id: q.id,
       type: q.type,
@@ -135,7 +138,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, user_id, status, display_mode")
+        .select("id, title, description, user_id, status, display_mode, thank_you_message")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -165,6 +168,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     title: "",
     description: null,
     display_mode: "conversational",
+    thank_you_message: null,
   });
   const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -187,6 +191,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         title: sf.title,
         description: sf.description ?? null,
         display_mode: sf.display_mode as DisplayMode,
+        thank_you_message: sf.thank_you_message ?? null,
       },
       questions: sq,
     };
@@ -220,6 +225,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     if (draftForm.title !== snapshot.form.title) return true;
     if ((draftForm.description ?? null) !== (snapshot.form.description ?? null)) return true;
     if (draftForm.display_mode !== snapshot.form.display_mode) return true;
+    if ((draftForm.thank_you_message ?? null) !== (snapshot.form.thank_you_message ?? null))
+      return true;
     if (visibleDraftQuestions.length !== snapshot.questions.length) return true;
     for (let i = 0; i < visibleDraftQuestions.length; i++) {
       const v = visibleDraftQuestions[i];
@@ -278,6 +285,23 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         isNew: true,
       },
     ]);
+  const duplicateDraftQuestion = (id: string) =>
+    setDraftQuestions((qs) => {
+      const idx = qs.findIndex((q) => q.id === id);
+      if (idx < 0) return qs;
+      const src = qs[idx];
+      // Jump rules are copied as-is: the duplicate sits right after the
+      // original, so forward-only targets remain valid (save re-sanitizes).
+      const copy: DraftQuestion = {
+        ...src,
+        id: `tmp-${Math.random().toString(36).slice(2, 10)}`,
+        logic: src.logic ? JSON.parse(JSON.stringify(src.logic)) : null,
+        options: src.options ? JSON.parse(JSON.stringify(src.options)) : null,
+        isNew: true,
+        isDeleted: false,
+      };
+      return [...qs.slice(0, idx + 1), copy, ...qs.slice(idx + 1)];
+    });
   const removeDraftQuestion = (id: string) =>
     setDraftQuestions((qs) =>
       qs
@@ -299,12 +323,23 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         draftForm.description && draftForm.description.trim() !== ""
           ? draftForm.description.trim()
           : null;
-      const formPatch: { title?: string; description?: string | null; display_mode?: string } = {};
+      const trimmedThanks =
+        draftForm.thank_you_message && draftForm.thank_you_message.trim() !== ""
+          ? draftForm.thank_you_message.trim().slice(0, 500)
+          : null;
+      const formPatch: {
+        title?: string;
+        description?: string | null;
+        display_mode?: string;
+        thank_you_message?: string | null;
+      } = {};
       if (trimmedTitle !== snapshot.form.title) formPatch.title = trimmedTitle;
       if ((trimmedDesc ?? null) !== (snapshot.form.description ?? null))
         formPatch.description = trimmedDesc;
       if (draftForm.display_mode !== snapshot.form.display_mode)
         formPatch.display_mode = draftForm.display_mode;
+      if ((trimmedThanks ?? null) !== (snapshot.form.thank_you_message ?? null))
+        formPatch.thank_you_message = trimmedThanks;
       const formPatchOp: Promise<void> =
         Object.keys(formPatch).length > 0
           ? (async () => {
@@ -613,6 +648,20 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               />
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="form-thanks-edit" className="text-xs">
+                Thank-you message{" "}
+                <span className="font-normal text-ink/40">(optional, shown after submitting)</span>
+              </Label>
+              <DebouncedTextarea
+                value={draftForm.thank_you_message ?? ""}
+                onChange={(v) =>
+                  setDraftForm((f) => ({ ...f, thank_you_message: v === "" ? null : v }))
+                }
+                placeholder="Thanks! Your response was recorded."
+                rows={2}
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label className="text-xs">Respondent experience</Label>
               <div className="flex gap-2">
                 {(
@@ -760,6 +809,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                     onChangeType={(type) => setDraftType(q.id, type)}
                     onChangeRequired={(required) => setDraftRequired(q.id, required)}
                     onChangeLogic={(logic) => setDraftLogic(q.id, logic)}
+                    onDuplicate={() => duplicateDraftQuestion(q.id)}
                     onDelete={() => removeDraftQuestion(q.id)}
                     onMoveUp={() => moveBy(q.id, -1)}
                     onMoveDown={() => moveBy(q.id, 1)}
@@ -937,6 +987,7 @@ function SortableQuestionCard({
   onChangeType,
   onChangeRequired,
   onChangeLogic,
+  onDuplicate,
   onDelete,
   onMoveUp,
   onMoveDown,
@@ -950,6 +1001,7 @@ function SortableQuestionCard({
   onChangeType: (type: QuestionType) => void;
   onChangeRequired: (required: boolean) => void;
   onChangeLogic: (logic: QuestionLogic) => void;
+  onDuplicate: () => void;
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -991,6 +1043,9 @@ function SortableQuestionCard({
           </IconBtn>
           <IconBtn label="Move down" onClick={onMoveDown} disabled={index === total - 1}>
             <ArrowDown className="size-4" />
+          </IconBtn>
+          <IconBtn label="Duplicate question" onClick={onDuplicate}>
+            <CopyPlus className="size-4" />
           </IconBtn>
           <IconBtn label="Delete" onClick={onDelete}>
             <Trash2 className="size-4" />

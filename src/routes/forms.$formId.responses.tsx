@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Sparkles, Trash2, WandSparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -19,6 +19,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { exportResponsesCsv } from "@/lib/export-csv";
+import { summarizeResponses, type ResponseSummary } from "@/lib/summarize-responses";
 import {
   getChoiceConfig,
   getRatingMax,
@@ -229,6 +230,7 @@ function ResponsesPage() {
 
         <TabsContent value="overview" className="mt-6">
           <Overview
+            formId={formId}
             questions={questions}
             responses={responses}
             analytics={analyticsQ.data ?? null}
@@ -263,6 +265,7 @@ function ResponsesPage() {
 }
 
 function Overview({
+  formId,
   questions,
   responses,
   analytics,
@@ -270,6 +273,7 @@ function Overview({
   days,
   onDaysChange,
 }: {
+  formId: string;
   questions: Question[];
   responses: ResponseRow[];
   analytics: FormAnalytics | null;
@@ -277,6 +281,13 @@ function Overview({
   days: RangeDays;
   onDaysChange: (d: RangeDays) => void;
 }) {
+  const [summary, setSummary] = useState<ResponseSummary | null>(null);
+  const summarize = useMutation({
+    mutationFn: async () => summarizeResponses({ data: { formId } }),
+    onSuccess: setSummary,
+    onError: (e: Error) => toast.error(e.message || "Could not summarize responses"),
+  });
+  const hasTextQuestions = questions.some((q) => q.type === "text" || q.type === "long_text");
   // value → count per question, aggregated server-side over ALL responses.
   const countsByQuestion = useMemo(() => {
     const m = new Map<string, Map<string, number>>();
@@ -372,6 +383,93 @@ function Overview({
           }
         />
       </div>
+
+      {hasTextQuestions && (
+        <div className="rounded-2xl border border-brand/20 bg-gradient-to-br from-brand/[0.04] to-transparent p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                <Sparkles className="size-4 text-brand" />
+                AI summary
+              </h3>
+              <p className="text-xs text-ink/50">
+                Claude reads your open-text answers and pulls out themes and sentiment.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => summarize.mutate()}
+              disabled={summarize.isPending || totals.responses === 0}
+              className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {summarize.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" /> Analyzing…
+                </>
+              ) : (
+                <>
+                  <WandSparkles className="size-4" />
+                  {summary ? "Refresh summary" : "Summarize with AI"}
+                </>
+              )}
+            </button>
+          </div>
+
+          {summary && (
+            <div className="mt-4 space-y-4">
+              <div className="flex items-start gap-3">
+                <span
+                  className={
+                    "mt-0.5 inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold " +
+                    (summary.sentiment === "positive"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : summary.sentiment === "negative"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700")
+                  }
+                >
+                  {summary.sentiment === "positive"
+                    ? "Positive"
+                    : summary.sentiment === "negative"
+                      ? "Negative"
+                      : "Mixed"}
+                </span>
+                <p className="text-sm leading-relaxed text-ink/80">{summary.summary}</p>
+              </div>
+
+              {summary.themes.length > 0 && (
+                <ul className="grid gap-2 md:grid-cols-2">
+                  {summary.themes.map((t, i) => (
+                    <li key={i} className="rounded-xl border border-ink/5 bg-white px-3 py-2.5">
+                      <p className="text-sm font-semibold text-ink">{t.name}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-ink/60">{t.detail}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {summary.quotes.length > 0 && (
+                <div className="space-y-1.5">
+                  {summary.quotes.map((q, i) => (
+                    <blockquote
+                      key={i}
+                      className="border-l-2 border-brand/40 pl-3 text-sm italic text-ink/60"
+                    >
+                      "{q}"
+                    </blockquote>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-xs text-ink/40">
+                Analyzed {summary.analyzed_count}{" "}
+                {summary.analyzed_count === 1 ? "answer" : "answers"} · AI-generated, may contain
+                inaccuracies.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       <Card title="Funnel" subtitle={`Views → starts → submits · last ${days} days`}>
         <div className="space-y-3">

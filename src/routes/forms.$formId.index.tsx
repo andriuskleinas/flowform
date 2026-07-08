@@ -58,6 +58,7 @@ type FormRow = {
   user_id: string;
   status: FormStatus;
   display_mode: DisplayMode;
+  thank_you_message: string | null;
 };
 
 type TrackKind = "view" | "start" | "reach";
@@ -146,7 +147,7 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, user_id, status, display_mode")
+        .select("id, title, description, user_id, status, display_mode, thank_you_message")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -316,7 +317,9 @@ function PublicFormPage() {
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
           <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Thanks!</h1>
-          <p className="mt-2 text-ink/60">Your response was recorded.</p>
+          <p className="mt-2 max-w-md whitespace-pre-line text-ink/60">
+            {formQ.data.thank_you_message?.trim() || "Your response was recorded."}
+          </p>
         </div>
       </Shell>
     );

@@ -63,6 +63,7 @@ export type Database = {
           display_mode: string
           id: string
           status: string
+          thank_you_message: string | null
           title: string
           user_id: string
         }
@@ -72,6 +73,7 @@ export type Database = {
           display_mode?: string
           id?: string
           status?: string
+          thank_you_message?: string | null
           title: string
           user_id: string
         }
@@ -81,6 +83,7 @@ export type Database = {
           display_mode?: string
           id?: string
           status?: string
+          thank_you_message?: string | null
           title?: string
           user_id?: string
         }
