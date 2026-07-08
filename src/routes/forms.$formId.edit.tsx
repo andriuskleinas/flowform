@@ -45,11 +45,14 @@ import {
   type QuestionOptions,
   type Answers,
   type FormStatus,
+  QUESTION_TYPE_LABELS,
   RATING_MAX_CHOICES,
+  defaultOptionsForType,
+  getChoiceConfig,
   getRatingMax,
-  getMcOptions,
   questionOptionsEqual,
 } from "@/lib/form-utils";
+import { Switch } from "@/components/ui/switch";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DeleteFormDialog } from "@/components/delete-form-dialog";
@@ -80,17 +83,11 @@ function EditFormPage() {
   return <EditFormAuthed formId={formId} userId={user.id} />;
 }
 
-const TYPE_DEFAULTS: Record<QuestionType, { label: string; options: QuestionOptions }> = {
-  text: { label: "Untitled question", options: null },
-  multiple_choice: { label: "Untitled question", options: ["Option 1", "Option 2"] },
-  rating: { label: "Untitled question", options: { max: 5 } },
-};
-
 type DraftQuestion = Question & { isNew?: boolean; isDeleted?: boolean };
 
 function snapshotKey(
   form: { title: string; description: string | null },
-  questions: Array<Pick<Question, "id" | "type" | "label" | "options">>,
+  questions: Array<Pick<Question, "id" | "type" | "label" | "options" | "required">>,
 ) {
   return JSON.stringify({
     title: form.title.trim(),
@@ -100,6 +97,7 @@ function snapshotKey(
       type: q.type,
       label: q.label.trim(),
       options: q.options ?? null,
+      required: q.required,
     })),
   });
 }
@@ -126,7 +124,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position")
+        .select("id, form_id, type, label, options, position, required")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
@@ -199,6 +197,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       if (v.id !== s.id) return true;
       if (v.type !== s.type) return true;
       if (v.label !== s.label) return true;
+      if (v.required !== s.required) return true;
       if (!questionOptionsEqual(v.options ?? null, s.options ?? null)) return true;
     }
     return false;
@@ -222,9 +221,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const setDraftType = (id: string, type: QuestionType) =>
     setDraftQuestions((qs) =>
       qs.map((q) =>
-        q.id === id && q.type !== type ? { ...q, type, options: TYPE_DEFAULTS[type].options } : q,
+        q.id === id && q.type !== type ? { ...q, type, options: defaultOptionsForType(type) } : q,
       ),
     );
+  const setDraftRequired = (id: string, required: boolean) =>
+    setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, required } : q)));
   const addDraftQuestion = (type: QuestionType) =>
     setDraftQuestions((qs) => [
       ...qs,
@@ -232,9 +233,10 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         id: `tmp-${Math.random().toString(36).slice(2, 10)}`,
         form_id: formId,
         type,
-        label: TYPE_DEFAULTS[type].label,
-        options: TYPE_DEFAULTS[type].options,
+        label: "Untitled question",
+        options: defaultOptionsForType(type),
         position: qs.length,
+        required: true,
         isNew: true,
       },
     ]);
@@ -279,6 +281,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         label: string;
         options: QuestionOptions;
         position: number;
+        required: boolean;
       }[] = [];
       const updateOps: Promise<void>[] = [];
 
@@ -292,6 +295,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             label,
             options: q.options ?? null,
             position: i,
+            required: q.required,
           });
         } else {
           const orig = snapshot.questions.find((o) => o.id === q.id);
@@ -300,16 +304,19 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             type?: QuestionType;
             label?: string;
             options?: QuestionOptions;
+            required?: boolean;
           } = { position: i };
           if (orig) {
             if (orig.type !== q.type) patch.type = q.type;
             if (orig.label !== label) patch.label = label;
+            if (orig.required !== q.required) patch.required = q.required;
             if (!questionOptionsEqual(orig.options ?? null, q.options ?? null))
               patch.options = q.options ?? null;
           } else {
             patch.type = q.type;
             patch.label = label;
             patch.options = q.options ?? null;
+            patch.required = q.required;
           }
           updateOps.push(
             (async () => {
@@ -599,6 +606,17 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             your changes.
           </p>
 
+          {(responseCountQ.data ?? 0) > 0 && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              This form already has{" "}
+              <span className="font-semibold">
+                {responseCountQ.data} {responseCountQ.data === 1 ? "response" : "responses"}
+              </span>
+              . Changing a question's type or deleting it can make those answers hard to interpret
+              in your results.
+            </div>
+          )}
+
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -618,6 +636,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                     onChangeLabel={(label) => setDraftLabel(q.id, label)}
                     onChangeOptions={(options) => setDraftOptions(q.id, options)}
                     onChangeType={(type) => setDraftType(q.id, type)}
+                    onChangeRequired={(required) => setDraftRequired(q.id, required)}
                     onDelete={() => removeDraftQuestion(q.id)}
                     onMoveUp={() => moveBy(q.id, -1)}
                     onMoveDown={() => moveBy(q.id, 1)}
@@ -638,15 +657,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={() => addDraftQuestion("text")}>
-                  Short answer
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => addDraftQuestion("multiple_choice")}>
-                  Multiple choice
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => addDraftQuestion("rating")}>
-                  Rating scale
-                </DropdownMenuItem>
+                {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((t) => (
+                  <DropdownMenuItem key={t} onClick={() => addDraftQuestion(t)}>
+                    {QUESTION_TYPE_LABELS[t]}
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -716,6 +731,9 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 <div key={q.id} className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/40">
                     Question {i + 1}
+                    {!q.required && (
+                      <span className="ml-2 font-medium text-ink/35">· Optional</span>
+                    )}
                   </p>
                   <QuestionRender
                     question={q}
@@ -776,6 +794,7 @@ function SortableQuestionCard({
   onChangeLabel,
   onChangeOptions,
   onChangeType,
+  onChangeRequired,
   onDelete,
   onMoveUp,
   onMoveDown,
@@ -786,6 +805,7 @@ function SortableQuestionCard({
   onChangeLabel: (label: string) => void;
   onChangeOptions: (options: QuestionOptions) => void;
   onChangeType: (type: QuestionType) => void;
+  onChangeRequired: (required: boolean) => void;
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -850,16 +870,44 @@ function SortableQuestionCard({
             onChange={(e) => onChangeType(e.target.value as QuestionType)}
             className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
-            <option value="text">Short answer</option>
-            <option value="multiple_choice">Multiple choice</option>
-            <option value="rating">Rating scale</option>
+            {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((t) => (
+              <option key={t} value={t}>
+                {QUESTION_TYPE_LABELS[t]}
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
-      {question.type === "multiple_choice" && (
+      {question.type === "multiple_choice" &&
+        (() => {
+          const cfg = getChoiceConfig(question.options);
+          return (
+            <div className="mt-4 space-y-3">
+              <OptionsEditor
+                options={cfg.choices}
+                onChange={(choices) => onChangeOptions({ choices, multi: cfg.multi })}
+              />
+              <div className="flex items-center gap-2">
+                <Switch
+                  id={`q-${question.id}-multi`}
+                  checked={cfg.multi}
+                  onCheckedChange={(multi) => onChangeOptions({ choices: cfg.choices, multi })}
+                />
+                <Label htmlFor={`q-${question.id}-multi`} className="text-xs font-normal">
+                  Allow selecting multiple options
+                </Label>
+              </div>
+            </div>
+          );
+        })()}
+
+      {question.type === "dropdown" && (
         <div className="mt-4">
-          <OptionsEditor options={getMcOptions(question.options)} onChange={onChangeOptions} />
+          <OptionsEditor
+            options={getChoiceConfig(question.options).choices}
+            onChange={(choices) => onChangeOptions(choices)}
+          />
         </div>
       )}
 
@@ -879,6 +927,17 @@ function SortableQuestionCard({
           </select>
         </div>
       )}
+
+      <div className="mt-4 flex items-center gap-2 border-t border-ink/5 pt-3">
+        <Switch
+          id={`q-${question.id}-required`}
+          checked={question.required}
+          onCheckedChange={onChangeRequired}
+        />
+        <Label htmlFor={`q-${question.id}-required`} className="text-xs font-normal">
+          Required
+        </Label>
+      </div>
     </li>
   );
 }

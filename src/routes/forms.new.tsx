@@ -7,17 +7,27 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { suggestQuestions, type SuggestedQuestion } from "@/lib/suggest-questions";
 import { useAuth } from "@/hooks/use-auth";
-import { type QuestionType, type QuestionOptions, RATING_MAX_CHOICES } from "@/lib/form-utils";
+import {
+  type QuestionType,
+  type QuestionOptions,
+  QUESTION_TYPE_LABELS,
+  RATING_MAX_CHOICES,
+  defaultOptionsForType,
+  getChoiceConfig,
+  getRatingMax,
+} from "@/lib/form-utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 
 type DraftQuestion = {
   key: string;
   type: QuestionType;
   label: string;
   options: QuestionOptions;
+  required: boolean;
 };
 
 export const Route = createFileRoute("/forms/new")({
@@ -30,18 +40,13 @@ export const Route = createFileRoute("/forms/new")({
   component: NewFormPage,
 });
 
-function defaultOptions(type: QuestionType): QuestionOptions {
-  if (type === "multiple_choice") return ["Option 1", "Option 2"];
-  if (type === "rating") return { max: 5 };
-  return null;
-}
-
 function makeQuestion(): DraftQuestion {
   return {
     key: crypto.randomUUID(),
     type: "text",
     label: "",
     options: null,
+    required: true,
   };
 }
 
@@ -94,7 +99,13 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
   const addSuggestion = (s: SuggestedQuestion) => {
     setQuestions((qs) => {
-      const newQ = { key: crypto.randomUUID(), type: s.type, label: s.label, options: s.options };
+      const newQ = {
+        key: crypto.randomUUID(),
+        type: s.type,
+        label: s.label,
+        options: s.options,
+        required: true,
+      };
       // If the only question is the default empty placeholder, replace it rather
       // than appending — so the AI flow doesn't leave a blank question behind.
       if (qs.length === 1 && qs[0].label.trim() === "") return [newQ];
@@ -117,9 +128,12 @@ function NewFormAuthed({ userId }: { userId: string }) {
       if (!title.trim()) throw new Error("Title is required");
       for (const q of questions) {
         if (!q.label.trim()) throw new Error("Every question needs a label");
-        if (q.type === "multiple_choice") {
-          const opts = (q.options as string[]).map((o) => o.trim()).filter(Boolean);
-          if (opts.length < 2) throw new Error("Multiple-choice questions need at least 2 options");
+        if (q.type === "multiple_choice" || q.type === "dropdown") {
+          const opts = getChoiceConfig(q.options)
+            .choices.map((o) => o.trim())
+            .filter(Boolean);
+          if (opts.length < 2)
+            throw new Error(`${QUESTION_TYPE_LABELS[q.type]} questions need at least 2 options`);
         }
       }
 
@@ -135,16 +149,28 @@ function NewFormAuthed({ userId }: { userId: string }) {
       if (fErr) throw fErr;
       const newId = form.id as string;
 
-      const rows = questions.map((q, i) => ({
-        form_id: newId,
-        type: q.type,
-        label: q.label.trim(),
-        options:
-          q.type === "multiple_choice"
-            ? (q.options as string[]).map((o) => o.trim()).filter(Boolean)
-            : q.options,
-        position: i,
-      }));
+      const rows = questions.map((q, i) => {
+        let options = q.options;
+        if (q.type === "multiple_choice") {
+          const cfg = getChoiceConfig(q.options);
+          options = {
+            choices: cfg.choices.map((o) => o.trim()).filter(Boolean),
+            multi: cfg.multi,
+          };
+        } else if (q.type === "dropdown") {
+          options = getChoiceConfig(q.options)
+            .choices.map((o) => o.trim())
+            .filter(Boolean);
+        }
+        return {
+          form_id: newId,
+          type: q.type,
+          label: q.label.trim(),
+          options,
+          position: i,
+          required: q.required,
+        };
+      });
       const { error: qErr } = await supabase.from("questions").insert(rows);
       if (qErr) throw qErr;
 
@@ -288,10 +314,9 @@ function NewFormAuthed({ userId }: { userId: string }) {
                       <div className="min-w-0">
                         <p className="text-sm font-medium leading-snug text-ink">{s.label}</p>
                         <p className="mt-0.5 text-xs text-ink/50">
-                          {s.type === "text" && "Short answer"}
-                          {s.type === "multiple_choice" && "Multiple choice"}
-                          {s.type === "rating" &&
-                            `Rating scale (1–${(s.options as { max: number })?.max ?? 5})`}
+                          {s.type === "rating"
+                            ? `Rating scale (1–${getRatingMax(s.options)})`
+                            : QUESTION_TYPE_LABELS[s.type]}
                         </p>
                       </div>
                       <button
@@ -327,11 +352,8 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
             <ul className="mt-5 space-y-4">
               {questions.map((q, i) => {
-                const mcOpts = Array.isArray(q.options) ? (q.options as string[]) : [];
-                const ratingMax =
-                  q.type === "rating" && q.options && !Array.isArray(q.options)
-                    ? (q.options as { max: number }).max
-                    : 5;
+                const choiceCfg = getChoiceConfig(q.options);
+                const ratingMax = getRatingMax(q.options);
                 return (
                   <li key={q.key} className="rounded-xl border border-ink/10 bg-surface/40 p-4">
                     <div className="flex items-start justify-between gap-3">
@@ -370,67 +392,97 @@ function NewFormAuthed({ userId }: { userId: string }) {
                           value={q.type}
                           onChange={(e) => {
                             const next = e.target.value as QuestionType;
-                            updateQuestion(q.key, { type: next, options: defaultOptions(next) });
+                            updateQuestion(q.key, {
+                              type: next,
+                              options: defaultOptionsForType(next),
+                            });
                           }}
                           className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                         >
-                          <option value="text">Short answer</option>
-                          <option value="multiple_choice">Multiple choice</option>
-                          <option value="rating">Rating scale</option>
+                          {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((t) => (
+                            <option key={t} value={t}>
+                              {QUESTION_TYPE_LABELS[t]}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
 
-                    {q.type === "multiple_choice" && (
-                      <div className="mt-4 space-y-2">
-                        <Label>Options</Label>
-                        <ul className="space-y-2">
-                          {mcOpts.map((opt, idx) => (
-                            <li key={idx} className="flex items-center gap-2">
-                              <Input
-                                value={opt}
-                                onChange={(e) => {
-                                  const next = [...mcOpts];
-                                  next[idx] = e.target.value;
-                                  updateQuestion(q.key, { options: next });
-                                }}
-                                placeholder={`Option ${idx + 1}`}
-                                maxLength={120}
-                                autoComplete="off"
-                                data-1p-ignore
-                                data-lpignore="true"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (mcOpts.length <= 2) return;
-                                  updateQuestion(q.key, {
-                                    options: mcOpts.filter((_, j) => j !== idx),
-                                  });
-                                }}
-                                disabled={mcOpts.length <= 2}
-                                aria-label="Remove option"
-                                className="rounded-lg p-2 text-ink/50 hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
-                              >
-                                <X className="size-4" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateQuestion(q.key, {
-                              options: [...mcOpts, `Option ${mcOpts.length + 1}`],
-                            })
-                          }
-                          className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/70 transition-colors hover:bg-ink/5"
-                        >
-                          <Plus className="size-3.5" />
-                          Add option
-                        </button>
-                      </div>
-                    )}
+                    {(q.type === "multiple_choice" || q.type === "dropdown") &&
+                      (() => {
+                        const setChoices = (choices: string[]) =>
+                          updateQuestion(q.key, {
+                            options:
+                              q.type === "multiple_choice"
+                                ? { choices, multi: choiceCfg.multi }
+                                : choices,
+                          });
+                        return (
+                          <div className="mt-4 space-y-2">
+                            <Label>Options</Label>
+                            <ul className="space-y-2">
+                              {choiceCfg.choices.map((opt, idx) => (
+                                <li key={idx} className="flex items-center gap-2">
+                                  <Input
+                                    value={opt}
+                                    onChange={(e) => {
+                                      const next = [...choiceCfg.choices];
+                                      next[idx] = e.target.value;
+                                      setChoices(next);
+                                    }}
+                                    placeholder={`Option ${idx + 1}`}
+                                    maxLength={120}
+                                    autoComplete="off"
+                                    data-1p-ignore
+                                    data-lpignore="true"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (choiceCfg.choices.length <= 2) return;
+                                      setChoices(choiceCfg.choices.filter((_, j) => j !== idx));
+                                    }}
+                                    disabled={choiceCfg.choices.length <= 2}
+                                    aria-label="Remove option"
+                                    className="rounded-lg p-2 text-ink/50 hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                                  >
+                                    <X className="size-4" />
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setChoices([
+                                  ...choiceCfg.choices,
+                                  `Option ${choiceCfg.choices.length + 1}`,
+                                ])
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/70 transition-colors hover:bg-ink/5"
+                            >
+                              <Plus className="size-3.5" />
+                              Add option
+                            </button>
+                            {q.type === "multiple_choice" && (
+                              <div className="flex items-center gap-2 pt-1">
+                                <Switch
+                                  id={`q-${q.key}-multi`}
+                                  checked={choiceCfg.multi}
+                                  onCheckedChange={(multi) =>
+                                    updateQuestion(q.key, {
+                                      options: { choices: choiceCfg.choices, multi },
+                                    })
+                                  }
+                                />
+                                <Label htmlFor={`q-${q.key}-multi`} className="text-xs font-normal">
+                                  Allow selecting multiple options
+                                </Label>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                     {q.type === "rating" && (
                       <div className="mt-4 space-y-2">
@@ -451,6 +503,17 @@ function NewFormAuthed({ userId }: { userId: string }) {
                         </select>
                       </div>
                     )}
+
+                    <div className="mt-4 flex items-center gap-2 border-t border-ink/10 pt-3">
+                      <Switch
+                        id={`q-${q.key}-required`}
+                        checked={q.required}
+                        onCheckedChange={(required) => updateQuestion(q.key, { required })}
+                      />
+                      <Label htmlFor={`q-${q.key}-required`} className="text-xs font-normal">
+                        Required
+                      </Label>
+                    </div>
                   </li>
                 );
               })}

@@ -76,6 +76,7 @@ export type Database = {
           label: string
           options: Json | null
           position: number
+          required: boolean
           type: string
         }
         Insert: {
@@ -85,6 +86,7 @@ export type Database = {
           label: string
           options?: Json | null
           position: number
+          required?: boolean
           type: string
         }
         Update: {
@@ -94,6 +96,7 @@ export type Database = {
           label?: string
           options?: Json | null
           position?: number
+          required?: boolean
           type?: string
         }
         Relationships: [

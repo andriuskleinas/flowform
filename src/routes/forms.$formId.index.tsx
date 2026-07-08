@@ -61,6 +61,8 @@ function PublicFormPage() {
   const { user } = useAuth();
   const [answers, setAnswers] = useState<Answers>({});
   const [submitted, setSubmitted] = useState(false);
+  // Only surface missing-required errors after a submit attempt.
+  const [showErrors, setShowErrors] = useState(false);
   // Set on first interaction, not page load, so fill-time reflects actual engagement.
   const startedAtRef = useRef<string | null>(null);
   const recordStart = () => {
@@ -85,7 +87,7 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position")
+        .select("id, form_id, type, label, options, position, required")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
@@ -117,9 +119,7 @@ function PublicFormPage() {
   });
 
   const questions = questionsQ.data ?? [];
-  const allAnswered =
-    questions.every((q) => isAnswered(q, answers[q.id])) &&
-    Object.values(answers).every(validateAnswerLength);
+  const missingRequired = questions.filter((q) => q.required && !isAnswered(q, answers[q.id]));
 
   if (formQ.isLoading) {
     return (
@@ -237,9 +237,22 @@ function PublicFormPage() {
 
       <form
         className="mt-10 space-y-8"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          if (allAnswered && !submit.isPending) submit.mutate();
+          if (submit.isPending) return;
+          if (missingRequired.length > 0) {
+            setShowErrors(true);
+            document
+              .getElementById(`qcard-${missingRequired[0].id}`)
+              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+          }
+          if (!Object.values(answers).every(validateAnswerLength)) {
+            toast.error(`An answer exceeds the ${MAX_ANSWER_LENGTH}-character limit.`);
+            return;
+          }
+          submit.mutate();
         }}
       >
         {questions.length === 0 && (
@@ -248,27 +261,49 @@ function PublicFormPage() {
           </p>
         )}
 
-        {questions.map((q, i) => (
-          <div key={q.id} className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/40">
-              Question {i + 1}
-            </p>
-            <QuestionRender
-              question={q}
-              value={answers[q.id]}
-              onChange={(v) => {
-                recordStart();
-                setAnswers((a) => ({ ...a, [q.id]: v }));
-              }}
-            />
-          </div>
-        ))}
+        {questions.map((q, i) => {
+          const missing = showErrors && q.required && !isAnswered(q, answers[q.id]);
+          return (
+            <div
+              key={q.id}
+              id={`qcard-${q.id}`}
+              className={
+                "rounded-2xl border bg-white p-6 shadow-sm transition-colors " +
+                (missing ? "border-red-300 ring-1 ring-red-200" : "border-ink/5")
+              }
+            >
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/40">
+                Question {i + 1}
+                {!q.required && <span className="ml-2 font-medium text-ink/35">· Optional</span>}
+              </p>
+              <QuestionRender
+                question={q}
+                value={answers[q.id]}
+                onChange={(v) => {
+                  recordStart();
+                  setAnswers((a) => ({ ...a, [q.id]: v }));
+                }}
+              />
+              {missing && (
+                <p className="mt-3 text-sm font-medium text-red-600">
+                  This question needs an answer.
+                </p>
+              )}
+            </div>
+          );
+        })}
 
         {questions.length > 0 && (
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-4">
+            {showErrors && missingRequired.length > 0 && (
+              <p className="text-sm font-medium text-red-600">
+                {missingRequired.length} required{" "}
+                {missingRequired.length === 1 ? "question needs" : "questions need"} an answer.
+              </p>
+            )}
             <button
               type="submit"
-              disabled={!allAnswered || submit.isPending}
+              disabled={submit.isPending}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submit.isPending ? "Submitting…" : "Submit"}

@@ -17,7 +17,13 @@ import {
 } from "recharts";
 
 import { supabase } from "@/integrations/supabase/client";
-import { getRatingMax, isAnswered, type Answers, type AnswerValue } from "@/lib/form-utils";
+import {
+  getChoiceConfig,
+  getRatingMax,
+  isAnswered,
+  type Answers,
+  type AnswerValue,
+} from "@/lib/form-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Shell } from "@/components/shell";
 import { ClientOnly } from "@/components/client-only";
@@ -68,7 +74,7 @@ function ResponsesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position")
+        .select("id, form_id, type, label, options, position, required")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
@@ -277,12 +283,17 @@ function QuestionAnalytics({
   responses: ResponseRow[];
 }) {
   const data = useMemo(() => {
-    if (question.type === "multiple_choice") {
-      const opts: string[] = Array.isArray(question.options) ? question.options : [];
+    if (
+      question.type === "multiple_choice" ||
+      question.type === "dropdown" ||
+      question.type === "yes_no"
+    ) {
+      const opts: string[] =
+        question.type === "yes_no" ? ["Yes", "No"] : getChoiceConfig(question.options).choices;
       const counts = new Map<string, number>(opts.map((o) => [o, 0]));
       for (const r of responses) {
         const v = r.answers?.[question.id];
-        // multiple_choice answers are string[]; some legacy rows may be a single string.
+        // choice answers are a string (single) or string[] (multi-select).
         const list: string[] = Array.isArray(v)
           ? v.filter((x): x is string => typeof x === "string")
           : typeof v === "string" && v.length > 0
@@ -291,6 +302,30 @@ function QuestionAnalytics({
         for (const item of list) counts.set(item, (counts.get(item) ?? 0) + 1);
       }
       return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+    }
+    if (question.type === "nps") {
+      const counts = new Map<number, number>(Array.from({ length: 11 }, (_, i) => [i, 0]));
+      let promoters = 0;
+      let detractors = 0;
+      let answered = 0;
+      for (const r of responses) {
+        const v = r.answers?.[question.id];
+        if (typeof v === "number" && v >= 0 && v <= 10) {
+          counts.set(v, (counts.get(v) ?? 0) + 1);
+          answered++;
+          if (v >= 9) promoters++;
+          else if (v <= 6) detractors++;
+        }
+      }
+      const score = answered > 0 ? Math.round(((promoters - detractors) / answered) * 100) : null;
+      return {
+        bars: Array.from(counts.entries()).map(([name, count]) => ({
+          name: String(name),
+          count,
+        })),
+        score,
+        answered,
+      };
     }
     if (question.type === "rating") {
       const max = getRatingMax(question.options);
@@ -315,7 +350,7 @@ function QuestionAnalytics({
     return null;
   }, [question, responses]);
 
-  if (question.type === "text") {
+  if (question.type === "text" || question.type === "long_text") {
     const answered = responses.filter((r) => isAnswered(question, r.answers?.[question.id]));
     const recent = answered.slice(0, 5);
     return (
@@ -341,10 +376,22 @@ function QuestionAnalytics({
     );
   }
 
-  if (question.type === "multiple_choice") {
+  if (
+    question.type === "multiple_choice" ||
+    question.type === "dropdown" ||
+    question.type === "yes_no"
+  ) {
     const arr = (data as { name: string; count: number }[]) ?? [];
+    const subtitle =
+      question.type === "yes_no"
+        ? "Yes / No"
+        : question.type === "dropdown"
+          ? "Dropdown"
+          : getChoiceConfig(question.options).multi
+            ? "Multiple choice · multi-select"
+            : "Multiple choice";
     return (
-      <Card title={question.label || "Untitled question"} subtitle="Multiple choice">
+      <Card title={question.label || "Untitled question"} subtitle={subtitle}>
         {arr.length === 0 ? (
           <p className="text-sm text-ink/40">No options.</p>
         ) : (
@@ -379,6 +426,48 @@ function QuestionAnalytics({
             </ClientOnly>
           </div>
         )}
+      </Card>
+    );
+  }
+
+  if (question.type === "nps") {
+    const d = data as {
+      bars: { name: string; count: number }[];
+      score: number | null;
+      answered: number;
+    };
+    return (
+      <Card
+        title={question.label || "Untitled question"}
+        subtitle={
+          d.score != null
+            ? `NPS ${d.score > 0 ? "+" : ""}${d.score} · ${d.answered} ${d.answered === 1 ? "answer" : "answers"}`
+            : "No answers yet"
+        }
+      >
+        <div className="h-56 w-full">
+          <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
+            <ResponsiveContainer>
+              <BarChart data={d.bars} margin={{ top: 4, right: 12, left: -16, bottom: 0 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11 }}
+                  stroke="currentColor"
+                  className="text-ink/50"
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 11 }}
+                  stroke="currentColor"
+                  className="text-ink/50"
+                />
+                <Tooltip content={<MiniTooltip />} />
+                <Bar dataKey="count" fill="var(--primary)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ClientOnly>
+        </div>
       </Card>
     );
   }
@@ -503,6 +592,9 @@ function AnswerView({ question, value }: { question: Question; value: AnswerValu
     return (
       <StarRating max={getRatingMax(question.options)} value={Number(value)} disabled size={18} />
     );
+  }
+  if (question.type === "nps") {
+    return <span>{String(value)} / 10</span>;
   }
   if (Array.isArray(value)) {
     return <span>{value.join(", ")}</span>;

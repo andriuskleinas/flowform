@@ -1,4 +1,11 @@
-export type QuestionType = "text" | "multiple_choice" | "rating";
+export type QuestionType =
+  | "text"
+  | "long_text"
+  | "multiple_choice"
+  | "dropdown"
+  | "yes_no"
+  | "nps"
+  | "rating";
 
 /** Form lifecycle: draft (owner-only) → published (live) → closed (visible, not accepting). */
 export type FormStatus = "draft" | "published" | "closed";
@@ -6,7 +13,49 @@ export type FormStatus = "draft" | "published" | "closed";
 /** Rating scales offered in the builders. Keep create + edit pages in sync. */
 export const RATING_MAX_CHOICES = [3, 4, 5, 6, 7, 8, 9, 10] as const;
 
-export type QuestionOptions = string[] | { max: number } | null;
+/** Display names for question types — single source for builder selects. */
+export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+  text: "Short answer",
+  long_text: "Long answer",
+  multiple_choice: "Multiple choice",
+  dropdown: "Dropdown",
+  yes_no: "Yes / No",
+  nps: "NPS (0–10)",
+  rating: "Rating scale",
+};
+
+/**
+ * Per-type options payload:
+ *   - text / long_text / yes_no / nps → null
+ *   - rating                         → { max: number }
+ *   - dropdown                       → string[] (the choices)
+ *   - multiple_choice                → { choices: string[], multi: boolean }
+ *                                      Legacy rows are plain string[] and mean
+ *                                      multi-select (checkbox behavior predates
+ *                                      the multi flag).
+ */
+export type QuestionOptions = string[] | { max: number } | ChoiceConfig | null;
+
+export type ChoiceConfig = { choices: string[]; multi: boolean };
+
+/**
+ * Normalizes any choice-carrying options shape (multiple_choice legacy array,
+ * multiple_choice object, dropdown array) into { choices, multi }.
+ */
+export function getChoiceConfig(options: QuestionOptions): ChoiceConfig {
+  if (Array.isArray(options)) return { choices: options, multi: true };
+  if (options && typeof options === "object" && "choices" in options) {
+    return { choices: options.choices, multi: options.multi ?? true };
+  }
+  return { choices: [], multi: false };
+}
+
+export function defaultOptionsForType(type: QuestionType): QuestionOptions {
+  if (type === "multiple_choice") return { choices: ["Option 1", "Option 2"], multi: false };
+  if (type === "dropdown") return ["Option 1", "Option 2"];
+  if (type === "rating") return { max: 5 };
+  return null;
+}
 
 /**
  * The value submitted for a single question.
@@ -30,16 +79,30 @@ export type Answers = Record<string, AnswerValue | undefined>;
 
 export function isAnswered(question: { type: QuestionType }, value: unknown): boolean {
   if (value === undefined || value === null) return false;
-  if (question.type === "text") return typeof value === "string" && value.trim().length > 0;
-  if (question.type === "multiple_choice")
-    return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value.length > 0;
-  if (question.type === "rating") return typeof value === "number" && value > 0;
-  return false;
+  switch (question.type) {
+    case "text":
+    case "long_text":
+      return typeof value === "string" && value.trim().length > 0;
+    case "multiple_choice":
+      return Array.isArray(value)
+        ? value.length > 0
+        : typeof value === "string" && value.length > 0;
+    case "dropdown":
+    case "yes_no":
+      return typeof value === "string" && value.length > 0;
+    case "nps":
+      // 0 is a legitimate NPS answer — only undefined/null means unanswered.
+      return typeof value === "number" && value >= 0;
+    case "rating":
+      return typeof value === "number" && value > 0;
+    default:
+      return false;
+  }
 }
 
 export function getRatingMax(options: QuestionOptions): number {
-  if (!options || Array.isArray(options)) return 5;
-  return (options as { max: number }).max;
+  if (!options || Array.isArray(options) || !("max" in options)) return 5;
+  return options.max;
 }
 
 /**
@@ -47,22 +110,27 @@ export function getRatingMax(options: QuestionOptions): number {
  * JSON.stringify calls and not sensitive to key ordering — used on hot
  * paths like the editor's `isDirty` memo where it runs on every keystroke.
  */
+function isChoiceish(o: QuestionOptions): boolean {
+  return Array.isArray(o) || (o != null && typeof o === "object" && "choices" in o);
+}
+
 export function questionOptionsEqual(a: QuestionOptions, b: QuestionOptions): boolean {
   if (a === b) return true;
   if (a == null || b == null) return a == null && b == null;
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  // Choice-carrying shapes compare by normalized { choices, multi } so a
+  // legacy string[] equals its { choices, multi: true } object form.
+  if (isChoiceish(a) && isChoiceish(b)) {
+    const ca = getChoiceConfig(a);
+    const cb = getChoiceConfig(b);
+    if (ca.multi !== cb.multi || ca.choices.length !== cb.choices.length) return false;
+    for (let i = 0; i < ca.choices.length; i++) if (ca.choices[i] !== cb.choices[i]) return false;
     return true;
   }
-  if (!Array.isArray(a) && !Array.isArray(b) && typeof a === "object" && typeof b === "object") {
-    return a.max === b.max;
+  if (isChoiceish(a) || isChoiceish(b)) return false;
+  if (typeof a === "object" && typeof b === "object") {
+    return (a as { max: number }).max === (b as { max: number }).max;
   }
   return false;
-}
-
-export function getMcOptions(options: QuestionOptions): string[] {
-  return Array.isArray(options) ? options : [];
 }
 
 export const MAX_ANSWER_LENGTH = 5000;

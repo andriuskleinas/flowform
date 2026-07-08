@@ -18,9 +18,14 @@ export type SuggestedQuestion = {
 
 const RawSuggestionSchema = z.object({
   label: z.string().min(1).max(300),
-  type: z.enum(["text", "multiple_choice", "rating"]),
+  type: z.enum(["text", "long_text", "multiple_choice", "dropdown", "yes_no", "nps", "rating"]),
   options: z
-    .union([z.array(z.string()), z.object({ max: z.number().int().min(3).max(10) }), z.null()])
+    .union([
+      z.array(z.string()),
+      z.object({ max: z.number().int().min(3).max(10) }),
+      z.object({ choices: z.array(z.string()), multi: z.boolean() }),
+      z.null(),
+    ])
     .optional()
     .nullable(),
 });
@@ -90,17 +95,27 @@ export const suggestQuestions = createServerFn({ method: "POST" })
 
 function resolveOptions(
   type: QuestionType,
-  raw: string[] | { max: number } | null | undefined,
+  raw: string[] | { max: number } | { choices: string[]; multi: boolean } | null | undefined,
 ): QuestionOptions {
-  if (type === "text") return null;
   if (type === "rating") {
     if (raw && !Array.isArray(raw) && "max" in raw) return { max: raw.max };
     return { max: 5 };
   }
   if (type === "multiple_choice") {
-    if (Array.isArray(raw) && raw.length >= 2) return raw.slice(0, 8);
+    if (raw && !Array.isArray(raw) && "choices" in raw && raw.choices.length >= 2) {
+      return { choices: raw.choices.slice(0, 8), multi: raw.multi };
+    }
+    if (Array.isArray(raw) && raw.length >= 2) return { choices: raw.slice(0, 8), multi: false };
+    return { choices: ["Option 1", "Option 2"], multi: false };
+  }
+  if (type === "dropdown") {
+    if (Array.isArray(raw) && raw.length >= 2) return raw.slice(0, 12);
+    if (raw && !Array.isArray(raw) && "choices" in raw && raw.choices.length >= 2) {
+      return raw.choices.slice(0, 12);
+    }
     return ["Option 1", "Option 2"];
   }
+  // text, long_text, yes_no, nps carry no options payload.
   return null;
 }
 
@@ -113,23 +128,27 @@ Return ONLY a valid JSON array. Do not add any explanation, markdown fences, or 
 
 Each element in the array must be a JSON object with these fields:
 - "label": string — the question text (clear, concise, under 150 characters)
-- "type": one of "text" | "multiple_choice" | "rating"
+- "type": one of "text" | "long_text" | "multiple_choice" | "dropdown" | "yes_no" | "nps" | "rating"
 - "options": depends on type:
-    - if type is "text": null
-    - if type is "multiple_choice": an array of 2-5 non-empty strings
+    - if type is "text", "long_text", "yes_no", or "nps": null
+    - if type is "multiple_choice": an object {"choices": [2-5 non-empty strings], "multi": boolean} — set "multi" true only when picking several answers makes sense
+    - if type is "dropdown": an array of 3-10 non-empty strings
     - if type is "rating": an object with a single key "max" (integer 3-10), e.g. {"max": 5}
 
 Guidelines for choosing type:
-- Use "text" for open-ended questions (e.g. "What could we improve?")
-- Use "multiple_choice" when there are a fixed set of natural answers (e.g. "How did you hear about us?")
-- Use "rating" for satisfaction / likelihood / frequency questions
+- Use "text" for short open-ended answers, "long_text" when a detailed answer is expected (e.g. "What could we improve?")
+- Use "multiple_choice" when there is a small fixed set of natural answers (e.g. "How did you hear about us?")
+- Use "dropdown" when the list of options is long (countries, departments, age brackets)
+- Use "yes_no" for binary questions
+- Use "nps" exactly for "How likely are you to recommend…" questions (0-10 scale)
+- Use "rating" for satisfaction / quality / frequency questions
 
 Example output (for a customer feedback form):
 [
   {"label": "How satisfied are you with our service overall?", "type": "rating", "options": {"max": 5}},
-  {"label": "How likely are you to recommend us to a friend?", "type": "rating", "options": {"max": 10}},
-  {"label": "What did you enjoy most about your experience?", "type": "text", "options": null},
-  {"label": "How did you hear about us?", "type": "multiple_choice", "options": ["Social media", "Word of mouth", "Search engine", "Advertisement", "Other"]},
-  {"label": "How often do you use our service?", "type": "multiple_choice", "options": ["First time", "Occasionally", "Regularly", "Daily"]},
-  {"label": "What could we do better?", "type": "text", "options": null}
+  {"label": "How likely are you to recommend us to a friend?", "type": "nps", "options": null},
+  {"label": "Did our product meet your expectations?", "type": "yes_no", "options": null},
+  {"label": "How did you hear about us?", "type": "multiple_choice", "options": {"choices": ["Social media", "Word of mouth", "Search engine", "Advertisement", "Other"], "multi": false}},
+  {"label": "Which features do you use regularly?", "type": "multiple_choice", "options": {"choices": ["Dashboards", "Reports", "Integrations", "Mobile app"], "multi": true}},
+  {"label": "What could we do better?", "type": "long_text", "options": null}
 ]`;
