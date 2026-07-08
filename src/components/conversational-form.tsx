@@ -10,30 +10,12 @@ import {
   type AnswerValue,
 } from "@/lib/form-utils";
 
-/** Question types that advance automatically right after a choice is made. */
-const AUTO_ADVANCE: ReadonlySet<string> = new Set([
-  "yes_no",
-  "dropdown",
-  "nps",
-  "rating",
-  "multiple_choice", // single-select only; multi is checked at runtime
-]);
-
-function autoAdvances(q: Question): boolean {
-  if (!AUTO_ADVANCE.has(q.type)) return false;
-  if (q.type === "multiple_choice") {
-    const opts = q.options;
-    const multi = Array.isArray(opts) ? true : opts && "multi" in opts ? opts.multi : false;
-    return !multi;
-  }
-  return true;
-}
-
 /**
  * One-question-at-a-time respondent experience: progress bar, Enter to
- * advance, back navigation, auto-advance on single choices, and logic-jump
- * routing. Owns only navigation state — answers live in the parent so
- * persistence and submission stay in one place.
+ * advance, back navigation, and logic-jump routing. Selecting a choice only
+ * records the answer — respondents always confirm with OK/Enter, so a
+ * misclick can be corrected before moving on. Owns only navigation state —
+ * answers live in the parent so persistence and submission stay in one place.
  */
 export function ConversationalForm({
   questions,
@@ -58,7 +40,6 @@ export function ConversationalForm({
   const [index, setIndex] = useState(0);
   const [history, setHistory] = useState<number[]>([]);
   const [error, setError] = useState(false);
-  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Restored drafts skip ahead to the first unanswered question on the path.
@@ -80,13 +61,6 @@ export function ConversationalForm({
     setIndex(resolveNextIndex(questions, last, answers[questions[last].id]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questions]);
-
-  useEffect(
-    () => () => {
-      if (autoTimer.current) clearTimeout(autoTimer.current);
-    },
-    [],
-  );
 
   const total = questions.length;
   const atSubmit = index >= total;
@@ -117,7 +91,6 @@ export function ConversationalForm({
   };
 
   const back = () => {
-    if (autoTimer.current) clearTimeout(autoTimer.current);
     setError(false);
     setHistory((h) => {
       if (h.length === 0) return h;
@@ -130,11 +103,6 @@ export function ConversationalForm({
     if (!current) return;
     setError(false);
     onAnswer(current.id, value);
-    if (autoAdvances(current)) {
-      if (autoTimer.current) clearTimeout(autoTimer.current);
-      const idx = index;
-      autoTimer.current = setTimeout(() => advanceFrom(idx, value), 350);
-    }
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -184,9 +152,9 @@ export function ConversationalForm({
             <button
               type="button"
               onClick={back}
-              className="mb-6 flex w-fit items-center gap-1.5 text-xs font-medium text-ink/40 transition-colors hover:text-ink"
+              className="mb-6 inline-flex w-fit items-center gap-1.5 rounded-full border border-ink/15 bg-white/70 px-3.5 py-1.5 text-sm font-medium text-ink/70 transition-colors hover:border-ink/30 hover:text-ink"
             >
-              <ArrowLeft className="size-3.5" /> Back
+              <ArrowLeft className="size-4" /> Back
             </button>
           )}
 
