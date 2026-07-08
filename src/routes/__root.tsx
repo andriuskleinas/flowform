@@ -10,6 +10,7 @@ import {
 
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { IdleLogout } from "@/components/idle-logout";
 
 import appCss from "../styles.css?url";
 
@@ -138,6 +139,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <IdleLogout />
       <ErrorBoundary>
         <Outlet />
       </ErrorBoundary>

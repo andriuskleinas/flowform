@@ -27,6 +27,9 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // The email of an account that tried to log in before confirming, if any.
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     if (!loading && session) navigate({ to: redirect });
@@ -38,14 +41,40 @@ function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
+        const notConfirmed =
+          ("code" in error && error.code === "email_not_confirmed") ||
+          error.message.toLowerCase().includes("not confirmed");
+        if (notConfirmed) {
+          setUnconfirmedEmail(email);
+          return;
+        }
         toast.error(error.message);
         return;
       }
+      setUnconfirmedEmail(null);
       navigate({ to: redirect });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not log in. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const resendConfirmation = async () => {
+    if (!unconfirmedEmail) return;
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: unconfirmedEmail,
+        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (error) toast.error(error.message);
+      else toast.success("Confirmation email sent — check your inbox");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not resend the email.");
+    } finally {
+      setResending(false);
     }
   };
 
@@ -95,6 +124,22 @@ function LoginPage() {
               autoComplete="current-password"
             />
           </div>
+          {unconfirmedEmail && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p>
+                <span className="font-semibold">{unconfirmedEmail}</span> hasn't been verified yet.
+                Click the confirmation link we emailed you, then log in.
+              </p>
+              <button
+                type="button"
+                onClick={resendConfirmation}
+                disabled={resending}
+                className="mt-2 font-semibold underline underline-offset-2 hover:text-amber-700 disabled:opacity-50"
+              >
+                {resending ? "Resending…" : "Resend confirmation email"}
+              </button>
+            </div>
+          )}
           <button
             type="submit"
             disabled={submitting}
