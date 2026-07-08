@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -29,6 +29,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { Shell } from "@/components/shell";
 import { ClientOnly } from "@/components/client-only";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StarRating, type Question } from "@/components/question-render";
@@ -44,12 +45,32 @@ type ResponseRow = {
   answers: Answers;
 };
 
+/** Shape returned by the `get_form_analytics` Postgres RPC (jsonb). */
+type FormAnalytics = {
+  totals: {
+    responses: number;
+    last7: number;
+    avg_fill_seconds: number | null;
+    timed_count: number;
+  };
+  funnel: { views: number; starts: number; submits: number };
+  trend: { day: string; count: number }[];
+  reach: { question_id: string; count: number }[];
+  value_counts: { question_id: string; value: string | null; count: number }[];
+};
+
+const RANGE_CHOICES = [7, 30, 90] as const;
+type RangeDays = (typeof RANGE_CHOICES)[number];
+
 function ResponsesPage() {
   const { formId } = Route.useParams();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [responseLimit, setResponseLimit] = useState(100);
   const [exporting, setExporting] = useState(false);
+  const [days, setDays] = useState<RangeDays>(30);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -100,6 +121,38 @@ function ResponsesPage() {
     },
   });
 
+  // Aggregates over ALL responses + funnel events, computed in Postgres —
+  // unlike the capped list above, these numbers never truncate.
+  const analyticsQ = useQuery({
+    enabled: !!user,
+    queryKey: ["form-analytics", formId, days],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_form_analytics", {
+        p_form_id: formId,
+        p_days: days,
+      });
+      if (error) throw error;
+      return data as unknown as FormAnalytics;
+    },
+  });
+
+  const deleteResponse = useMutation({
+    mutationFn: async (responseId: string) => {
+      const { error } = await supabase.from("responses").delete().eq("id", responseId);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setPendingDelete(null);
+      toast.success("Response deleted");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["responses", formId] }),
+        qc.invalidateQueries({ queryKey: ["form-analytics", formId] }),
+        qc.invalidateQueries({ queryKey: ["dashboard-forms"] }),
+      ]);
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not delete response"),
+  });
+
   if (loading || formQ.isLoading) {
     return (
       <Shell width="md">
@@ -137,8 +190,10 @@ function ResponsesPage() {
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{formQ.data.title}</h1>
           <p className="mt-1 text-ink/60">
-            {hasMore ? `${responses.length}+` : responses.length}{" "}
-            {responses.length === 1 && !hasMore ? "response" : "responses"}
+            {(() => {
+              const total = analyticsQ.data?.totals.responses ?? responses.length;
+              return `${total} ${total === 1 ? "response" : "responses"}`;
+            })()}
           </p>
         </div>
         <button
@@ -173,7 +228,14 @@ function ResponsesPage() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <Overview questions={questions} responses={responses} hasMore={hasMore} />
+          <Overview
+            questions={questions}
+            responses={responses}
+            analytics={analyticsQ.data ?? null}
+            analyticsLoading={analyticsQ.isLoading}
+            days={days}
+            onDaysChange={setDays}
+          />
         </TabsContent>
 
         <TabsContent value="individual" className="mt-6">
@@ -182,9 +244,20 @@ function ResponsesPage() {
             responses={responses}
             hasMore={hasMore}
             onLoadMore={() => setResponseLimit((l) => l + 100)}
+            onDelete={(id) => setPendingDelete(id)}
           />
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this response?"
+        description="The response will be permanently removed from your results. This cannot be undone."
+        confirmLabel="Delete response"
+        destructive
+        onConfirm={() => pendingDelete && deleteResponse.mutate(pendingDelete)}
+        onCancel={() => setPendingDelete(null)}
+      />
     </Shell>
   );
 }
@@ -192,40 +265,64 @@ function ResponsesPage() {
 function Overview({
   questions,
   responses,
-  hasMore,
+  analytics,
+  analyticsLoading,
+  days,
+  onDaysChange,
 }: {
   questions: Question[];
   responses: ResponseRow[];
-  hasMore: boolean;
+  analytics: FormAnalytics | null;
+  analyticsLoading: boolean;
+  days: RangeDays;
+  onDaysChange: (d: RangeDays) => void;
 }) {
-  const stats = useMemo(() => {
-    const total = responses.length;
-    const now = Date.now();
-    const last7 = responses.filter(
-      (r) => now - new Date(r.submitted_at).getTime() <= 7 * 24 * 3600 * 1000,
-    ).length;
+  // value → count per question, aggregated server-side over ALL responses.
+  const countsByQuestion = useMemo(() => {
+    const m = new Map<string, Map<string, number>>();
+    for (const vc of analytics?.value_counts ?? []) {
+      if (vc.value == null) continue;
+      let inner = m.get(vc.question_id);
+      if (!inner) {
+        inner = new Map();
+        m.set(vc.question_id, inner);
+      }
+      inner.set(vc.value, (inner.get(vc.value) ?? 0) + vc.count);
+    }
+    return m;
+  }, [analytics]);
 
-    const durations = responses
-      .filter((r) => r.started_at)
-      .map((r) => (new Date(r.submitted_at).getTime() - new Date(r.started_at!).getTime()) / 1000)
-      .filter((s) => s > 0 && s < 2 * 3600);
-    const avgDuration =
-      durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : null;
+  const reachByQuestion = useMemo(
+    () => new Map((analytics?.reach ?? []).map((r) => [r.question_id, r.count])),
+    [analytics],
+  );
 
-    // NOTE: a true completion rate (views → submits) arrives with funnel
-    // analytics; until then every submitted response necessarily answered
-    // everything, so we report volume instead of a fake 100% stat.
-    const last30 = responses.filter(
-      (r) => now - new Date(r.submitted_at).getTime() <= 30 * 24 * 3600 * 1000,
-    ).length;
-    const avgPerDay = last30 / 30;
+  const trend = useMemo(
+    () =>
+      (analytics?.trend ?? []).map((t) => ({
+        key: t.day,
+        count: t.count,
+        label: new Date(t.day).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      })),
+    [analytics],
+  );
 
-    return { total, last7, avgDuration, avgPerDay, durationsCount: durations.length };
-  }, [responses]);
+  if (analyticsLoading || !analytics) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton className="h-64 rounded-2xl" />
+      </div>
+    );
+  }
 
-  const trend = useMemo(() => buildTrend(responses, 30), [responses]);
+  const { totals, funnel } = analytics;
 
-  if (responses.length === 0) {
+  if (totals.responses === 0 && funnel.views === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-ink/15 bg-white/50 p-10 text-center">
         <p className="text-ink/60">
@@ -235,32 +332,79 @@ function Overview({
     );
   }
 
+  const completion = funnel.views > 0 ? Math.round((funnel.submits / funnel.views) * 100) : null;
+  const maxReach = Math.max(0, ...questions.map((q) => reachByQuestion.get(q.id) ?? 0));
+  const funnelMax = Math.max(funnel.views, funnel.starts, funnel.submits, 1);
+  const pctOfViews = (n: number) =>
+    funnel.views > 0 ? `${Math.round((n / funnel.views) * 100)}%` : "—";
+
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end gap-1">
+        {RANGE_CHOICES.map((d) => (
+          <button
+            key={d}
+            type="button"
+            onClick={() => onDaysChange(d)}
+            className={
+              "rounded-full px-3 py-1 text-xs font-semibold transition-colors " +
+              (days === d ? "bg-brand/10 text-brand" : "text-ink/50 hover:bg-ink/5 hover:text-ink")
+            }
+          >
+            {d}d
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Total responses" value={String(stats.total)} />
-        <StatCard label="Last 7 days" value={String(stats.last7)} />
+        <StatCard label="Total responses" value={String(totals.responses)} hint="All time" />
+        <StatCard label="Views" value={String(funnel.views)} hint={`Last ${days} days`} />
         <StatCard
-          label="Avg time to fill"
-          value={stats.avgDuration != null ? formatDuration(stats.avgDuration) : "—"}
-          hint={stats.avgDuration == null ? "Not enough data yet" : `${stats.durationsCount} timed`}
+          label="Completion rate"
+          value={completion != null ? `${completion}%` : "—"}
+          hint={completion != null ? `Submits ÷ views · last ${days}d` : "No views tracked yet"}
         />
         <StatCard
-          label="Avg per day"
-          value={
-            stats.avgPerDay >= 10 ? String(Math.round(stats.avgPerDay)) : stats.avgPerDay.toFixed(1)
+          label="Avg time to fill"
+          value={totals.avg_fill_seconds != null ? formatDuration(totals.avg_fill_seconds) : "—"}
+          hint={
+            totals.avg_fill_seconds == null ? "Not enough data yet" : `${totals.timed_count} timed`
           }
-          hint="Last 30 days"
         />
       </div>
 
-      {hasMore && (
-        <p className="text-xs text-ink/50">
-          Stats are based on the most recent {responses.length} responses.
-        </p>
-      )}
+      <Card title="Funnel" subtitle={`Views → starts → submits · last ${days} days`}>
+        <div className="space-y-3">
+          {(
+            [
+              ["Viewed", funnel.views],
+              ["Started", funnel.starts],
+              ["Submitted", funnel.submits],
+            ] as const
+          ).map(([label, n]) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="w-20 shrink-0 text-xs font-semibold text-ink/60">{label}</span>
+              <div className="h-6 flex-1 overflow-hidden rounded-md bg-ink/5">
+                <div
+                  className="flex h-full items-center rounded-md bg-brand/80 px-2 text-xs font-semibold text-brand-foreground transition-all duration-500"
+                  style={{ width: `${Math.max((n / funnelMax) * 100, n > 0 ? 6 : 0)}%` }}
+                >
+                  {n > 0 ? n : ""}
+                </div>
+              </div>
+              <span className="w-12 shrink-0 text-right text-xs text-ink/50">{pctOfViews(n)}</span>
+            </div>
+          ))}
+          {funnel.views === 0 && (
+            <p className="text-xs text-ink/40">
+              Views are tracked from the moment this update shipped — share your form to see the
+              funnel fill in.
+            </p>
+          )}
+        </div>
+      </Card>
 
-      <Card title="Responses over time" subtitle="Last 30 days">
+      <Card title="Responses over time" subtitle={`Last ${days} days`}>
         <div className="h-56 w-full">
           <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
             <ResponsiveContainer>
@@ -292,9 +436,48 @@ function Overview({
         </div>
       </Card>
 
+      <Card
+        title="Question drop-off"
+        subtitle="How many respondents reached each question (conversational mode)"
+      >
+        {maxReach === 0 ? (
+          <p className="text-sm text-ink/40">
+            No data yet — drop-off is measured as respondents move through the conversational form.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {questions.map((q, i) => {
+              const n = reachByQuestion.get(q.id) ?? 0;
+              return (
+                <div key={q.id} className="flex items-center gap-3">
+                  <span className="w-8 shrink-0 text-xs font-semibold text-ink/40">Q{i + 1}</span>
+                  <div className="h-5 flex-1 overflow-hidden rounded-md bg-ink/5">
+                    <div
+                      className="h-full rounded-md bg-brand/70 transition-all duration-500"
+                      style={{ width: `${(n / maxReach) * 100}%` }}
+                    />
+                  </div>
+                  <span className="w-24 shrink-0 truncate text-xs text-ink/50" title={q.label}>
+                    {q.label}
+                  </span>
+                  <span className="w-10 shrink-0 text-right text-xs font-semibold text-ink/70">
+                    {n}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-2">
         {questions.map((q) => (
-          <QuestionAnalytics key={q.id} question={q} responses={responses} />
+          <QuestionAnalytics
+            key={q.id}
+            question={q}
+            responses={responses}
+            counts={countsByQuestion.get(q.id) ?? new Map()}
+          />
         ))}
       </div>
     </div>
@@ -304,9 +487,12 @@ function Overview({
 function QuestionAnalytics({
   question,
   responses,
+  counts,
 }: {
   question: Question;
   responses: ResponseRow[];
+  /** value → count for this question, aggregated server-side over all responses. */
+  counts: Map<string, number>;
 }) {
   const data = useMemo(() => {
     if (
@@ -316,65 +502,38 @@ function QuestionAnalytics({
     ) {
       const opts: string[] =
         question.type === "yes_no" ? ["Yes", "No"] : getChoiceConfig(question.options).choices;
-      const counts = new Map<string, number>(opts.map((o) => [o, 0]));
-      for (const r of responses) {
-        const v = r.answers?.[question.id];
-        // choice answers are a string (single) or string[] (multi-select).
-        const list: string[] = Array.isArray(v)
-          ? v.filter((x): x is string => typeof x === "string")
-          : typeof v === "string" && v.length > 0
-            ? [v]
-            : [];
-        for (const item of list) counts.set(item, (counts.get(item) ?? 0) + 1);
-      }
-      return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+      return opts.map((name) => ({ name, count: counts.get(name) ?? 0 }));
     }
     if (question.type === "nps") {
-      const counts = new Map<number, number>(Array.from({ length: 11 }, (_, i) => [i, 0]));
       let promoters = 0;
       let detractors = 0;
       let answered = 0;
-      for (const r of responses) {
-        const v = r.answers?.[question.id];
-        if (typeof v === "number" && v >= 0 && v <= 10) {
-          counts.set(v, (counts.get(v) ?? 0) + 1);
-          answered++;
-          if (v >= 9) promoters++;
-          else if (v <= 6) detractors++;
-        }
-      }
+      const bars = Array.from({ length: 11 }, (_, n) => {
+        const count = counts.get(String(n)) ?? 0;
+        answered += count;
+        if (n >= 9) promoters += count;
+        else if (n <= 6) detractors += count;
+        return { name: String(n), count };
+      });
       const score = answered > 0 ? Math.round(((promoters - detractors) / answered) * 100) : null;
-      return {
-        bars: Array.from(counts.entries()).map(([name, count]) => ({
-          name: String(name),
-          count,
-        })),
-        score,
-        answered,
-      };
+      return { bars, score, answered };
     }
     if (question.type === "rating") {
       const max = getRatingMax(question.options);
-      const counts = new Map<number, number>(Array.from({ length: max }, (_, i) => [i + 1, 0]));
-      const vals: number[] = [];
-      for (const r of responses) {
-        const v = r.answers?.[question.id];
-        if (typeof v === "number" && v > 0) {
-          counts.set(v, (counts.get(v) ?? 0) + 1);
-          vals.push(v);
-        }
-      }
-      const avg = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-      return {
-        bars: Array.from(counts.entries()).map(([name, count]) => ({
-          name: `${name}★`,
-          count,
-        })),
-        avg,
-      };
+      let sum = 0;
+      let answered = 0;
+      const bars = Array.from({ length: max }, (_, i) => {
+        const n = i + 1;
+        const count = counts.get(String(n)) ?? 0;
+        sum += n * count;
+        answered += count;
+        return { name: `${n}★`, count };
+      });
+      const avg = answered > 0 ? sum / answered : null;
+      return { bars, avg };
     }
     return null;
-  }, [question, responses]);
+  }, [question, counts]);
 
   if (question.type === "text" || question.type === "long_text") {
     const answered = responses.filter((r) => isAnswered(question, r.answers?.[question.id]));
@@ -544,11 +703,13 @@ function IndividualList({
   responses,
   hasMore,
   onLoadMore,
+  onDelete,
 }: {
   questions: Question[];
   responses: ResponseRow[];
   hasMore: boolean;
   onLoadMore: () => void;
+  onDelete: (responseId: string) => void;
 }) {
   if (responses.length === 0) {
     return (
@@ -567,14 +728,25 @@ function IndividualList({
               : null;
           return (
             <li key={r.id} className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-ink/40">
-                {new Date(r.submitted_at).toLocaleString()}
-                {dur != null && dur > 0 && dur < 2 * 3600 && (
-                  <span className="ml-2 text-ink/60 normal-case">
-                    · filled in {formatDuration(dur)}
-                  </span>
-                )}
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink/40">
+                  {new Date(r.submitted_at).toLocaleString()}
+                  {dur != null && dur > 0 && dur < 2 * 3600 && (
+                    <span className="ml-2 text-ink/60 normal-case">
+                      · filled in {formatDuration(dur)}
+                    </span>
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onDelete(r.id)}
+                  aria-label="Delete response"
+                  title="Delete response"
+                  className="rounded p-1.5 text-ink/40 hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
               <dl className="mt-4 space-y-4">
                 {questions.map((q) => (
                   <div key={q.id}>
@@ -668,29 +840,6 @@ function MiniTooltip({ active, payload, label }: TooltipProps<number, string>) {
       </p>
     </div>
   );
-}
-
-function buildTrend(responses: ResponseRow[], days: number) {
-  const buckets = new Map<string, number>();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    buckets.set(d.toISOString().slice(0, 10), 0);
-  }
-  for (const r of responses) {
-    const key = new Date(r.submitted_at).toISOString().slice(0, 10);
-    if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
-  }
-  return Array.from(buckets.entries()).map(([key, count]) => {
-    const d = new Date(key);
-    return {
-      key,
-      count,
-      label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-    };
-  });
 }
 
 function formatDuration(seconds: number) {

@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      form_events: {
+        Row: {
+          form_id: string
+          id: number
+          ip_hash: string
+          kind: string
+          occurred_at: string
+          question_id: string | null
+        }
+        Insert: {
+          form_id: string
+          id?: number
+          ip_hash: string
+          kind: string
+          occurred_at?: string
+          question_id?: string | null
+        }
+        Update: {
+          form_id?: string
+          id?: number
+          ip_hash?: string
+          kind?: string
+          occurred_at?: string
+          question_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_events_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_events_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forms: {
         Row: {
           created_at: string
@@ -192,6 +234,14 @@ export type Database = {
           status: string
           title: string
         }[]
+      }
+      get_form_analytics: {
+        Args: { p_form_id: string; p_days?: number }
+        Returns: Json
+      }
+      record_form_event: {
+        Args: { p_form_id: string; p_kind: string; p_question_id?: string }
+        Returns: undefined
       }
     }
     Enums: {

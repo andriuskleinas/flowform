@@ -60,9 +60,11 @@ type FormRow = {
   display_mode: DisplayMode;
 };
 
+type TrackKind = "view" | "start" | "reach";
+
 function PublicFormPage() {
   const { formId } = Route.useParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [answers, setAnswers] = useState<Answers>({});
   const [submitted, setSubmitted] = useState(false);
   // Only surface missing-required errors after a submit attempt.
@@ -71,8 +73,40 @@ function PublicFormPage() {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   // Set on first interaction, not page load, so fill-time reflects actual engagement.
   const startedAtRef = useRef<string | null>(null);
+
+  // Funnel events (view / start / reach). Fire-and-forget; the DB function
+  // ignores drafts/closed forms and dedupes by hashed IP, and we skip the
+  // owner so testing your own form doesn't inflate the numbers.
+  const trackableRef = useRef(false);
+  const sentEventsRef = useRef<Set<string>>(new Set());
+  // Events raised before auth/form state resolves are queued, then flushed
+  // (or discarded, for owners) once tracking is armed.
+  const pendingEventsRef = useRef<Array<{ kind: TrackKind; questionId?: string }>>([]);
+  const sendEvent = (kind: TrackKind, questionId?: string) => {
+    const key = questionId ? `${kind}:${questionId}` : kind;
+    if (sentEventsRef.current.has(key)) return;
+    sentEventsRef.current.add(key);
+    supabase
+      .rpc("record_form_event", {
+        p_form_id: formId,
+        p_kind: kind,
+        ...(questionId ? { p_question_id: questionId } : {}),
+      })
+      .then(({ error }) => {
+        if (error) sentEventsRef.current.delete(key);
+      });
+  };
+  const trackEvent = (kind: TrackKind, questionId?: string) => {
+    if (!trackableRef.current) {
+      pendingEventsRef.current.push({ kind, questionId });
+      return;
+    }
+    sendEvent(kind, questionId);
+  };
+
   const recordStart = () => {
     if (!startedAtRef.current) startedAtRef.current = new Date().toISOString();
+    trackEvent("start");
   };
 
   const draftKey = `flowform:draft:${formId}`;
@@ -132,6 +166,23 @@ function PublicFormPage() {
       return (data ?? []) as Question[];
     },
   });
+
+  // Arm tracking + record the view once the form and auth state are known.
+  const form = formQ.data;
+  useEffect(() => {
+    if (!form || authLoading || trackableRef.current) return;
+    const owner = !!user && user.id === form.user_id;
+    if (form.status !== "published") return;
+    if (owner) {
+      pendingEventsRef.current = [];
+      return;
+    }
+    trackableRef.current = true;
+    sendEvent("view");
+    for (const e of pendingEventsRef.current) sendEvent(e.kind, e.questionId);
+    pendingEventsRef.current = [];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, authLoading, user]);
 
   const submit = useMutation({
     mutationFn: async () => {
@@ -321,6 +372,7 @@ function PublicFormPage() {
               recordStart();
               setAnswers((a) => ({ ...a, [qid]: v }));
             }}
+            onShowQuestion={(qid) => trackEvent("reach", qid)}
             submitting={submit.isPending}
             onSubmit={() => {
               if (submit.isPending) return;

@@ -40,6 +40,7 @@ export function ConversationalForm({
   answers,
   onAnswer,
   onSubmit,
+  onShowQuestion,
   submitting = false,
   preview = false,
 }: {
@@ -47,6 +48,8 @@ export function ConversationalForm({
   answers: Answers;
   onAnswer: (questionId: string, value: AnswerValue) => void;
   onSubmit: () => void;
+  /** Fired whenever a question becomes the visible step (funnel analytics). */
+  onShowQuestion?: (questionId: string) => void;
   submitting?: boolean;
   /** Preview mode disables the final submit. */
   preview?: boolean;
@@ -88,6 +91,12 @@ export function ConversationalForm({
   const total = questions.length;
   const atSubmit = index >= total;
   const current = atSubmit ? null : questions[index];
+
+  const currentId = current?.id;
+  useEffect(() => {
+    if (currentId) onShowQuestion?.(currentId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentId]);
 
   const answeredCount = questions.filter((q) => isAnswered(q, answers[q.id])).length;
   const progress = atSubmit ? 100 : Math.round((answeredCount / Math.max(total, 1)) * 100);
