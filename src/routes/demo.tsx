@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, RotateCcw, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/demo")({
   head: () => ({
@@ -96,6 +96,30 @@ function ChoiceGrid({
   );
 }
 
+function StepConfirm({
+  answered,
+  onConfirm,
+  hint,
+}: {
+  answered: boolean;
+  onConfirm: () => void;
+  hint: string;
+}) {
+  return (
+    <div className="mt-8 flex items-center gap-4">
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={!answered}
+        className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground shadow-md shadow-brand/20 transition-all enabled:hover:scale-[1.02] disabled:opacity-40"
+      >
+        OK
+      </button>
+      <span className="text-xs text-ink/40">{hint}</span>
+    </div>
+  );
+}
+
 function DemoPage() {
   const [phase, setPhase] = useState<Phase>("intro");
   const [idx, setIdx] = useState(0);
@@ -103,15 +127,11 @@ function DemoPage() {
   const [useCase, setUseCase] = useState<UseCase | null>(null);
   const [followUp, setFollowUp] = useState<string | null>(null);
   const [rating, setRating] = useState<number | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const followUpQ = useCase ? FOLLOW_UPS[useCase] : null;
-
-  useEffect(() => () => clearTimeout(timerRef.current ?? undefined), []);
 
   useEffect(() => {
     if (phase === "run" && idx === 0) inputRef.current?.focus();
@@ -132,46 +152,39 @@ function DemoPage() {
     setUseCase(null);
     setFollowUp(null);
     setRating(null);
-    setFlash(null);
     setIdx(0);
     setPhase("intro");
   }
 
-  // Briefly show the selection, then advance — feels like the real product.
-  function selectAndAdvance(commit: () => void, isLast = false) {
-    if (flash !== null) return;
-    commit();
-    timerRef.current = setTimeout(() => {
-      setFlash(null);
-      if (isLast) finish();
-      else setIdx((i) => i + 1);
-    }, 400);
-  }
-
+  // Selecting only records the answer — like the real product, respondents
+  // confirm with OK/Enter, so a misclick can be corrected before moving on.
   function pickUseCase(opt: string) {
-    setFlash(opt);
-    selectAndAdvance(() => setUseCase(opt as UseCase));
+    if (opt !== useCase) setFollowUp(null);
+    setUseCase(opt as UseCase);
   }
 
-  function pickFollowUp(opt: string) {
-    setFlash(opt);
-    selectAndAdvance(() => setFollowUp(opt));
+  function confirmStep() {
+    if (idx === 0 && name.trim()) setIdx(1);
+    else if (idx === 1 && useCase) setIdx(2);
+    else if (idx === 2 && followUp) setIdx(3);
+    else if (idx === 3 && rating !== null) finish();
   }
 
-  function pickRating(n: number) {
-    setFlash(String(n));
-    selectAndAdvance(() => setRating(n), true);
-  }
-
-  function submitName() {
-    if (name.trim()) setIdx(1);
-  }
+  const stepAnswered =
+    idx === 0
+      ? name.trim().length > 0
+      : idx === 1
+        ? useCase !== null
+        : idx === 2
+          ? followUp !== null
+          : rating !== null;
 
   function goBack() {
     if (idx > 0) setIdx((i) => i - 1);
   }
 
-  // Keyboard shortcuts: Enter on intro, A–D on choices, 1–9/0 on the rating.
+  // Keyboard shortcuts: Enter on intro, A–D selects a choice, 1–9/0 selects a
+  // rating, Enter confirms the selection and advances.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -180,17 +193,23 @@ function DemoPage() {
         start();
         return;
       }
-      if (phase !== "run" || flash !== null) return;
+      if (phase !== "run") return;
+      if (idx > 0 && e.key === "Enter") {
+        e.preventDefault();
+        confirmStep();
+        return;
+      }
       if (idx === 1 || idx === 2) {
         const options = idx === 1 ? USE_CASES : (followUpQ?.options ?? []);
         const i = e.key.length === 1 ? "abcd".indexOf(e.key.toLowerCase()) : -1;
         if (i >= 0 && i < options.length) {
           e.preventDefault();
-          (idx === 1 ? pickUseCase : pickFollowUp)(options[i]);
+          if (idx === 1) pickUseCase(options[i]);
+          else setFollowUp(options[i]);
         }
       } else if (idx === 3 && /^[0-9]$/.test(e.key)) {
         e.preventDefault();
-        pickRating(e.key === "0" ? 10 : Number(e.key));
+        setRating(e.key === "0" ? 10 : Number(e.key));
       }
     }
     window.addEventListener("keydown", onKey);
@@ -262,10 +281,10 @@ function DemoPage() {
               <button
                 type="button"
                 onClick={goBack}
-                className="mb-6 flex w-fit items-center gap-1.5 text-xs font-medium text-ink/40 transition-colors hover:text-ink"
+                className="mb-6 inline-flex w-fit items-center gap-1.5 rounded-full border border-ink/15 bg-white/70 px-3.5 py-1.5 text-sm font-medium text-ink/70 transition-colors hover:border-ink/30 hover:text-ink"
               >
-                <ArrowUp className="size-3.5" />
-                Previous question
+                <ArrowLeft className="size-4" />
+                Back
               </button>
             )}
 
@@ -281,7 +300,7 @@ function DemoPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      submitName();
+                      confirmStep();
                     }
                   }}
                   placeholder="Type your name…"
@@ -291,7 +310,7 @@ function DemoPage() {
                 <div className="mt-8 flex items-center gap-4">
                   <button
                     type="button"
-                    onClick={submitName}
+                    onClick={confirmStep}
                     disabled={!name.trim()}
                     className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground shadow-md shadow-brand/20 transition-all enabled:hover:scale-[1.02] disabled:opacity-40"
                   >
@@ -309,8 +328,12 @@ function DemoPage() {
                   Nice to meet you{name.trim() ? `, ${name.trim().split(/\s+/)[0]}` : ""}. What
                   would you use Flowform for?
                 </h2>
-                <ChoiceGrid options={USE_CASES} selected={flash} onSelect={pickUseCase} />
-                <p className="mt-6 text-xs text-ink/40">press A – D</p>
+                <ChoiceGrid options={USE_CASES} selected={useCase} onSelect={pickUseCase} />
+                <StepConfirm
+                  answered={stepAnswered}
+                  onConfirm={confirmStep}
+                  hint="press A – D, then Enter ↵"
+                />
               </>
             )}
 
@@ -323,8 +346,16 @@ function DemoPage() {
                 <h2 className="mt-5 text-3xl font-bold tracking-tight md:text-4xl">
                   {followUpQ.label}
                 </h2>
-                <ChoiceGrid options={followUpQ.options} selected={flash} onSelect={pickFollowUp} />
-                <p className="mt-6 text-xs text-ink/40">press A – D</p>
+                <ChoiceGrid
+                  options={followUpQ.options}
+                  selected={followUp}
+                  onSelect={setFollowUp}
+                />
+                <StepConfirm
+                  answered={stepAnswered}
+                  onConfirm={confirmStep}
+                  hint="press A – D, then Enter ↵"
+                />
               </>
             )}
 
@@ -335,12 +366,12 @@ function DemoPage() {
                 </h2>
                 <div className="mt-8 grid grid-cols-5 gap-2 sm:grid-cols-10">
                   {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
-                    const isSelected = flash === String(n);
+                    const isSelected = rating === n;
                     return (
                       <button
                         key={n}
                         type="button"
-                        onClick={() => pickRating(n)}
+                        onClick={() => setRating(n)}
                         className={`grid h-12 place-items-center rounded-lg border text-sm font-semibold transition-all ${
                           isSelected
                             ? "border-brand bg-brand text-white shadow-md shadow-brand/25"
@@ -356,7 +387,11 @@ function DemoPage() {
                   <span>Feels like homework</span>
                   <span>Feels like a conversation</span>
                 </div>
-                <p className="mt-6 text-xs text-ink/40">press 1 – 9, or 0 for 10</p>
+                <StepConfirm
+                  answered={stepAnswered}
+                  onConfirm={confirmStep}
+                  hint="press 1 – 9 (0 for 10), then Enter ↵"
+                />
               </>
             )}
           </div>
