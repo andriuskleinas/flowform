@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   type QuestionType,
   type QuestionOptions,
+  type QuestionLogic,
   type AnswerValue,
   getRatingMax,
   getChoiceConfig,
@@ -22,6 +23,8 @@ export type Question = {
   options: QuestionOptions;
   position: number;
   required: boolean;
+  /** Optional — routes that don't need jump rules may omit it from their select. */
+  logic?: QuestionLogic;
 };
 
 type Props = {

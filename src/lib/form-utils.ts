@@ -10,6 +10,60 @@ export type QuestionType =
 /** Form lifecycle: draft (owner-only) → published (live) → closed (visible, not accepting). */
 export type FormStatus = "draft" | "published" | "closed";
 
+/** How respondents experience the form: one question at a time, or a single page. */
+export type DisplayMode = "conversational" | "classic";
+
+/**
+ * Logic-jump rules for a question. `jumps` maps a choice value to the id of a
+ * LATER question, or the sentinel "end" (skip to submit). Only single-choice
+ * questions (single-select multiple_choice, dropdown, yes_no) carry rules.
+ */
+export type QuestionLogic = { jumps?: Record<string, string> } | null;
+
+export const JUMP_TO_END = "end";
+
+export function logicEqual(a: QuestionLogic | undefined, b: QuestionLogic | undefined): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+type LogicCarrier = { id: string; logic?: QuestionLogic };
+
+/**
+ * Index of the question shown after answering `questions[idx]`, following a
+ * matching jump rule when the answer is a single choice. Returns
+ * `questions.length` for "end of form". Jumps are forward-only; stale or
+ * backward targets fall through to the next question so a bad rule can never
+ * trap a respondent in a loop.
+ */
+export function resolveNextIndex(questions: LogicCarrier[], idx: number, answer: unknown): number {
+  const jumps = questions[idx]?.logic?.jumps;
+  if (jumps && typeof answer === "string" && jumps[answer]) {
+    const target = jumps[answer];
+    if (target === JUMP_TO_END) return questions.length;
+    const ti = questions.findIndex((q) => q.id === target);
+    if (ti > idx) return ti;
+  }
+  return idx + 1;
+}
+
+/**
+ * The indices a respondent actually visits given their answers, following
+ * jump rules from the top. Used to validate only the questions on the path —
+ * a required question skipped by a jump must not block submission.
+ */
+export function computeVisiblePath(
+  questions: LogicCarrier[],
+  answers: Record<string, unknown>,
+): number[] {
+  const path: number[] = [];
+  let idx = 0;
+  while (idx < questions.length && path.length <= questions.length) {
+    path.push(idx);
+    idx = resolveNextIndex(questions, idx, answers[questions[idx].id]);
+  }
+  return path;
+}
+
 /** Rating scales offered in the builders. Keep create + edit pages in sync. */
 export const RATING_MAX_CHOICES = [3, 4, 5, 6, 7, 8, 9, 10] as const;
 

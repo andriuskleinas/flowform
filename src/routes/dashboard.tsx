@@ -166,13 +166,13 @@ function DashboardAuthed({
     mutationFn: async (formId: string) => {
       const { data: src, error: srcErr } = await supabase
         .from("forms")
-        .select("title, description")
+        .select("title, description, display_mode")
         .eq("id", formId)
         .single();
       if (srcErr) throw srcErr;
       const { data: qs, error: qErr } = await supabase
         .from("questions")
-        .select("type, label, options, position, required")
+        .select("id, type, label, options, position, required, logic")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (qErr) throw qErr;
@@ -182,16 +182,53 @@ function DashboardAuthed({
           // Stay under the 300-char title constraint even with the suffix.
           title: `${src.title.slice(0, 290)} (copy)`,
           description: src.description,
+          display_mode: src.display_mode,
           user_id: userId,
         })
         .select("id")
         .single();
       if (insErr) throw insErr;
       if (qs && qs.length > 0) {
-        const { error: qInsErr } = await supabase
+        // Insert copies without logic first, then remap jump targets from the
+        // source question ids to the freshly created ids (matched by
+        // position, which is unique within a form).
+        const { data: inserted, error: qInsErr } = await supabase
           .from("questions")
-          .insert(qs.map((q) => ({ ...q, form_id: created.id })));
+          .insert(
+            qs.map((q) => ({
+              form_id: created.id,
+              type: q.type,
+              label: q.label,
+              options: q.options,
+              position: q.position,
+              required: q.required,
+            })),
+          )
+          .select("id, position");
         if (qInsErr) throw qInsErr;
+        const idByPosition = new Map((inserted ?? []).map((r) => [r.position, r.id]));
+        const oldToNew = new Map(qs.map((q) => [q.id, idByPosition.get(q.position)]));
+        const logicUpdates = qs
+          .filter((q) => q.logic && typeof q.logic === "object" && "jumps" in q.logic)
+          .map((q) => {
+            const jumps = (q.logic as { jumps: Record<string, string> }).jumps;
+            const remapped: Record<string, string> = {};
+            for (const [choice, target] of Object.entries(jumps)) {
+              remapped[choice] = target === "end" ? "end" : (oldToNew.get(target) ?? "");
+            }
+            for (const k of Object.keys(remapped)) if (!remapped[k]) delete remapped[k];
+            return { newId: oldToNew.get(q.id), jumps: remapped };
+          })
+          .filter((u) => u.newId && Object.keys(u.jumps).length > 0);
+        await Promise.all(
+          logicUpdates.map(async (u) => {
+            const { error } = await supabase
+              .from("questions")
+              .update({ logic: { jumps: u.jumps } })
+              .eq("id", u.newId!);
+            if (error) throw error;
+          }),
+        );
       }
       return created.id as string;
     },

@@ -7,15 +7,18 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
+  computeVisiblePath,
   isAnswered,
   validateAnswerLength,
   MAX_ANSWER_LENGTH,
   type Answers,
+  type DisplayMode,
   type FormStatus,
 } from "@/lib/form-utils";
 import { getPublicFormMeta } from "@/lib/form-meta";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionRender, type Question } from "@/components/question-render";
+import { ConversationalForm } from "@/components/conversational-form";
 import { Shell } from "@/components/shell";
 
 export const Route = createFileRoute("/forms/$formId/")({
@@ -54,6 +57,7 @@ type FormRow = {
   description: string | null;
   user_id: string;
   status: FormStatus;
+  display_mode: DisplayMode;
 };
 
 function PublicFormPage() {
@@ -108,7 +112,7 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, user_id, status")
+        .select("id, title, description, user_id, status, display_mode")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -121,7 +125,7 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position, required")
+        .select("id, form_id, type, label, options, position, required, logic")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
@@ -294,6 +298,49 @@ function PublicFormPage() {
           >
             Submit another response
           </button>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (formQ.data.display_mode === "conversational") {
+    return (
+      <Shell width="sm">
+        {ownerNav}
+        <header>
+          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{formQ.data.title}</h1>
+          {formQ.data.description && (
+            <p className="mt-3 text-base text-ink/60 md:text-lg">{formQ.data.description}</p>
+          )}
+        </header>
+        <div className="mt-10">
+          <ConversationalForm
+            questions={questions}
+            answers={answers}
+            onAnswer={(qid, v) => {
+              recordStart();
+              setAnswers((a) => ({ ...a, [qid]: v }));
+            }}
+            submitting={submit.isPending}
+            onSubmit={() => {
+              if (submit.isPending) return;
+              // Safety net — the component enforces required per question,
+              // but only questions on the jump path may block submission.
+              const path = computeVisiblePath(questions, answers);
+              const missing = path
+                .map((i) => questions[i])
+                .filter((q) => q.required && !isAnswered(q, answers[q.id]));
+              if (missing.length > 0) {
+                toast.error("A required question still needs an answer.");
+                return;
+              }
+              if (!Object.values(answers).every(validateAnswerLength)) {
+                toast.error(`An answer exceeds the ${MAX_ANSWER_LENGTH}-character limit.`);
+                return;
+              }
+              submit.mutate();
+            }}
+          />
         </div>
       </Shell>
     );

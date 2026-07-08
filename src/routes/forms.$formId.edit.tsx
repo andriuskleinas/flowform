@@ -53,15 +53,20 @@ import {
 import { QuestionRender, type Question, type QuestionType } from "@/components/question-render";
 import {
   type QuestionOptions,
+  type QuestionLogic,
   type Answers,
+  type DisplayMode,
   type FormStatus,
+  JUMP_TO_END,
   QUESTION_TYPE_LABELS,
   RATING_MAX_CHOICES,
   defaultOptionsForType,
   getChoiceConfig,
   getRatingMax,
+  logicEqual,
   questionOptionsEqual,
 } from "@/lib/form-utils";
+import { ConversationalForm } from "@/components/conversational-form";
 import { Switch } from "@/components/ui/switch";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -96,19 +101,27 @@ function EditFormPage() {
 
 type DraftQuestion = Question & { isNew?: boolean; isDeleted?: boolean };
 
+type DraftFormState = {
+  title: string;
+  description: string | null;
+  display_mode: DisplayMode;
+};
+
 function snapshotKey(
-  form: { title: string; description: string | null },
-  questions: Array<Pick<Question, "id" | "type" | "label" | "options" | "required">>,
+  form: DraftFormState,
+  questions: Array<Pick<Question, "id" | "type" | "label" | "options" | "required" | "logic">>,
 ) {
   return JSON.stringify({
     title: form.title.trim(),
     description: (form.description ?? "").trim(),
+    display_mode: form.display_mode,
     questions: questions.map((q) => ({
       id: q.id,
       type: q.type,
       label: q.label.trim(),
       options: q.options ?? null,
       required: q.required,
+      logic: q.logic ?? null,
     })),
   });
 }
@@ -122,7 +135,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, user_id, status")
+        .select("id, title, description, user_id, status, display_mode")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -135,7 +148,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position, required")
+        .select("id, form_id, type, label, options, position, required, logic")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
@@ -145,12 +158,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
   // Local draft state — server-truth is mirrored in `snapshot`.
   const [snapshot, setSnapshot] = useState<{
-    form: { title: string; description: string | null };
+    form: DraftFormState;
     questions: Question[];
   } | null>(null);
-  const [draftForm, setDraftForm] = useState<{ title: string; description: string | null }>({
+  const [draftForm, setDraftForm] = useState<DraftFormState>({
     title: "",
     description: null,
+    display_mode: "conversational",
   });
   const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -169,7 +183,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     if (!sf) return;
     const sq = questionsQ.data ?? [];
     const newSnap = {
-      form: { title: sf.title, description: sf.description ?? null },
+      form: {
+        title: sf.title,
+        description: sf.description ?? null,
+        display_mode: sf.display_mode as DisplayMode,
+      },
       questions: sq,
     };
     if (!snapshot) {
@@ -201,6 +219,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     if (!snapshot) return false;
     if (draftForm.title !== snapshot.form.title) return true;
     if ((draftForm.description ?? null) !== (snapshot.form.description ?? null)) return true;
+    if (draftForm.display_mode !== snapshot.form.display_mode) return true;
     if (visibleDraftQuestions.length !== snapshot.questions.length) return true;
     for (let i = 0; i < visibleDraftQuestions.length; i++) {
       const v = visibleDraftQuestions[i];
@@ -211,6 +230,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       if (v.label !== s.label) return true;
       if (v.required !== s.required) return true;
       if (!questionOptionsEqual(v.options ?? null, s.options ?? null)) return true;
+      if (!logicEqual(v.logic, s.logic)) return true;
     }
     return false;
   }, [draftForm, visibleDraftQuestions, snapshot]);
@@ -233,11 +253,16 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const setDraftType = (id: string, type: QuestionType) =>
     setDraftQuestions((qs) =>
       qs.map((q) =>
-        q.id === id && q.type !== type ? { ...q, type, options: defaultOptionsForType(type) } : q,
+        q.id === id && q.type !== type
+          ? // A type change invalidates choice-keyed jump rules along with options.
+            { ...q, type, options: defaultOptionsForType(type), logic: null }
+          : q,
       ),
     );
   const setDraftRequired = (id: string, required: boolean) =>
     setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, required } : q)));
+  const setDraftLogic = (id: string, logic: QuestionLogic) =>
+    setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, logic } : q)));
   const addDraftQuestion = (type: QuestionType) =>
     setDraftQuestions((qs) => [
       ...qs,
@@ -249,6 +274,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         options: defaultOptionsForType(type),
         position: qs.length,
         required: true,
+        logic: null,
         isNew: true,
       },
     ]);
@@ -273,10 +299,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         draftForm.description && draftForm.description.trim() !== ""
           ? draftForm.description.trim()
           : null;
-      const formPatch: { title?: string; description?: string | null } = {};
+      const formPatch: { title?: string; description?: string | null; display_mode?: string } = {};
       if (trimmedTitle !== snapshot.form.title) formPatch.title = trimmedTitle;
       if ((trimmedDesc ?? null) !== (snapshot.form.description ?? null))
         formPatch.description = trimmedDesc;
+      if (draftForm.display_mode !== snapshot.form.display_mode)
+        formPatch.display_mode = draftForm.display_mode;
       const formPatchOp: Promise<void> =
         Object.keys(formPatch).length > 0
           ? (async () => {
@@ -287,6 +315,33 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
       // 2. Build inserts + updates (positions = visible draft order).
       const visible = draftQuestions.filter((q) => !q.isDeleted);
+
+      // Drop jump rules that no longer make sense: unknown choices, targets
+      // that aren't later questions, or targets that are unsaved (tmp) rows.
+      const sanitizeLogic = (q: DraftQuestion, i: number): QuestionLogic => {
+        const jumps = q.logic?.jumps;
+        if (!jumps) return null;
+        const cfg = getChoiceConfig(q.options);
+        const eligible =
+          q.type === "dropdown" ||
+          q.type === "yes_no" ||
+          (q.type === "multiple_choice" && !cfg.multi);
+        if (!eligible) return null;
+        const choices = q.type === "yes_no" ? ["Yes", "No"] : cfg.choices;
+        const laterIds = new Set(
+          visible
+            .slice(i + 1)
+            .filter((v) => !v.isNew)
+            .map((v) => v.id),
+        );
+        const clean: Record<string, string> = {};
+        for (const [choice, target] of Object.entries(jumps)) {
+          if (!choices.includes(choice)) continue;
+          if (target === JUMP_TO_END || laterIds.has(target)) clean[choice] = target;
+        }
+        return Object.keys(clean).length > 0 ? { jumps: clean } : null;
+      };
+
       const newRows: {
         form_id: string;
         type: QuestionType;
@@ -294,12 +349,14 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         options: QuestionOptions;
         position: number;
         required: boolean;
+        logic: QuestionLogic;
       }[] = [];
       const updateOps: Promise<void>[] = [];
 
       for (let i = 0; i < visible.length; i++) {
         const q = visible[i];
         const label = q.label.trim() || "Untitled question";
+        const logic = sanitizeLogic(q, i);
         if (q.isNew) {
           newRows.push({
             form_id: formId,
@@ -308,6 +365,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             options: q.options ?? null,
             position: i,
             required: q.required,
+            logic,
           });
         } else {
           const orig = snapshot.questions.find((o) => o.id === q.id);
@@ -317,6 +375,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             label?: string;
             options?: QuestionOptions;
             required?: boolean;
+            logic?: QuestionLogic;
           } = { position: i };
           if (orig) {
             if (orig.type !== q.type) patch.type = q.type;
@@ -324,11 +383,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             if (orig.required !== q.required) patch.required = q.required;
             if (!questionOptionsEqual(orig.options ?? null, q.options ?? null))
               patch.options = q.options ?? null;
+            if (!logicEqual(orig.logic, logic)) patch.logic = logic;
           } else {
             patch.type = q.type;
             patch.label = label;
             patch.options = q.options ?? null;
             patch.required = q.required;
+            patch.logic = logic;
           }
           updateOps.push(
             (async () => {
@@ -551,6 +612,37 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 placeholder="What's this form for?"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Respondent experience</Label>
+              <div className="flex gap-2">
+                {(
+                  [
+                    ["conversational", "Conversational", "One question at a time"],
+                    ["classic", "Classic", "All questions on one page"],
+                  ] as const
+                ).map(([mode, label, hint]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    title={hint}
+                    onClick={() => setDraftForm((f) => ({ ...f, display_mode: mode }))}
+                    className={
+                      "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors " +
+                      (draftForm.display_mode === mode
+                        ? "border-brand bg-brand/10 text-brand"
+                        : "border-ink/15 bg-white text-ink/60 hover:bg-ink/5")
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-ink/40">
+                {draftForm.display_mode === "conversational"
+                  ? "Respondents see one question at a time with a progress bar — logic jumps apply here."
+                  : "Respondents see every question on a single page."}
+              </p>
+            </div>
           </div>
           <div className="flex flex-col items-end gap-2">
             <StatusPill status={form.status as FormStatus} />
@@ -654,10 +746,20 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                     question={q}
                     index={i}
                     total={visibleDraftQuestions.length}
+                    jumpTargets={visibleDraftQuestions
+                      .map((t, ti) => ({
+                        id: t.id,
+                        label: t.label,
+                        number: ti + 1,
+                        isNew: !!t.isNew,
+                      }))
+                      .slice(i + 1)
+                      .filter((t) => !t.isNew)}
                     onChangeLabel={(label) => setDraftLabel(q.id, label)}
                     onChangeOptions={(options) => setDraftOptions(q.id, options)}
                     onChangeType={(type) => setDraftType(q.id, type)}
                     onChangeRequired={(required) => setDraftRequired(q.id, required)}
+                    onChangeLogic={(logic) => setDraftLogic(q.id, logic)}
                     onDelete={() => removeDraftQuestion(q.id)}
                     onMoveUp={() => moveBy(q.id, -1)}
                     onMoveDown={() => moveBy(q.id, 1)}
@@ -754,6 +856,14 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               <p className="rounded-xl border border-dashed border-ink/15 p-6 text-center text-sm text-ink/50">
                 No questions yet — add one to see a preview.
               </p>
+            ) : draftForm.display_mode === "conversational" ? (
+              <ConversationalForm
+                questions={visibleDraftQuestions}
+                answers={previewAnswers}
+                onAnswer={(qid, v) => setPreviewAnswers((a) => ({ ...a, [qid]: v }))}
+                onSubmit={() => {}}
+                preview
+              />
             ) : (
               visibleDraftQuestions.map((q, i) => (
                 <div key={q.id} className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
@@ -772,7 +882,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               ))
             )}
 
-            {visibleDraftQuestions.length > 0 && (
+            {visibleDraftQuestions.length > 0 && draftForm.display_mode === "classic" && (
               <div className="flex items-center justify-between gap-3 pt-2">
                 <p className="text-xs text-ink/50">Responses aren't recorded in preview.</p>
                 <button
@@ -815,14 +925,18 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
 /* ------------------------------ Sortable card ------------------------------ */
 
+type JumpTarget = { id: string; label: string; number: number };
+
 function SortableQuestionCard({
   question,
   index,
   total,
+  jumpTargets,
   onChangeLabel,
   onChangeOptions,
   onChangeType,
   onChangeRequired,
+  onChangeLogic,
   onDelete,
   onMoveUp,
   onMoveDown,
@@ -830,10 +944,12 @@ function SortableQuestionCard({
   question: Question;
   index: number;
   total: number;
+  jumpTargets: JumpTarget[];
   onChangeLabel: (label: string) => void;
   onChangeOptions: (options: QuestionOptions) => void;
   onChangeType: (type: QuestionType) => void;
   onChangeRequired: (required: boolean) => void;
+  onChangeLogic: (logic: QuestionLogic) => void;
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -955,6 +1071,62 @@ function SortableQuestionCard({
           </select>
         </div>
       )}
+
+      {(() => {
+        const cfg = getChoiceConfig(question.options);
+        const jumpEligible =
+          question.type === "dropdown" ||
+          question.type === "yes_no" ||
+          (question.type === "multiple_choice" && !cfg.multi);
+        if (!jumpEligible) return null;
+        const choices = question.type === "yes_no" ? ["Yes", "No"] : cfg.choices;
+        if (choices.length === 0) return null;
+        const jumps = question.logic?.jumps ?? {};
+        const setJump = (choice: string, target: string) => {
+          const next = { ...jumps };
+          if (target === "") delete next[choice];
+          else next[choice] = target;
+          onChangeLogic(Object.keys(next).length > 0 ? { jumps: next } : null);
+        };
+        return (
+          <details
+            className="mt-4 rounded-xl bg-surface/60 p-3"
+            open={Object.keys(jumps).length > 0}
+          >
+            <summary className="cursor-pointer text-xs font-semibold text-ink/70">
+              Logic jumps{" "}
+              <span className="font-normal text-ink/40">
+                — route respondents based on their answer (conversational mode)
+              </span>
+            </summary>
+            <div className="mt-3 space-y-2">
+              {choices.map((choice) => (
+                <div key={choice} className="flex items-center gap-2 text-sm">
+                  <span className="min-w-0 flex-1 truncate text-ink/70">
+                    If <span className="font-semibold text-ink">"{choice}"</span>
+                  </span>
+                  <select
+                    value={jumps[choice] ?? ""}
+                    onChange={(e) => setJump(choice, e.target.value)}
+                    className="w-52 rounded-md border border-input bg-white px-2 py-1.5 text-xs shadow-sm"
+                  >
+                    <option value="">→ Next question</option>
+                    {jumpTargets.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        → Q{t.number}: {t.label.slice(0, 40)}
+                      </option>
+                    ))}
+                    <option value={JUMP_TO_END}>→ End of form</option>
+                  </select>
+                </div>
+              ))}
+              <p className="text-xs text-ink/40">
+                Jumps go forward only. Newly added questions become targets after saving.
+              </p>
+            </div>
+          </details>
+        );
+      })()}
 
       <div className="mt-4 flex items-center gap-2 border-t border-ink/5 pt-3">
         <Switch

@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          display_mode: string
           id: string
           status: string
           title: string
@@ -26,6 +27,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          display_mode?: string
           id?: string
           status?: string
           title: string
@@ -34,6 +36,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          display_mode?: string
           id?: string
           status?: string
           title?: string
@@ -74,6 +77,7 @@ export type Database = {
           form_id: string
           id: string
           label: string
+          logic: Json | null
           options: Json | null
           position: number
           required: boolean
@@ -84,6 +88,7 @@ export type Database = {
           form_id: string
           id?: string
           label: string
+          logic?: Json | null
           options?: Json | null
           position: number
           required?: boolean
@@ -94,6 +99,7 @@ export type Database = {
           form_id?: string
           id?: string
           label?: string
+          logic?: Json | null
           options?: Json | null
           position?: number
           required?: boolean
