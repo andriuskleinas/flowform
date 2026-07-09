@@ -326,9 +326,13 @@ function PublicFormPage() {
         {ownerNav}
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Thanks!</h1>
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">
+            {isOwner ? "Test submission" : "Thanks!"}
+          </h1>
           <p className="mt-2 max-w-md whitespace-pre-line text-ink/60">
-            {formQ.data.thank_you_message?.trim() || "Your response was recorded."}
+            {isOwner
+              ? "This was a preview of your own form — nothing was recorded, and it isn't counted in analytics."
+              : formQ.data.thank_you_message?.trim() || "Your response was recorded."}
           </p>
         </div>
       </Shell>
