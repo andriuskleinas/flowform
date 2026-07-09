@@ -40,6 +40,9 @@ export function ConversationalForm({
   const [index, setIndex] = useState(0);
   const [history, setHistory] = useState<number[]>([]);
   const [error, setError] = useState(false);
+  // In preview there's no real submission — clicking Submit shows a "preview
+  // complete" confirmation instead of a dead, disabled button.
+  const [previewSubmitted, setPreviewSubmitted] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Restored drafts skip ahead to the first unanswered question on the path.
@@ -92,6 +95,7 @@ export function ConversationalForm({
 
   const back = () => {
     setError(false);
+    setPreviewSubmitted(false);
     setHistory((h) => {
       if (h.length === 0) return h;
       setIndex(h[h.length - 1]);
@@ -193,20 +197,33 @@ export function ConversationalForm({
       {atSubmit && (
         <div className="mt-10 text-center motion-safe:animate-[demo-step-in_0.4s_ease-out_both]">
           <CheckCircle2 className="mx-auto size-12 text-brand" />
-          <h2 className="mt-4 text-2xl font-extrabold tracking-tight">You're all set</h2>
-          <p className="mt-2 text-sm text-ink/60">
-            {answeredCount} of {total} questions answered.
-          </p>
+          {preview && previewSubmitted ? (
+            <>
+              <h2 className="mt-4 text-2xl font-extrabold tracking-tight">Preview complete</h2>
+              <p className="mt-2 text-sm text-ink/60">
+                In the live form this submits the response and shows your thank-you message. Nothing
+                is recorded in preview.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="mt-4 text-2xl font-extrabold tracking-tight">You're all set</h2>
+              <p className="mt-2 text-sm text-ink/60">
+                {answeredCount} of {total} questions answered.
+              </p>
+            </>
+          )}
           <div className="mt-8 flex flex-col items-center gap-3">
-            <button
-              type="button"
-              disabled={submitting || preview}
-              onClick={onSubmit}
-              title={preview ? "Responses aren't recorded in preview" : undefined}
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-3.5 text-base font-semibold text-brand-foreground shadow-lg shadow-brand/25 transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submitting ? "Submitting…" : "Submit"}
-            </button>
+            {!(preview && previewSubmitted) && (
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={preview ? () => setPreviewSubmitted(true) : onSubmit}
+                className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-3.5 text-base font-semibold text-brand-foreground shadow-lg shadow-brand/25 transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submitting ? "Submitting…" : preview ? "Submit (preview)" : "Submit"}
+              </button>
+            )}
             <button
               type="button"
               onClick={back}
