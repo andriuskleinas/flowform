@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   ArrowLeft,
   ArrowDown,
@@ -8,9 +8,12 @@ import {
   CopyPlus,
   Eye,
   GripVertical,
+  Loader2,
   Plus,
   Share2,
+  Sparkles,
   Trash2,
+  WandSparkles,
   X,
 } from "lucide-react";
 import {
@@ -41,6 +44,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { suggestQuestions, type SuggestedQuestion } from "@/lib/suggest-questions";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -177,6 +181,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const [discardOpen, setDiscardOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  // AI question suggestions (moved here from /forms/new so it's available for
+  // any form, and the editor is the single canonical builder).
+  const [suggestions, setSuggestions] = useState<SuggestedQuestion[]>([]);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [addedSuggestionIds, setAddedSuggestionIds] = useState<Set<string>>(new Set());
+  const [isSuggesting, startSuggesting] = useTransition();
   // Once the form is deleted, unsaved-changes blocking must not trap the
   // redirect to the dashboard.
   const deletedRef = useRef(false);
@@ -286,6 +296,39 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         isNew: true,
       },
     ]);
+  const handleSuggest = () => {
+    setSuggestError(null);
+    startSuggesting(async () => {
+      try {
+        const results = await suggestQuestions({
+          data: { title: draftForm.title, description: draftForm.description ?? "" },
+        });
+        setSuggestions(results);
+        setAddedSuggestionIds(new Set());
+      } catch (err: unknown) {
+        setSuggestError(
+          err instanceof Error ? err.message : "Could not get suggestions. Please try again.",
+        );
+      }
+    });
+  };
+  const addSuggestion = (s: SuggestedQuestion) => {
+    setDraftQuestions((qs) => [
+      ...qs,
+      {
+        id: `tmp-${Math.random().toString(36).slice(2, 10)}`,
+        form_id: formId,
+        type: s.type,
+        label: s.label,
+        options: s.options,
+        position: qs.length,
+        required: true,
+        logic: null,
+        isNew: true,
+      },
+    ]);
+    setAddedSuggestionIds((prev) => new Set(prev).add(s.id));
+  };
   const duplicateDraftQuestion = (id: string) =>
     setDraftQuestions((qs) => {
       const idx = qs.findIndex((q) => q.id === id);
@@ -758,6 +801,81 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+
+          {/* AI suggestions */}
+          <div className="mt-8 rounded-2xl border border-brand/20 bg-gradient-to-br from-brand/[0.04] to-transparent p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                  <Sparkles className="size-4 text-brand" />
+                  Suggest questions with AI
+                </h3>
+                <p className="text-xs text-ink/50">
+                  Claude drafts questions from your form's title and description.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSuggest}
+                disabled={isSuggesting || !draftForm.title.trim()}
+                title={!draftForm.title.trim() ? "Add a title first" : undefined}
+                className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSuggesting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> Thinking…
+                  </>
+                ) : (
+                  <>
+                    <WandSparkles className="size-4" /> Suggest questions
+                  </>
+                )}
+              </button>
+            </div>
+
+            {suggestError && (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {suggestError}
+              </p>
+            )}
+
+            {suggestions.length > 0 && (
+              <ul className="mt-4 space-y-2">
+                {suggestions.map((s) => {
+                  const added = addedSuggestionIds.has(s.id);
+                  return (
+                    <li
+                      key={s.id}
+                      className="flex items-start justify-between gap-3 rounded-xl border border-ink/10 bg-white px-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-snug text-ink">{s.label}</p>
+                        <p className="mt-0.5 text-xs text-ink/50">
+                          {s.type === "rating"
+                            ? `Rating scale (1–${getRatingMax(s.options)})`
+                            : QUESTION_TYPE_LABELS[s.type]}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addSuggestion(s)}
+                        disabled={added}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-brand hover:bg-brand/5 hover:text-brand disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
+                      >
+                        {added ? (
+                          "Added"
+                        ) : (
+                          <>
+                            <Plus className="size-3" /> Add
+                          </>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </section>
 
