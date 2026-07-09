@@ -65,7 +65,7 @@ type TrackKind = "view" | "start" | "reach";
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [answers, setAnswers] = useState<Answers>({});
   const [submitted, setSubmitted] = useState(false);
   // Only surface missing-required errors after a submit attempt.
