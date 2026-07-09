@@ -4,6 +4,7 @@ import {
   BarChart3,
   Check,
   GitBranch,
+  Github,
   LineChart,
   Palette,
   PenLine,
@@ -978,8 +979,20 @@ function Index() {
               </ul>
             </div>
           </div>
-          <div className="mt-14 border-t border-white/10 pt-8 text-center text-sm text-white/40 sm:text-left">
-            &copy; {new Date().getFullYear()} Flowform. All rights reserved.
+          <div className="mt-14 flex flex-col items-center gap-4 border-t border-white/10 pt-8 text-sm text-white/40 sm:flex-row sm:justify-between">
+            <p>&copy; {new Date().getFullYear()} Flowform. All rights reserved.</p>
+            <p className="flex items-center gap-1.5">
+              Built by Andrius
+              <a
+                href="https://github.com/andriuskleinas"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 font-medium text-white/60 transition-colors hover:text-white"
+              >
+                <Github className="size-4" />
+                andriuskleinas
+              </a>
+            </p>
           </div>
         </div>
       </footer>
