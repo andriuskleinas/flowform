@@ -65,7 +65,7 @@ type TrackKind = "view" | "start" | "reach";
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [answers, setAnswers] = useState<Answers>({});
   const [submitted, setSubmitted] = useState(false);
   // Only surface missing-required errors after a submit attempt.
@@ -76,9 +76,9 @@ function PublicFormPage() {
   const startedAtRef = useRef<string | null>(null);
 
   // Funnel events (view / start / reach). Fire-and-forget; the DB function
-  // ignores drafts/closed forms and dedupes only near-instant duplicate fires
-  // (short window), so each distinct visit is counted — including your own,
-  // so testing a published form shows up in the funnel.
+  // ignores drafts/closed forms and dedupes by hashed IP. Owner visits are
+  // skipped entirely so testing your own form stays out of real-respondent
+  // stats (owner submissions are likewise skipped in the submit mutation).
   const trackableRef = useRef(false);
   const sentEventsRef = useRef<Set<string>>(new Set());
   // Events raised before auth/form state resolves are queued, then flushed
@@ -169,17 +169,25 @@ function PublicFormPage() {
     },
   });
 
-  // Arm tracking + record the view once the form is known. Owner visits count
-  // too (no auth gate needed), so testing your own published form registers.
+  // Arm tracking + record the view once the form and auth state are known.
+  // Wait for auth to resolve, then skip the owner so their own visits stay out
+  // of the analytics. (Auth gate matters: firing before `user` resolves would
+  // count the owner as an anonymous visitor.)
   const form = formQ.data;
   useEffect(() => {
-    if (!form || trackableRef.current || form.status !== "published") return;
+    if (!form || authLoading || trackableRef.current) return;
+    const owner = !!user && user.id === form.user_id;
+    if (form.status !== "published") return;
+    if (owner) {
+      pendingEventsRef.current = [];
+      return;
+    }
     trackableRef.current = true;
     sendEvent("view");
     for (const e of pendingEventsRef.current) sendEvent(e.kind, e.questionId);
     pendingEventsRef.current = [];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form]);
+  }, [form, authLoading, user]);
 
   const submit = useMutation({
     mutationFn: async () => {
@@ -187,6 +195,9 @@ function PublicFormPage() {
         if (!validateAnswerLength(v))
           throw new Error(`An answer exceeds the ${MAX_ANSWER_LENGTH}-character limit.`);
       }
+      // Owner previews aren't recorded: show the success screen without saving
+      // a response, so testing your own published form keeps stats clean.
+      if (!!user && user.id === form?.user_id) return;
       const { error } = await supabase
         .from("responses")
         .insert({ form_id: formId, answers, started_at: startedAtRef.current });
@@ -194,6 +205,9 @@ function PublicFormPage() {
     },
     onSuccess: () => {
       setSubmitted(true);
+      // Owners keep their draft and aren't flagged as submitted, so they can
+      // re-test freely; nothing was persisted for them anyway.
+      if (!!user && user.id === form?.user_id) return;
       try {
         localStorage.setItem(submittedKey, new Date().toISOString());
         localStorage.removeItem(draftKey);
@@ -252,7 +266,7 @@ function PublicFormPage() {
             {status === "draft" &&
               "Draft — respondents can't see this yet. Publish from the editor to share it."}
             {status === "published" &&
-              "This is what respondents see. To change questions, open the editor."}
+              "This is what respondents see. Your visits and test submissions here aren't counted in analytics — open the editor to change questions."}
             {status === "closed" &&
               "Closed — respondents see this notice. Reopen from the editor to accept more responses."}
           </p>
