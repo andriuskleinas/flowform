@@ -343,23 +343,26 @@ function Overview({
     );
   }
 
-  // A completion rate is a share of the people who viewed the form, so it
-  // can't exceed 100%. View tracking started after some forms already had
-  // responses, so tracked views can trail submits — clamp rather than show a
-  // nonsensical figure like 300%.
-  const completion =
-    funnel.views > 0 ? Math.min(100, Math.round((funnel.submits / funnel.views) * 100)) : null;
+  // A completed submission proves the respondent also viewed and started the
+  // form. But view/start events are deduped per IP over 30 min and only exist
+  // since funnel tracking shipped, so raw counts can undercount and even show
+  // submits > views (e.g. a form's older responses predate tracking, or one
+  // person submits twice within the dedup window). Floor each upstream stage
+  // at the stage below it so the funnel is always monotonic
+  // (Viewed ≥ Started ≥ Submitted) and every share stays ≤ 100%. In normal
+  // traffic (views ≥ starts ≥ submits) these already equal the raw counts, so
+  // this only repairs the degenerate case.
+  const submitted = funnel.submits;
+  const started = Math.max(funnel.starts, submitted);
+  const viewed = Math.max(funnel.views, started);
+
+  const completion = viewed > 0 ? Math.round((submitted / viewed) * 100) : null;
   const maxReach = Math.max(0, ...questions.map((q) => reachByQuestion.get(q.id) ?? 0));
-  const funnelMax = Math.max(funnel.views, funnel.starts, funnel.submits, 1);
-  // Each funnel stage as a share of views, clamped at 100% for the same reason.
-  const pctOfViews = (n: number) =>
-    funnel.views > 0 ? `${Math.min(100, Math.round((n / funnel.views) * 100))}%` : "—";
-  // Bar width mirrors the clamped share of views so the funnel narrows
-  // downward; when no views are tracked yet, fall back to relative counts.
-  const barWidth = (n: number) => {
-    const pct = funnel.views > 0 ? Math.min(100, (n / funnel.views) * 100) : (n / funnelMax) * 100;
-    return `${Math.max(pct, n > 0 ? 6 : 0)}%`;
-  };
+  const pctOfViews = (n: number) => (viewed > 0 ? `${Math.round((n / viewed) * 100)}%` : "—");
+  // Bar width is the stage's share of the (floored) funnel entry, so the bars
+  // narrow monotonically down the funnel.
+  const barWidth = (n: number) =>
+    `${Math.max(viewed > 0 ? (n / viewed) * 100 : 0, n > 0 ? 6 : 0)}%`;
 
   return (
     <div className="space-y-6">
@@ -381,7 +384,7 @@ function Overview({
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Total responses" value={String(totals.responses)} hint="All time" />
-        <StatCard label="Views" value={String(funnel.views)} hint={`Last ${days} days`} />
+        <StatCard label="Views" value={String(viewed)} hint={`Last ${days} days`} />
         <StatCard
           label="Completion rate"
           value={completion != null ? `${completion}%` : "—"}
@@ -487,9 +490,9 @@ function Overview({
         <div className="space-y-3">
           {(
             [
-              ["Viewed", funnel.views],
-              ["Started", funnel.starts],
-              ["Submitted", funnel.submits],
+              ["Viewed", viewed],
+              ["Started", started],
+              ["Submitted", submitted],
             ] as const
           ).map(([label, n]) => (
             <div key={label} className="flex items-center gap-3">
@@ -505,7 +508,7 @@ function Overview({
               <span className="w-12 shrink-0 text-right text-xs text-ink/50">{pctOfViews(n)}</span>
             </div>
           ))}
-          {funnel.views === 0 && (
+          {viewed === 0 && (
             <p className="text-xs text-ink/40">
               Views are tracked from the moment this update shipped — share your form to see the
               funnel fill in.
