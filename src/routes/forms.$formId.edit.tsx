@@ -40,6 +40,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -317,42 +318,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     mutationFn: async () => {
       if (!snapshot) throw new Error("Not loaded yet");
 
-      // 1. Prepare form patch (runs concurrently with question ops below).
-      const trimmedTitle = draftForm.title.trim() || "Untitled form";
-      const trimmedDesc =
-        draftForm.description && draftForm.description.trim() !== ""
-          ? draftForm.description.trim()
-          : null;
-      const trimmedThanks =
-        draftForm.thank_you_message && draftForm.thank_you_message.trim() !== ""
-          ? draftForm.thank_you_message.trim().slice(0, 500)
-          : null;
-      const formPatch: {
-        title?: string;
-        description?: string | null;
-        display_mode?: string;
-        thank_you_message?: string | null;
-      } = {};
-      if (trimmedTitle !== snapshot.form.title) formPatch.title = trimmedTitle;
-      if ((trimmedDesc ?? null) !== (snapshot.form.description ?? null))
-        formPatch.description = trimmedDesc;
-      if (draftForm.display_mode !== snapshot.form.display_mode)
-        formPatch.display_mode = draftForm.display_mode;
-      if ((trimmedThanks ?? null) !== (snapshot.form.thank_you_message ?? null))
-        formPatch.thank_you_message = trimmedThanks;
-      const formPatchOp: Promise<void> =
-        Object.keys(formPatch).length > 0
-          ? (async () => {
-              const { error } = await supabase.from("forms").update(formPatch).eq("id", formId);
-              if (error) throw error;
-            })()
-          : Promise.resolve();
-
-      // 2. Build inserts + updates (positions = visible draft order).
       const visible = draftQuestions.filter((q) => !q.isDeleted);
 
       // Drop jump rules that no longer make sense: unknown choices, targets
       // that aren't later questions, or targets that are unsaved (tmp) rows.
+      // Sanitized here (needs choice configs + draft order); the RPC stores
+      // the result as-is.
       const sanitizeLogic = (q: DraftQuestion, i: number): QuestionLogic => {
         const jumps = q.logic?.jumps;
         if (!jumps) return null;
@@ -377,81 +348,31 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         return Object.keys(clean).length > 0 ? { jumps: clean } : null;
       };
 
-      const newRows: {
-        form_id: string;
-        type: QuestionType;
-        label: string;
-        options: QuestionOptions;
-        position: number;
-        required: boolean;
-        logic: QuestionLogic;
-      }[] = [];
-      const updateOps: Promise<void>[] = [];
+      // One transactional RPC replaces the old N+1 (update-per-question +
+      // batch insert + trailing delete). Array order sets position; existing
+      // ids are preserved (responses.answers is keyed by question id). The RPC
+      // trims labels/title and normalizes empty description/thank-you, so raw
+      // draft values are sent. New questions send id: null.
+      const p_questions = visible.map((q, i) => ({
+        id: q.isNew ? null : q.id,
+        type: q.type,
+        label: q.label,
+        options: q.options ?? null,
+        required: q.required,
+        logic: sanitizeLogic(q, i),
+      }));
 
-      for (let i = 0; i < visible.length; i++) {
-        const q = visible[i];
-        const label = q.label.trim() || "Untitled question";
-        const logic = sanitizeLogic(q, i);
-        if (q.isNew) {
-          newRows.push({
-            form_id: formId,
-            type: q.type,
-            label,
-            options: q.options ?? null,
-            position: i,
-            required: q.required,
-            logic,
-          });
-        } else {
-          const orig = snapshot.questions.find((o) => o.id === q.id);
-          const patch: {
-            position: number;
-            type?: QuestionType;
-            label?: string;
-            options?: QuestionOptions;
-            required?: boolean;
-            logic?: QuestionLogic;
-          } = { position: i };
-          if (orig) {
-            if (orig.type !== q.type) patch.type = q.type;
-            if (orig.label !== label) patch.label = label;
-            if (orig.required !== q.required) patch.required = q.required;
-            if (!questionOptionsEqual(orig.options ?? null, q.options ?? null))
-              patch.options = q.options ?? null;
-            if (!logicEqual(orig.logic, logic)) patch.logic = logic;
-          } else {
-            patch.type = q.type;
-            patch.label = label;
-            patch.options = q.options ?? null;
-            patch.required = q.required;
-            patch.logic = logic;
-          }
-          updateOps.push(
-            (async () => {
-              const { error } = await supabase.from("questions").update(patch).eq("id", q.id);
-              if (error) throw error;
-            })(),
-          );
-        }
-      }
-
-      // Run form patch, batch insert, and all updates concurrently.
-      const insertOp: Promise<void> =
-        newRows.length > 0
-          ? (async () => {
-              const { error } = await supabase.from("questions").insert(newRows);
-              if (error) throw error;
-            })()
-          : Promise.resolve();
-
-      await Promise.all([formPatchOp, insertOp, ...updateOps]);
-
-      // Deletes run last: if anything above fails, we haven't lost data yet.
-      const toDeleteIds = draftQuestions.filter((q) => !q.isNew && q.isDeleted).map((q) => q.id);
-      if (toDeleteIds.length > 0) {
-        const { error } = await supabase.from("questions").delete().in("id", toDeleteIds);
-        if (error) throw error;
-      }
+      const { error } = await supabase.rpc("save_form_editor", {
+        p_form_id: formId,
+        p_form: {
+          title: draftForm.title,
+          description: draftForm.description,
+          display_mode: draftForm.display_mode,
+          thank_you_message: draftForm.thank_you_message,
+        } as unknown as Json,
+        p_questions: p_questions as unknown as Json,
+      });
+      if (error) throw error;
     },
     onSuccess: async () => {
       toast.success("Saved");

@@ -239,11 +239,15 @@ export type Database = {
         }[]
       }
       get_form_analytics: {
-        Args: { p_form_id: string; p_days?: number }
+        Args: { p_days?: number; p_form_id: string }
         Returns: Json
       }
       record_form_event: {
         Args: { p_form_id: string; p_kind: string; p_question_id?: string }
+        Returns: undefined
+      }
+      save_form_editor: {
+        Args: { p_form: Json; p_form_id: string; p_questions: Json }
         Returns: undefined
       }
     }
