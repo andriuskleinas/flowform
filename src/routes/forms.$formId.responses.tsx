@@ -343,11 +343,23 @@ function Overview({
     );
   }
 
-  const completion = funnel.views > 0 ? Math.round((funnel.submits / funnel.views) * 100) : null;
+  // A completion rate is a share of the people who viewed the form, so it
+  // can't exceed 100%. View tracking started after some forms already had
+  // responses, so tracked views can trail submits — clamp rather than show a
+  // nonsensical figure like 300%.
+  const completion =
+    funnel.views > 0 ? Math.min(100, Math.round((funnel.submits / funnel.views) * 100)) : null;
   const maxReach = Math.max(0, ...questions.map((q) => reachByQuestion.get(q.id) ?? 0));
   const funnelMax = Math.max(funnel.views, funnel.starts, funnel.submits, 1);
+  // Each funnel stage as a share of views, clamped at 100% for the same reason.
   const pctOfViews = (n: number) =>
-    funnel.views > 0 ? `${Math.round((n / funnel.views) * 100)}%` : "—";
+    funnel.views > 0 ? `${Math.min(100, Math.round((n / funnel.views) * 100))}%` : "—";
+  // Bar width mirrors the clamped share of views so the funnel narrows
+  // downward; when no views are tracked yet, fall back to relative counts.
+  const barWidth = (n: number) => {
+    const pct = funnel.views > 0 ? Math.min(100, (n / funnel.views) * 100) : (n / funnelMax) * 100;
+    return `${Math.max(pct, n > 0 ? 6 : 0)}%`;
+  };
 
   return (
     <div className="space-y-6">
@@ -485,7 +497,7 @@ function Overview({
               <div className="h-6 flex-1 overflow-hidden rounded-md bg-ink/5">
                 <div
                   className="flex h-full items-center rounded-md bg-brand/80 px-2 text-xs font-semibold text-brand-foreground transition-all duration-500"
-                  style={{ width: `${Math.max((n / funnelMax) * 100, n > 0 ? 6 : 0)}%` }}
+                  style={{ width: barWidth(n) }}
                 >
                   {n > 0 ? n : ""}
                 </div>
