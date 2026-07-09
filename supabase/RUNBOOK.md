@@ -4,7 +4,7 @@ This branch ships **three new SQL migrations** that haven't been applied to
 the deployed database yet. Apply them in order, then regenerate the
 TypeScript types so the lone cast in `dashboard.tsx` can be removed.
 
-The project ID is `gdutdyimfdrtgfqfemjd` (from `supabase/config.toml`).
+The project ID is `tzbbeubzyulncdyfahpw` (from `supabase/config.toml`).
 
 ---
 
@@ -20,7 +20,7 @@ Then log in and link the project:
 
 ```bash
 supabase login
-supabase link --project-ref gdutdyimfdrtgfqfemjd
+supabase link --project-ref tzbbeubzyulncdyfahpw
 ```
 
 ---
@@ -84,7 +84,7 @@ After the migrations are in, refresh the auto-generated types so
 
 ```bash
 supabase gen types typescript \
-  --project-id gdutdyimfdrtgfqfemjd \
+  --project-id tzbbeubzyulncdyfahpw \
   > src/integrations/supabase/types.ts
 ```
 
