@@ -76,8 +76,9 @@ function PublicFormPage() {
   const startedAtRef = useRef<string | null>(null);
 
   // Funnel events (view / start / reach). Fire-and-forget; the DB function
-  // ignores drafts/closed forms and dedupes by hashed IP, and we skip the
-  // owner so testing your own form doesn't inflate the numbers.
+  // ignores drafts/closed forms and dedupes only near-instant duplicate fires
+  // (short window), so each distinct visit is counted — including your own,
+  // so testing a published form shows up in the funnel.
   const trackableRef = useRef(false);
   const sentEventsRef = useRef<Set<string>>(new Set());
   // Events raised before auth/form state resolves are queued, then flushed
@@ -168,22 +169,17 @@ function PublicFormPage() {
     },
   });
 
-  // Arm tracking + record the view once the form and auth state are known.
+  // Arm tracking + record the view once the form is known. Owner visits count
+  // too (no auth gate needed), so testing your own published form registers.
   const form = formQ.data;
   useEffect(() => {
-    if (!form || authLoading || trackableRef.current) return;
-    const owner = !!user && user.id === form.user_id;
-    if (form.status !== "published") return;
-    if (owner) {
-      pendingEventsRef.current = [];
-      return;
-    }
+    if (!form || trackableRef.current || form.status !== "published") return;
     trackableRef.current = true;
     sendEvent("view");
     for (const e of pendingEventsRef.current) sendEvent(e.kind, e.questionId);
     pendingEventsRef.current = [];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, authLoading, user]);
+  }, [form]);
 
   const submit = useMutation({
     mutationFn: async () => {
