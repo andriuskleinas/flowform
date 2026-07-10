@@ -43,7 +43,6 @@ export function ConversationalForm({
   // In preview there's no real submission — clicking Submit shows a "preview
   // complete" confirmation instead of a dead, disabled button.
   const [previewSubmitted, setPreviewSubmitted] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Restored drafts skip ahead to the first unanswered question on the path.
   const fastForwarded = useRef(false);
@@ -109,20 +108,27 @@ export function ConversationalForm({
     onAnswer(current.id, value);
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key !== "Enter") return;
-    const target = e.target as HTMLElement;
-    if (target.tagName === "TEXTAREA") {
-      // Enter makes a newline in long answers; Ctrl/⌘+Enter advances.
-      if (!(e.ctrlKey || e.metaKey)) return;
-    }
-    e.preventDefault();
-    if (atSubmit) {
-      if (!preview && !submitting) onSubmit();
-    } else {
-      advance();
-    }
-  };
+  // A window-level listener (rather than onKeyDown on the container) so Enter
+  // works regardless of focus — nothing in the form autofocuses, and clicking
+  // a choice/rating button doesn't move focus at all in Safari.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === "TEXTAREA") {
+        // Enter makes a newline in long answers; Ctrl/⌘+Enter advances.
+        if (!(e.ctrlKey || e.metaKey)) return;
+      }
+      e.preventDefault();
+      if (atSubmit) {
+        if (!preview && !submitting) onSubmit();
+      } else {
+        advance();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   if (total === 0) {
     return (
@@ -133,7 +139,7 @@ export function ConversationalForm({
   }
 
   return (
-    <div ref={containerRef} onKeyDown={onKeyDown}>
+    <div>
       <div
         className="h-1.5 w-full overflow-hidden rounded-full bg-ink/10"
         role="progressbar"
