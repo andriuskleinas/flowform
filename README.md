@@ -73,6 +73,10 @@ bun run build        # production build
 
 Required env vars: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (Supabase project), plus `ANTHROPIC_API_KEY` server-side for the AI features. Database schema lives in [`supabase/migrations/`](supabase/migrations).
 
+## License
+
+[MIT](LICENSE) © Andrius Kleinas
+
 ---
 
 <sub>Built by [Andrius Kleinas](https://github.com/andriuskleinas) — designed and developed with [Claude Code](https://www.anthropic.com/claude-code) as an AI pair programmer.</sub>
