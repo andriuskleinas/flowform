@@ -349,7 +349,7 @@ function Overview({
   // submits > views (e.g. a form's older responses predate tracking, or one
   // person submits twice within the dedup window). Floor each upstream stage
   // at the stage below it so the funnel is always monotonic
-  // (Viewed ≥ Started ≥ Submitted) and every share stays ≤ 100%. In normal
+  // (Opened ≥ Started ≥ Completed) and every share stays ≤ 100%. In normal
   // traffic (views ≥ starts ≥ submits) these already equal the raw counts, so
   // this only repairs the degenerate case.
   const submitted = funnel.submits;
@@ -486,13 +486,13 @@ function Overview({
         </div>
       )}
 
-      <Card title="Funnel" subtitle={`Views → starts → submits · last ${days} days`}>
+      <Card title="Funnel" subtitle={`Opened → started → completed · last ${days} days`}>
         <div className="space-y-3">
           {(
             [
-              ["Viewed", viewed],
+              ["Opened", viewed],
               ["Started", started],
-              ["Submitted", submitted],
+              ["Completed", submitted],
             ] as const
           ).map(([label, n]) => (
             <div key={label} className="flex items-center gap-3">
