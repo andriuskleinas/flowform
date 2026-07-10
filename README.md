@@ -9,10 +9,12 @@
 > Portfolio project — the product is fully functional end to end, but testimonials and company names on the landing page are illustrative.
 
 <!--
-  TODO (author): drop 2–3 real screenshots here for the strongest first impression, e.g.
-  ![Builder](docs/screenshots/builder.png)
-  ![Conversational fill](docs/screenshots/fill.png)
-  ![Analytics](docs/screenshots/analytics.png)
+  TODO (author): record a short (10–15s) looping GIF of the conversational fill
+  experience — this is the single highest-impact addition to this README, since
+  it proves the product works before anyone reads a word below. Save it as
+  docs/screenshots/demo.gif, then uncomment:
+
+  ![Flowform demo](docs/screenshots/demo.gif)
 -->
 
 ## What it does
@@ -24,16 +26,28 @@
 - **Conditional logic** — forward-only jump rules ("if they answer X, skip to…"), with path-aware validation so a required question a respondent never sees can't block them
 - **Templates** to start from, or a blank form; a live preview shows exactly what respondents will see
 
+<!-- TODO (author): docs/screenshots/builder.png, then uncomment:
+![Form builder](docs/screenshots/builder.png)
+-->
+
 **Filling**
 
 - **Conversational mode** — one question at a time with a progress bar, full keyboard navigation (Enter, A–D, 0–9), and back-navigation; or a **classic** all-on-one-page mode
 - **Drafts persist** locally so a respondent can return and finish, with a guard against double submission
+
+<!-- TODO (author): docs/screenshots/fill.png, then uncomment:
+![Conversational fill experience](docs/screenshots/fill.png)
+-->
 
 **Measuring**
 
 - **Analytics dashboard** — a real conversion funnel (views → starts → submits), completion rate, average time-to-fill, per-question drop-off, and a response trend over 7/30/90-day windows
 - **AI response summaries** — Claude reads open-text answers and pulls out themes, sentiment, and representative quotes
 - **Sharing & export** — shareable link, QR code, embed snippet, native share, and CSV export
+
+<!-- TODO (author): docs/screenshots/analytics.png, then uncomment:
+![Analytics dashboard](docs/screenshots/analytics.png)
+-->
 
 ## Tech stack
 
