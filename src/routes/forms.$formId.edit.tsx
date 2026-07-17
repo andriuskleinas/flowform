@@ -241,11 +241,19 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     const anchor = scrollAnchorRef.current;
     if (!anchor) return;
     scrollAnchorRef.current = null;
-    const delta = anchor.el.getBoundingClientRect().top - anchor.top;
-    // `behavior: "instant"` overrides the global `scroll-behavior: smooth`, so
-    // the correction lands before paint instead of animating (which looked like
-    // the very jump we're trying to cancel).
-    if (delta !== 0) window.scrollBy({ top: delta, behavior: "instant" });
+    // Re-pin the clicked row to its pre-add viewport position. `behavior:
+    // "instant"` overrides the global `scroll-behavior: smooth`, so the
+    // correction is a silent jump-free snap, not an animation.
+    const pin = () => {
+      const delta = anchor.el.getBoundingClientRect().top - anchor.top;
+      if (delta !== 0) window.scrollBy({ top: delta, behavior: "instant" });
+    };
+    // First pass runs before paint (cancels the main insert shift); the rAF
+    // pass absorbs any late reflow — a card's async render, dnd-kit re-measuring
+    // — that would otherwise nudge the list after the frame paints.
+    pin();
+    const raf = requestAnimationFrame(pin);
+    return () => cancelAnimationFrame(raf);
   }, [visibleDraftQuestions.length]);
 
   const isDirty = useMemo(() => {
