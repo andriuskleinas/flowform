@@ -461,9 +461,32 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
   const doDiscard = () => {
     if (!snapshot) return;
+    setDiscardOpen(false);
+
+    // A brand-new throwaway draft — never published, no responses, and still the
+    // pristine blank form (default title, no saved questions or description) — is
+    // deleted outright, since discarding it leaves nothing worth keeping. Any
+    // form with real saved content just reverts its edits.
+    const savedTitle = snapshot.form.title.trim();
+    const isPristineDraft =
+      formQ.data?.status === "draft" &&
+      (responseCountQ.data ?? 0) === 0 &&
+      snapshot.questions.length === 0 &&
+      (savedTitle === "" || savedTitle === "Untitled form") &&
+      !snapshot.form.description;
+
+    if (isPristineDraft) {
+      // deleteForm handles the toast + redirect to the dashboard.
+      deleteForm.mutate();
+      return;
+    }
+
     setDraftForm(snapshot.form);
     setDraftQuestions(snapshot.questions.map((q) => ({ ...q })));
-    setDiscardOpen(false);
+    // Edits are reverted; leave for the dashboard. Bypass the unsaved-changes
+    // guard for this navigation (the draft now matches the saved snapshot).
+    deletedRef.current = true;
+    navigate({ to: "/dashboard" });
   };
 
   /* ---------------------------- Status & delete ---------------------------- */
