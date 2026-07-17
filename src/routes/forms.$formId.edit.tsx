@@ -242,7 +242,10 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     if (!anchor) return;
     scrollAnchorRef.current = null;
     const delta = anchor.el.getBoundingClientRect().top - anchor.top;
-    if (delta !== 0) window.scrollBy(0, delta);
+    // `behavior: "instant"` overrides the global `scroll-behavior: smooth`, so
+    // the correction lands before paint instead of animating (which looked like
+    // the very jump we're trying to cancel).
+    if (delta !== 0) window.scrollBy({ top: delta, behavior: "instant" });
   }, [visibleDraftQuestions.length]);
 
   const isDirty = useMemo(() => {
