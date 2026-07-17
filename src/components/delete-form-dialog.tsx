@@ -12,8 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 /**
- * Destructive-action dialog for deleting a form. Requires typing the form's
- * title to enable the delete button — deleting also removes every response,
+ * Destructive-action dialog for deleting a form. Requires typing DELETE
+ * to enable the delete button — deleting also removes every response,
  * so a plain two-button confirm is too easy to click through.
  */
 export function DeleteFormDialog({
@@ -37,7 +37,7 @@ export function DeleteFormDialog({
     if (open) setTyped("");
   }, [open]);
 
-  const matches = typed.trim() === formTitle.trim();
+  const matches = typed.trim() === "DELETE";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !pending && onCancel()}>
@@ -76,13 +76,13 @@ export function DeleteFormDialog({
         >
           <div className="space-y-1.5">
             <Label htmlFor="delete-confirm-title" className="text-xs text-ink/60">
-              Type the form title to confirm
+              Type DELETE to confirm
             </Label>
             <Input
               id="delete-confirm-title"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
-              placeholder={formTitle}
+              placeholder="DELETE"
               autoComplete="off"
               data-1p-ignore
               data-lpignore="true"
