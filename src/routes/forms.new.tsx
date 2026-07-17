@@ -87,7 +87,12 @@ const TEMPLATES: Template[] = [
         options: { choices: ["Talks", "Workshops", "Networking", "Venue & catering"], multi: true },
         required: false,
       },
-      { type: "long_text", label: "Any suggestions for next time?", options: null, required: false },
+      {
+        type: "long_text",
+        label: "Any suggestions for next time?",
+        options: null,
+        required: false,
+      },
     ],
   },
   {
