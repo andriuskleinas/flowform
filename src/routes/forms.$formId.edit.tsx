@@ -463,19 +463,10 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     if (!snapshot) return;
     setDiscardOpen(false);
 
-    // A brand-new throwaway draft — never published, no responses, and still the
-    // pristine blank form (default title, no saved questions or description) — is
-    // deleted outright, since discarding it leaves nothing worth keeping. Any
-    // form with real saved content just reverts its edits.
-    const savedTitle = snapshot.form.title.trim();
-    const isPristineDraft =
-      formQ.data?.status === "draft" &&
-      (responseCountQ.data ?? 0) === 0 &&
-      snapshot.questions.length === 0 &&
-      (savedTitle === "" || savedTitle === "Untitled form") &&
-      !snapshot.form.description;
-
-    if (isPristineDraft) {
+    // A brand-new throwaway draft is deleted outright, since discarding it
+    // leaves nothing worth keeping; anything with real saved content just
+    // reverts its edits. See discardDeletesDraft for the exact criteria.
+    if (discardDeletesDraft) {
       // deleteForm handles the toast + redirect to the dashboard.
       deleteForm.mutate();
       return;
@@ -540,6 +531,17 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     },
     onError: (e: Error) => toast.error(e.message || "Could not delete form"),
   });
+
+  // A brand-new throwaway draft — never published, no responses, and still the
+  // pristine blank form — is deleted outright on discard rather than reverted.
+  // This drives both doDiscard's behaviour and the confirm-dialog wording.
+  const savedTitle = snapshot?.form.title.trim() ?? "";
+  const discardDeletesDraft =
+    formQ.data?.status === "draft" &&
+    (responseCountQ.data ?? 0) === 0 &&
+    (snapshot?.questions.length ?? 0) === 0 &&
+    (savedTitle === "" || savedTitle === "Untitled form") &&
+    !snapshot?.form.description;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -1043,9 +1045,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
       <ConfirmDialog
         open={discardOpen}
-        title="Discard changes?"
-        description="All unsaved changes will be lost. This cannot be undone."
-        confirmLabel="Discard"
+        title={discardDeletesDraft ? "Discard this draft?" : "Discard changes?"}
+        description={
+          discardDeletesDraft
+            ? "This empty draft will be deleted and you'll return to the dashboard. This cannot be undone."
+            : "All unsaved changes will be lost. This cannot be undone."
+        }
+        confirmLabel={discardDeletesDraft ? "Delete draft" : "Discard"}
         cancelLabel="Keep editing"
         destructive
         onConfirm={doDiscard}
