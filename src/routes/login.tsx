@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { AuthShell } from "@/components/auth-shell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -79,76 +80,73 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface text-ink">
-      <header className="border-b border-ink/5">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 md:px-8">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
-              <span className="size-3 rounded-sm bg-white" />
-            </span>
-            <span className="text-xl font-bold tracking-tight">Flowform</span>
-          </Link>
-        </nav>
-      </header>
-      <main className="mx-auto flex max-w-md flex-col px-6 pb-24 pt-16 md:px-8">
-        <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Welcome back</h1>
-        <p className="mt-2 text-ink/60">
-          New here?{" "}
-          <Link to="/signup" className="font-semibold text-brand hover:underline">
-            Create an account
-          </Link>
-        </p>
-        <form
-          onSubmit={onSubmit}
-          className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
-        >
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
-          </div>
-          <div className="space-y-2">
+    <AuthShell>
+      <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Welcome back</h1>
+      <p className="mt-2 text-ink/60">
+        New here?{" "}
+        <Link to="/signup" className="font-semibold text-brand hover:underline">
+          Create an account
+        </Link>
+      </p>
+      <form
+        onSubmit={onSubmit}
+        className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
+      >
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
+            <Link
+              to="/forgot-password"
+              search={{ email: email || undefined }}
+              className="text-sm font-medium text-brand hover:underline"
+            >
+              Forgot password?
+            </Link>
           </div>
-          {unconfirmedEmail && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <p>
-                <span className="font-semibold">{unconfirmedEmail}</span> hasn't been verified yet.
-                Click the confirmation link we emailed you, then log in.
-              </p>
-              <button
-                type="button"
-                onClick={resendConfirmation}
-                disabled={resending}
-                className="mt-2 font-semibold underline underline-offset-2 hover:text-amber-700 disabled:opacity-50"
-              >
-                {resending ? "Resending…" : "Resend confirmation email"}
-              </button>
-            </div>
-          )}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="inline-flex w-full items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:opacity-50"
-          >
-            {submitting ? "Logging in…" : "Log in"}
-          </button>
-        </form>
-      </main>
-    </div>
+          <Input
+            id="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+          />
+        </div>
+        {unconfirmedEmail && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p>
+              <span className="font-semibold">{unconfirmedEmail}</span> hasn't been verified yet.
+              Click the confirmation link we emailed you, then log in.
+            </p>
+            <button
+              type="button"
+              onClick={resendConfirmation}
+              disabled={resending}
+              className="mt-2 font-semibold underline underline-offset-2 hover:text-amber-700 disabled:opacity-50"
+            >
+              {resending ? "Resending…" : "Resend confirmation email"}
+            </button>
+          </div>
+        )}
+        <button
+          type="submit"
+          disabled={submitting}
+          className="inline-flex w-full items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:opacity-50"
+        >
+          {submitting ? "Logging in…" : "Log in"}
+        </button>
+      </form>
+    </AuthShell>
   );
 }

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { AuthShell } from "@/components/auth-shell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -27,6 +28,9 @@ function SignupPage() {
   // Set once signUp requires email confirmation; switches the page to the
   // "check your inbox" card.
   const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
+  // The submitted address, when signUp reported it is already registered. Kept
+  // as the email itself (not a flag) so editing the field hides the notice.
+  const [existingEmail, setExistingEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
 
   useEffect(() => {
@@ -47,13 +51,20 @@ function SignupPage() {
         toast.error(error.message);
         return;
       }
+      // Email-enumeration protection makes signUp answer 200 for an address
+      // that is already registered: it returns a fabricated user (even a
+      // `confirmation_sent_at`) but sends no email at all. An empty identities
+      // array is the one tell. Match it strictly — any other shape falls
+      // through to "check your inbox", so a genuinely new signup is never
+      // turned away.
+      if (Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
+        setExistingEmail(email);
+        return;
+      }
       if (data.session) {
         toast.success("Welcome to Flowform");
         navigate({ to: "/dashboard" });
       } else {
-        // No session means the account needs email confirmation first (also
-        // the shape returned for an already-registered address, so this stays
-        // safe against account enumeration).
         setConfirmationSentTo(email);
       }
     } catch (err) {
@@ -84,93 +95,108 @@ function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface text-ink">
-      <header className="border-b border-ink/5">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 md:px-8">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
-              <span className="size-3 rounded-sm bg-white" />
-            </span>
-            <span className="text-xl font-bold tracking-tight">Flowform</span>
-          </Link>
-        </nav>
-      </header>
-      <main className="mx-auto flex max-w-md flex-col px-6 pb-24 pt-16 md:px-8">
-        {confirmationSentTo ? (
-          <div className="rounded-2xl border border-ink/5 bg-white p-8 text-center shadow-sm">
-            <MailCheck className="mx-auto size-12 text-brand" />
-            <h1 className="mt-4 text-2xl font-extrabold tracking-tight">Check your inbox</h1>
-            <p className="mt-3 text-ink/60">
-              We sent a confirmation link to{" "}
-              <span className="font-semibold text-ink">{confirmationSentTo}</span>. Click it to
-              activate your account — then you'll land right in your dashboard.
-            </p>
-            <p className="mt-3 text-sm text-ink/50">
-              Nothing there? Check your spam folder, or resend the email.
-            </p>
+    <AuthShell>
+      {confirmationSentTo ? (
+        <div className="rounded-2xl border border-ink/5 bg-white p-8 text-center shadow-sm">
+          <MailCheck className="mx-auto size-12 text-brand" />
+          <h1 className="mt-4 text-2xl font-extrabold tracking-tight">Check your inbox</h1>
+          <p className="mt-3 text-ink/60">
+            We sent a confirmation link to{" "}
+            <span className="font-semibold text-ink">{confirmationSentTo}</span>. Click it to
+            activate your account — then you'll land right in your dashboard.
+          </p>
+          <p className="mt-3 text-sm text-ink/50">
+            Nothing there? Check your spam folder, or resend the email.
+          </p>
+          <button
+            type="button"
+            onClick={resendConfirmation}
+            disabled={resending}
+            className="mt-6 inline-flex items-center justify-center rounded-full border border-ink/15 px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink/30 disabled:opacity-50"
+          >
+            {resending ? "Resending…" : "Resend confirmation email"}
+          </button>
+        </div>
+      ) : (
+        <>
+          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
+            Create your account
+          </h1>
+          <p className="mt-2 text-ink/60">Start building forms in seconds.</p>
+          <form
+            onSubmit={onSubmit}
+            className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            {existingEmail === email && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <p>
+                  <span className="font-semibold">{existingEmail}</span> already has a Flowform
+                  account.
+                </p>
+                <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <Link
+                    to="/login"
+                    search={{ redirect: "/dashboard" }}
+                    className="font-semibold underline underline-offset-2 hover:text-amber-700"
+                  >
+                    Log in instead
+                  </Link>
+                  <span aria-hidden className="text-amber-900/40">
+                    ·
+                  </span>
+                  <Link
+                    to="/forgot-password"
+                    search={{ email: existingEmail }}
+                    className="font-semibold underline underline-offset-2 hover:text-amber-700"
+                  >
+                    Forgot your password?
+                  </Link>
+                </p>
+              </div>
+            )}
             <button
-              type="button"
-              onClick={resendConfirmation}
-              disabled={resending}
-              className="mt-6 inline-flex items-center justify-center rounded-full border border-ink/15 px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink/30 disabled:opacity-50"
+              type="submit"
+              disabled={submitting}
+              className="inline-flex w-full items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:opacity-50"
             >
-              {resending ? "Resending…" : "Resend confirmation email"}
+              {submitting ? "Creating account…" : "Sign up"}
             </button>
-          </div>
-        ) : (
-          <>
-            <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
-              Create your account
-            </h1>
-            <p className="mt-2 text-ink/60">Start building forms in seconds.</p>
-            <form
-              onSubmit={onSubmit}
-              className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
-            >
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex w-full items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:opacity-50"
+            <p className="text-center text-sm text-ink/60">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                search={{ redirect: "/dashboard" }}
+                className="font-semibold text-brand hover:underline"
               >
-                {submitting ? "Creating account…" : "Sign up"}
-              </button>
-              <p className="text-center text-sm text-ink/60">
-                Already have an account?{" "}
-                <Link
-                  to="/login"
-                  search={{ redirect: "/dashboard" }}
-                  className="font-semibold text-brand hover:underline"
-                >
-                  Log in
-                </Link>
-              </p>
-            </form>
-          </>
-        )}
-      </main>
-    </div>
+                Log in
+              </Link>
+            </p>
+          </form>
+        </>
+      )}
+    </AuthShell>
   );
 }
