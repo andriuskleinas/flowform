@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,6 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/reset-password")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    token_hash: typeof s.token_hash === "string" ? s.token_hash : undefined,
+    type: typeof s.type === "string" ? s.type : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Choose a new password — Flowform" },
@@ -21,13 +25,39 @@ export const Route = createFileRoute("/reset-password")({
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
-  // Following the emailed link puts a recovery session in the URL, which the
-  // Supabase client picks up on init. So "no session once auth has settled"
-  // is what an expired or already-used link looks like here.
+  const { token_hash } = useSearch({ from: "/reset-password" });
+  // Two link shapes reach this page, and both must work:
+  //   - new: ?token_hash=… on our own domain, redeemed here via verifyOtp
+  //   - old: a recovery session in the URL hash, which the Supabase client
+  //     picks up on init — still live in any reset email already sent
+  // Either way, "no session once auth has settled" means expired or used.
   const { session, loading } = useAuth();
+  const [verifying, setVerifying] = useState(Boolean(token_hash));
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!token_hash) return;
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase.auth.verifyOtp({ type: "recovery", token_hash });
+      if (cancelled) return;
+      if (!error) {
+        // Drop the token from the URL before it reaches history or a referrer
+        // header. Replace, so Back doesn't return to a spent token.
+        navigate({
+          to: "/reset-password",
+          search: { token_hash: undefined, type: undefined },
+          replace: true,
+        });
+      }
+      setVerifying(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token_hash, navigate]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +83,9 @@ function ResetPasswordPage() {
     }
   };
 
-  if (loading) {
+  // `verifying` matters: auth settles to "no session" while verifyOtp is still
+  // in flight, which would flash the expired card on a perfectly good link.
+  if (loading || verifying) {
     return (
       <AuthShell>
         <p className="text-center text-ink/50">Checking your link…</p>
