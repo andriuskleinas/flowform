@@ -41,7 +41,9 @@ function SignupPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const redirectUrl = `${window.location.origin}/dashboard`;
+      // Confirming lands on /confirmed, which ends the session Supabase creates
+      // and sends the user to the login form — the dashboard needs a password.
+      const redirectUrl = `${window.location.origin}/confirmed`;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -83,7 +85,7 @@ function SignupPage() {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email: confirmationSentTo,
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        options: { emailRedirectTo: `${window.location.origin}/confirmed` },
       });
       if (error) toast.error(error.message);
       else toast.success("Confirmation email sent again");

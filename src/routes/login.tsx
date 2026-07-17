@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -9,8 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (s: Record<string, unknown>) => ({
+  // `confirmed` is optional in the return type on purpose: spelling it as
+  // `confirmed: boolean | undefined` would make every existing `to="/login"`
+  // link pass it explicitly.
+  validateSearch: (s: Record<string, unknown>): { redirect: string; confirmed?: true } => ({
     redirect: typeof s.redirect === "string" ? s.redirect : "/dashboard",
+    // Set by /confirmed, so the user knows the click worked and why they're
+    // being asked to log in.
+    ...(s.confirmed === true || s.confirmed === "true" ? { confirmed: true as const } : {}),
   }),
   head: () => ({
     meta: [
@@ -23,7 +30,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { redirect } = useSearch({ from: "/login" });
+  const { redirect, confirmed } = useSearch({ from: "/login" });
   const { session, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,7 +75,7 @@ function LoginPage() {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email: unconfirmedEmail,
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        options: { emailRedirectTo: `${window.location.origin}/confirmed` },
       });
       if (error) toast.error(error.message);
       else toast.success("Confirmation email sent — check your inbox");
@@ -88,6 +95,14 @@ function LoginPage() {
           Create an account
         </Link>
       </p>
+      {confirmed && (
+        <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+          <p>
+            <span className="font-semibold">Email confirmed.</span> Log in to reach your dashboard.
+          </p>
+        </div>
+      )}
       <form
         onSubmit={onSubmit}
         className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
