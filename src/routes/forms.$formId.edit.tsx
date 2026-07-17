@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   ArrowLeft,
   ArrowDown,
@@ -190,6 +190,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   // Once the form is deleted, unsaved-changes blocking must not trap the
   // redirect to the dashboard.
   const deletedRef = useRef(false);
+  // Adding an AI suggestion appends a question card *above* the suggestions
+  // panel, which shifts the panel and scrolls the clicked row out of view.
+  // We stash the row's pre-add viewport position and restore it after layout
+  // so the list stays put and the user can keep clicking "Add".
+  const scrollAnchorRef = useRef<{ el: HTMLElement; top: number } | null>(null);
 
   // Initialize / re-sync draft from server when (a) we don't have one yet,
   // or (b) the server snapshot changed AND the user has no unsaved changes.
@@ -230,6 +235,15 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   }, [formQ.data, questionsQ.data]);
 
   const visibleDraftQuestions = draftQuestions.filter((q) => !q.isDeleted);
+
+  // Compensate the scroll shift after a question is added (see scrollAnchorRef).
+  useLayoutEffect(() => {
+    const anchor = scrollAnchorRef.current;
+    if (!anchor) return;
+    scrollAnchorRef.current = null;
+    const delta = anchor.el.getBoundingClientRect().top - anchor.top;
+    if (delta !== 0) window.scrollBy(0, delta);
+  }, [visibleDraftQuestions.length]);
 
   const isDirty = useMemo(() => {
     if (!snapshot) return false;
@@ -859,7 +873,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                       </div>
                       <button
                         type="button"
-                        onClick={() => addSuggestion(s)}
+                        onClick={(e) => {
+                          scrollAnchorRef.current = {
+                            el: e.currentTarget,
+                            top: e.currentTarget.getBoundingClientRect().top,
+                          };
+                          addSuggestion(s);
+                        }}
                         disabled={added}
                         className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-brand hover:bg-brand/5 hover:text-brand disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
                       >
