@@ -313,7 +313,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         id: `tmp-${Math.random().toString(36).slice(2, 10)}`,
         form_id: formId,
         type,
-        label: "Untitled question",
+        label: "",
         options: defaultOptionsForType(type),
         position: qs.length,
         required: true,
