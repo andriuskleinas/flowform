@@ -63,6 +63,7 @@ import {
   type Answers,
   type DisplayMode,
   type FormStatus,
+  DEFAULT_FORM_TITLE,
   JUMP_TO_END,
   QUESTION_TYPE_LABELS,
   RATING_MAX_CHOICES,
@@ -204,7 +205,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     const sq = questionsQ.data ?? [];
     const newSnap = {
       form: {
-        title: sf.title,
+        title: sf.title === DEFAULT_FORM_TITLE ? "" : sf.title,
         description: sf.description ?? null,
         display_mode: sf.display_mode as DisplayMode,
         thank_you_message: sf.thank_you_message ?? null,
@@ -540,7 +541,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     formQ.data?.status === "draft" &&
     (responseCountQ.data ?? 0) === 0 &&
     (snapshot?.questions.length ?? 0) === 0 &&
-    (savedTitle === "" || savedTitle === "Untitled form") &&
+    (savedTitle === "" || savedTitle === DEFAULT_FORM_TITLE) &&
     !snapshot?.form.description;
 
   const sensors = useSensors(
@@ -647,7 +648,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               <DebouncedInput
                 value={draftForm.title}
                 onChange={(v) => setDraftForm((f) => ({ ...f, title: v }))}
-                placeholder="Form title"
+                placeholder="Start your best survey!"
                 className="text-2xl font-extrabold tracking-tight md:text-3xl"
               />
             </div>
@@ -982,7 +983,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-extrabold tracking-tight">
-              {draftForm.title || "Untitled form"}
+              {draftForm.title || DEFAULT_FORM_TITLE}
             </DialogTitle>
             {draftForm.description ? (
               <DialogDescription className="text-base text-ink/60">

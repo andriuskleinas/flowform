@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import type { QuestionType, QuestionOptions } from "@/lib/form-utils";
+import { DEFAULT_FORM_TITLE, type QuestionType, type QuestionOptions } from "@/lib/form-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/forms/new")({
@@ -163,7 +163,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
       const { data: form, error: fErr } = await supabase
         .from("forms")
         .insert({
-          title: template?.title ?? "Untitled form",
+          title: template?.title ?? DEFAULT_FORM_TITLE,
           description: template?.description ?? null,
           user_id: userId,
         })

@@ -187,6 +187,13 @@ export function questionOptionsEqual(a: QuestionOptions, b: QuestionOptions): bo
   return false;
 }
 
+// forms.title is NOT NULL with a min-length check, so a blank form is created
+// under this placeholder title (and save_form_editor coalesces an empty title
+// back to it). The editor shows it as an empty field instead, so the input's
+// placeholder shows and vanishes on the first keystroke rather than making the
+// user select and delete filler text.
+export const DEFAULT_FORM_TITLE = "Untitled form";
+
 export const MAX_ANSWER_LENGTH = 5000;
 
 export function validateAnswerLength(value: unknown): boolean {
