@@ -14,7 +14,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          status=$(curl -s -o /dev/null -w "%{http_code}" "${SUPABASE_URL}/rest/v1/" -H "apikey: ${SUPABASE_ANON_KEY}")
+          status=$(curl -s -o /dev/null -w "%{http_code}" "${SUPABASE_URL}/rest/v1/forms?select=id&limit=1" -H "apikey: ${SUPABASE_ANON_KEY}" -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
           echo "Supabase REST API responded with HTTP $status"
           if [ "$status" != "200" ]; then
             echo "Unexpected response from Supabase"
