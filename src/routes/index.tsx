@@ -236,7 +236,7 @@ function HeroPreview() {
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-10 overflow-hidden rounded-[48px] transition-opacity duration-500"
+        className="pointer-events-none absolute -inset-10 hidden overflow-hidden rounded-[48px] transition-opacity duration-500 md:block"
         style={{ opacity: "calc(0.75 + 0.35 * var(--active, 0))" }}
       >
         <div
@@ -677,11 +677,11 @@ function Index() {
         >
           <div
             aria-hidden
-            className="pointer-events-none absolute -top-32 -left-32 size-[480px] rounded-full bg-brand/5 blur-[120px]"
+            className="pointer-events-none absolute -top-32 -left-32 hidden size-[480px] rounded-full bg-brand/5 blur-[120px] md:block"
           />
           <div
             aria-hidden
-            className="pointer-events-none absolute -bottom-32 -right-32 size-[460px] rounded-full bg-gold/5 blur-[120px]"
+            className="pointer-events-none absolute -bottom-32 -right-32 hidden size-[460px] rounded-full bg-gold/5 blur-[120px] md:block"
           />
 
           <div className="relative mx-auto max-w-7xl">
@@ -779,11 +779,11 @@ function Index() {
         <section className="relative overflow-hidden bg-gradient-to-b from-surface via-white to-surface px-6 py-24 md:px-8 md:py-32">
           <div
             aria-hidden
-            className="pointer-events-none absolute -top-24 -left-24 size-[420px] rounded-full bg-brand/15 blur-[120px]"
+            className="pointer-events-none absolute -top-24 -left-24 hidden size-[420px] rounded-full bg-brand/15 blur-[120px] md:block"
           />
           <div
             aria-hidden
-            className="pointer-events-none absolute -bottom-24 -right-24 size-[420px] rounded-full bg-gold/20 blur-[120px]"
+            className="pointer-events-none absolute -bottom-24 -right-24 hidden size-[420px] rounded-full bg-gold/20 blur-[120px] md:block"
           />
           <div className="relative mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
