@@ -48,7 +48,7 @@ function PrimaryCTA({
 }) {
   const { session } = useAuth();
   const to = session ? "/dashboard" : "/signup";
-  const sizing = size === "lg" ? "px-8 py-4 text-base" : "px-4 py-2 text-sm sm:px-5 sm:py-2.5";
+  const sizing = size === "lg" ? "px-8 py-4 text-base" : "px-3 py-2 text-sm sm:px-5 sm:py-2.5";
   const variantClass =
     variant === "brand"
       ? "bg-brand text-brand-foreground hover:shadow-lg hover:shadow-brand/25"
@@ -547,7 +547,7 @@ function SiteHeader() {
       }`}
     >
       <nav
-        className={`mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 transition-[padding] duration-300 sm:px-6 md:px-8 ${
+        className={`mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 transition-[padding] duration-300 sm:gap-3 sm:px-6 md:px-8 ${
           scrolled ? "py-3.5" : "py-6"
         }`}
       >
@@ -557,7 +557,7 @@ function SiteHeader() {
           </span>
           <span className="text-xl font-bold tracking-tight">Flowform</span>
         </a>
-        <div className="flex items-center gap-3 sm:gap-6 md:gap-8">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-6 md:gap-8">
           <div className="hidden items-center gap-6 md:flex">
             {NAV_LINKS.map((l) => (
               <a
@@ -573,7 +573,7 @@ function SiteHeader() {
             <>
               <Link
                 to="/dashboard"
-                className="text-sm font-medium text-ink/60 transition-colors hover:text-ink"
+                className="text-sm font-medium whitespace-nowrap text-ink/60 transition-colors hover:text-ink"
               >
                 Dashboard
               </Link>
@@ -584,7 +584,7 @@ function SiteHeader() {
               <Link
                 to="/login"
                 search={{ redirect: "/dashboard" }}
-                className="text-sm font-medium text-ink/60 transition-colors hover:text-ink"
+                className="text-sm font-medium whitespace-nowrap text-ink/60 transition-colors hover:text-ink"
               >
                 Log in
               </Link>
