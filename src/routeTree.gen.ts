@@ -20,6 +20,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as ApiKeepaliveRouteImport } from './routes/api.keepalive'
 import { Route as FormsNewRouteImport } from './routes/forms.new'
 import { Route as FormsFormIdIndexRouteImport } from './routes/forms.$formId.index'
 import { Route as FormsFormIdEditRouteImport } from './routes/forms.$formId.edit'
@@ -80,6 +81,11 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiKeepaliveRoute = ApiKeepaliveRouteImport.update({
+  id: '/api/keepalive',
+  path: '/api/keepalive',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FormsNewRoute = FormsNewRouteImport.update({
   id: '/forms/new',
   path: '/forms/new',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/api/keepalive': typeof ApiKeepaliveRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
   '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/api/keepalive': typeof ApiKeepaliveRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
   '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/api/keepalive': typeof ApiKeepaliveRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
   '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/terms'
+    | '/api/keepalive'
     | '/forms/new'
     | '/forms/$formId/edit'
     | '/forms/$formId/responses'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/terms'
+    | '/api/keepalive'
     | '/forms/new'
     | '/forms/$formId/edit'
     | '/forms/$formId/responses'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/terms'
+    | '/api/keepalive'
     | '/forms/new'
     | '/forms/$formId/edit'
     | '/forms/$formId/responses'
@@ -219,6 +231,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  ApiKeepaliveRoute: typeof ApiKeepaliveRoute
   FormsNewRoute: typeof FormsNewRoute
   FormsFormIdEditRoute: typeof FormsFormIdEditRoute
   FormsFormIdResponsesRoute: typeof FormsFormIdResponsesRoute
@@ -304,6 +317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/keepalive': {
+      id: '/api/keepalive'
+      path: '/api/keepalive'
+      fullPath: '/api/keepalive'
+      preLoaderRoute: typeof ApiKeepaliveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forms/new': {
       id: '/forms/new'
       path: '/forms/new'
@@ -347,6 +367,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  ApiKeepaliveRoute: ApiKeepaliveRoute,
   FormsNewRoute: FormsNewRoute,
   FormsFormIdEditRoute: FormsFormIdEditRoute,
   FormsFormIdResponsesRoute: FormsFormIdResponsesRoute,

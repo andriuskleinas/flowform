@@ -226,6 +226,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      record_keepalive_ping: { Args: never; Returns: undefined }
       get_dashboard_forms: {
         Args: never
         Returns: {

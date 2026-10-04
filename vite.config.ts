@@ -18,6 +18,14 @@ export default defineConfig({
       // Recovers from h3 swallowing an in-handler throw into a generic JSON 500 —
       // see src/lib/nitro-error-handler.ts for details.
       errorHandler: "./src/lib/nitro-error-handler.ts",
+      // Daily Supabase keep-alive (see src/routes/api.keepalive.ts). Nitro writes
+      // Vercel's Build Output config itself, so crons go here, not vercel.json.
+      vercel: {
+        config: {
+          version: 3,
+          crons: [{ path: "/api/keepalive", schedule: "41 11 * * *" }],
+        },
+      },
       routeRules: {
         "/**": {
           headers: {
