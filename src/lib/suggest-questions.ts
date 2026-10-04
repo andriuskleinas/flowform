@@ -54,12 +54,27 @@ export const suggestQuestions = createServerFn({ method: "POST" })
       `Form title: ${data.title || "(untitled)"}` +
       (data.description?.trim() ? `\nDescription: ${data.description.trim()}` : "");
 
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 1024,
+    const message = await client.beta.messages.create({
+      model: "claude-opus-5-5",
+      // Thinking tokens count toward max_tokens, so leave room beyond the JSON.
+      max_tokens: 16000,
+      // Interactive and well-specified: keep thinking short for snappy suggestions.
+      output_config: { effort: "low" },
+      // If a safety classifier declines, retry on a fallback model in the same call.
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
     });
+
+    // Opus 5.5 always thinks, so the reply can start with (empty) thinking
+    // blocks; read by block type and check why generation stopped.
+    if (message.stop_reason === "refusal") {
+      throw new Error("Claude declined this request. Try rewording it.");
+    }
+    if (message.stop_reason === "max_tokens") {
+      throw new Error("Claude's reply was cut off. Please try again.");
+    }
 
     const textBlock = message.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {

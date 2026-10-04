@@ -125,12 +125,27 @@ export const summarizeResponses = createServerFn({ method: "POST" })
         .join("\n\n");
 
     const client = new Anthropic({ apiKey });
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 1500,
+    const message = await client.beta.messages.create({
+      model: "claude-opus-5-5",
+      // Thinking tokens count toward max_tokens, so leave room beyond the JSON.
+      max_tokens: 16000,
+      // Reading up to 300 answers for themes benefits from a bit more thought.
+      output_config: { effort: "medium" },
+      // If a safety classifier declines, retry on a fallback model in the same call.
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
     });
+
+    // Opus 5.5 always thinks, so the reply can start with (empty) thinking
+    // blocks; read by block type and check why generation stopped.
+    if (message.stop_reason === "refusal") {
+      throw new Error("Claude declined this request. Try rewording it.");
+    }
+    if (message.stop_reason === "max_tokens") {
+      throw new Error("Claude's reply was cut off. Please try again.");
+    }
 
     const textBlock = message.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {

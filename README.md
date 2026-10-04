@@ -78,7 +78,7 @@ flowchart LR
 | **Frontend** | [TanStack Start](https://tanstack.com/start) (file-based routing, SSR), React 19, Tailwind CSS 4, shadcn/ui on Radix primitives, dnd-kit for drag-and-drop, Recharts for analytics |
 | **Backend** | TanStack Start server functions running as Vercel serverless functions via Nitro; Zod validation on AI input and output |
 | **Database** | Supabase Postgres with row-level security on every table, 24 versioned SQL migrations, transactional RPCs for editor saves and analytics, `CHECK` constraints on JSON shapes |
-| **AI** | Anthropic Claude for question suggestions and open-text summaries, called only from server functions |
+| **AI** | Anthropic Claude Opus 5.5 for question suggestions and open-text summaries, called only from server functions, with refusal fallback and Zod-validated output |
 | **Auth** | Supabase Auth: email verification with branded emails, password reset, email change, 10-minute idle auto-logout |
 | **Automation** | Postgres trigger + `pg_net` posts a Slack alert on each confirmed signup (webhook URL kept in Vault); GitHub Actions runs CI and a keep-alive ping |
 | **Hosting** | Vercel, deployed from `main`; Bun for installs and scripts |
