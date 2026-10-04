@@ -1,76 +1,150 @@
+<p align="center">
+  <img src="public/og-image.png" alt="Flowform: forms people actually finish" width="820">
+</p>
+
+<p align="center">
+  <a href="https://flowformapp.vercel.app"><b>Live app →</b></a>
+  ·
+  <a href="https://flowformapp.vercel.app/demo">Try the demo</a>
+  ·
+  <a href="#features">Features</a>
+  ·
+  <a href="#how-its-built">How it's built</a>
+  ·
+  <a href="#run-it-yourself">Run it yourself</a>
+</p>
+
+<p align="center">
+  <img alt="TanStack Start" src="https://img.shields.io/badge/TanStack-Start-ff4154?logo=reactquery&logoColor=white">
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white">
+  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ecf8e?logo=supabase&logoColor=white">
+  <img alt="Claude" src="https://img.shields.io/badge/AI-Claude-d97757">
+  <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind-4-38bdf8?logo=tailwindcss&logoColor=white">
+  <img alt="Vercel" src="https://img.shields.io/badge/Vercel-deployed-000?logo=vercel">
+  <a href="https://github.com/andriuskleinas/flowform/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/andriuskleinas/flowform/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green">
+</p>
+
 # Flowform
 
-**Forms people actually finish.** A full-stack form builder in the spirit of Typeform: respondents answer one question at a time, like a conversation — which is why they get to the end.
+**Forms people actually finish.** A full-stack form builder in the spirit of Typeform: respondents
+answer one question at a time, like a conversation, which is why they get to the end. Claude helps
+you write the questions and reads the open-text answers for you, and a real conversion funnel shows
+exactly where people drop off.
 
-![Flowform — forms people actually finish](public/og-image.png)
+It's a deployed product, built end to end: product design, database security, AI integration,
+analytics and auth.
 
-🔗 **Live:** [flowformapp.vercel.app](https://flowformapp.vercel.app) · **Try it without an account:** [interactive demo](https://flowformapp.vercel.app/demo)
+🎥 [Watch a 60-second demo](https://www.loom.com/share/a067acd4829d4d5ba661f69df3316b3b) · no account needed for the [interactive demo](https://flowformapp.vercel.app/demo)
 
-> Portfolio project — the product is fully functional end to end, but testimonials and company names on the landing page are illustrative.
+> Portfolio project. The product works end to end, but testimonials and company names on the
+> landing page are illustrative.
 
-🎥 [Watch a 60-second demo](https://www.loom.com/share/a067acd4829d4d5ba661f69df3316b3b)
+## Features
 
-## What it does
+| | Feature | What it does |
+|---|---|---|
+| 🧱 | **Drag-and-drop builder** | 7 question types: short & long text, single/multi choice, dropdown, yes/no, NPS and rating scales. Start from a template or a blank form, with a live preview of what respondents see. |
+| ✨ | **AI question suggestions** | Describe what you want to learn and Claude drafts well-worded, correctly typed questions you accept or edit with one click. |
+| 🔀 | **Conditional logic** | Forward-only jump rules ("if they answer X, skip to…"), with path-aware validation so a required question a respondent never sees can't block them. |
+| 💬 | **Conversational mode** | One question at a time with a progress bar, full keyboard navigation (Enter, A–D, 0–9) and back-navigation. Or a **classic** all-on-one-page mode. |
+| 💾 | **Drafts that persist** | Answers are saved locally so a respondent can come back and finish, with a guard against double submission. |
+| 📊 | **Analytics dashboard** | A real funnel (opened → started → completed), completion rate, average time-to-fill, per-question drop-off and a response trend over 7/30/90 days. |
+| 🧠 | **AI response summaries** | Claude reads open-text answers and pulls out themes, sentiment and representative quotes. |
+| 🔗 | **Sharing & export** | Shareable link, QR code, embed snippet, native share and CSV export. |
 
-**Building**
-
-- **Drag-and-drop builder** with 7 question types — short & long text, single/multi choice, dropdown, yes/no, NPS, and rating scales
-- **AI question suggestions** — describe what you want to learn and Claude drafts well-worded, correctly-typed questions you accept or edit with one click
-- **Conditional logic** — forward-only jump rules ("if they answer X, skip to…"), with path-aware validation so a required question a respondent never sees can't block them
-- **Templates** to start from, or a blank form; a live preview shows exactly what respondents will see
-
-**Filling**
-
-- **Conversational mode** — one question at a time with a progress bar, full keyboard navigation (Enter, A–D, 0–9), and back-navigation; or a **classic** all-on-one-page mode
-- **Drafts persist** locally so a respondent can return and finish, with a guard against double submission
+### Filling a form
 
 ![Conversational fill experience](docs/screenshots/fill.png)
 
-**Measuring**
-
-- **Analytics dashboard** — a real conversion funnel (opened → started → completed), completion rate, average time-to-fill, per-question drop-off, and a response trend over 7/30/90-day windows
-- **AI response summaries** — Claude reads open-text answers and pulls out themes, sentiment, and representative quotes
-- **Sharing & export** — shareable link, QR code, embed snippet, native share, and CSV export
+### Measuring results
 
 ![Analytics dashboard](docs/screenshots/analytics.png)
 
-## Tech stack
+## How it's built
 
-| Layer | Choice |
-| --- | --- |
-| Framework | [TanStack Start](https://tanstack.com/start) — React 19, file-based routing, SSR, server functions |
-| Styling | Tailwind CSS 4, shadcn/ui (Radix primitives), dnd-kit for drag-and-drop |
-| Backend | Supabase — Postgres with row-level security, auth, and SQL functions (RPCs) |
-| AI | Anthropic Claude API, called from server functions |
-| Build & deploy | Vite 7 + Nitro, deployed on Vercel |
-| Tooling | Bun, TypeScript, Zod, ESLint + Prettier |
-
-## Architecture notes
-
-The interesting decisions, and why:
-
-- **RLS is the security boundary, not the client.** Every table carries row-level-security policies — a user can only read/write their own forms, questions, and responses, and public form-filling is scoped by policy. There is deliberately **no service-role key** in the app: the anon/publishable key plus RLS does all the work, so a leaked client bundle grants nothing.
-- **The Claude API key never reaches the client.** AI question suggestions and response summaries run in **server functions** (Vercel serverless via Nitro), reading the key from server-side env only.
-- **Atomic editor saves via a Postgres RPC.** Saving the builder is a single transactional `save_form_editor` function that applies reorders, edits, inserts, and deletes in one round-trip — replacing an N+1 write path that could leave a form half-saved. Existing question IDs are preserved, so previously-collected answers (keyed by question ID) stay valid.
-- **Analytics over full data.** A `SECURITY DEFINER` RPC computes the funnel/trend/summary server-side across every response (not a client-capped sample), with ownership checked explicitly. The funnel is floored to stay monotonic even when event tracking and response history don't line up.
-- **Integrity enforced in the database.** `CHECK` constraints validate the shape of the `options` / `logic` JSON per question type; submissions are rate-limited (per-IP and per-form) and funnel events are de-duplicated and garbage-collected — all in SQL, so the rules hold no matter what hits the API.
-- **Auth niceties.** Email verification with branded transactional emails, password-reset / magic-link / email-change flows, a 10-minute idle auto-logout, and the form owner's own test traffic is excluded from analytics so real-respondent metrics stay clean.
-- **Security headers** (CSP, HSTS, and friends) are set via Nitro route rules in [vite.config.ts](vite.config.ts).
-
-## Run it locally
-
-```bash
-bun install
-bun run dev          # http://localhost:8080
+```mermaid
+flowchart LR
+  B[Browser: builder, dashboard, respondent] -->|SSR pages + server functions| V[Vercel · Nitro]
+  B -->|supabase-js, RLS applies| S[(Supabase Postgres + Auth)]
+  V -->|server-only API key| C[Claude API]
+  V -->|anon key + user JWT, RLS applies| S
+  S -->|pg_net trigger on signup| SL[Slack alert]
+  GH[GitHub Actions] -->|CI + keep-alive RPC| S
 ```
 
+| Layer | Choices |
+|---|---|
+| **Frontend** | [TanStack Start](https://tanstack.com/start) (file-based routing, SSR), React 19, Tailwind CSS 4, shadcn/ui on Radix primitives, dnd-kit for drag-and-drop, Recharts for analytics |
+| **Backend** | TanStack Start server functions running as Vercel serverless functions via Nitro; Zod validation on AI input and output |
+| **Database** | Supabase Postgres with row-level security on every table, 24 versioned SQL migrations, transactional RPCs for editor saves and analytics, `CHECK` constraints on JSON shapes |
+| **AI** | Anthropic Claude for question suggestions and open-text summaries, called only from server functions |
+| **Auth** | Supabase Auth: email verification with branded emails, password reset, email change, 10-minute idle auto-logout |
+| **Automation** | Postgres trigger + `pg_net` posts a Slack alert on each confirmed signup (webhook URL kept in Vault); GitHub Actions runs CI and a keep-alive ping |
+| **Hosting** | Vercel, deployed from `main`; Bun for installs and scripts |
+
+### Engineering highlights
+
+- **RLS is the security boundary, not the client.** Every table has row-level-security policies: a
+  user can only read and write their own forms, questions and responses, and public form filling is
+  scoped by policy. There is deliberately **no service-role key** in the app. The publishable key
+  plus RLS does all the work, so a leaked client bundle grants nothing.
+- **The Claude API key never reaches the client.** Question suggestions and response summaries run
+  in server functions and read the key from server-side env only.
+- **Atomic editor saves.** Saving the builder is one transactional `save_form_editor` RPC that
+  applies reorders, edits, inserts and deletes in a single round-trip, replacing an N+1 write path
+  that could leave a form half-saved. Existing question IDs are preserved, so answers collected
+  earlier (keyed by question ID) stay valid.
+- **Analytics over all the data.** A `SECURITY DEFINER` RPC computes the funnel, trend and summary
+  in Postgres across every response (not a client-capped sample), with ownership checked
+  explicitly. The funnel is floored so it stays monotonic even when event tracking and response
+  history don't line up.
+- **Integrity enforced in the database.** `CHECK` constraints validate the `options` / `logic` JSON
+  per question type. Submissions are rate-limited per IP and per form, and funnel events are
+  de-duplicated and garbage-collected, all in SQL, so the rules hold no matter what hits the API.
+- **Clean metrics.** The form owner's own test traffic is excluded from analytics, so the numbers
+  reflect real respondents.
+- **Security headers.** CSP `frame-ancestors`, HSTS, `nosniff`, a strict referrer policy and a
+  locked-down permissions policy are set through Nitro route rules in [vite.config.ts](vite.config.ts).
+
+## Run it yourself
+
+You need [Bun](https://bun.sh), a [Supabase](https://supabase.com) project and an
+[Anthropic API key](https://console.anthropic.com) (only for the AI features).
+
 ```bash
-bun run typecheck    # tsc --noEmit
+git clone https://github.com/andriuskleinas/flowform.git
+cd flowform
+bun install
+cp .env.example .env   # fill in your own keys; never commit .env
+bun run dev            # http://localhost:8080
+```
+
+Apply the SQL files in [`supabase/migrations/`](supabase/migrations) to your Supabase project, in
+order (`supabase db push` with the Supabase CLI does this).
+
+### Checks
+
+```bash
 bun run lint         # eslint
+bun run typecheck    # tsc --noEmit
 bun run build        # production build
 ```
 
-Required env vars: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (Supabase project), plus `ANTHROPIC_API_KEY` server-side for the AI features. Database schema lives in [`supabase/migrations/`](supabase/migrations).
+The same three steps run in [CI](.github/workflows/ci.yml) on every push and pull request.
+
+## Project layout
+
+```
+src/routes/                 file-based routes: landing, demo, auth, dashboard, builder, fill, responses
+src/components/             conversational form, question renderer, share dialog, app shell
+src/components/ui/          shadcn/ui primitives
+src/lib/                    server functions (AI suggestions, summaries), form logic, CSV export
+src/integrations/supabase/  typed Supabase client
+supabase/migrations/        schema, RLS policies, RPCs, constraints, triggers
+.github/workflows/          CI and Supabase keep-alive
+```
 
 ## License
 
@@ -78,4 +152,4 @@ Required env vars: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (Supa
 
 ---
 
-<sub>Built by [Andrius Kleinas](https://github.com/andriuskleinas) — designed and developed with [Claude Code](https://www.anthropic.com/claude-code) as an AI pair programmer.</sub>
+<sub>Built by [Andrius Kleinas](https://github.com/andriuskleinas), designed and developed with [Claude Code](https://www.anthropic.com/claude-code) as an AI pair programmer.</sub>
