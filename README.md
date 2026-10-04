@@ -66,12 +66,11 @@ analytics and auth.
 
 ```mermaid
 flowchart LR
-  B[Browser: builder, dashboard, respondent] -->|SSR pages + server functions| V[Vercel · Nitro]
-  B -->|supabase-js, RLS applies| S[(Supabase Postgres + Auth)]
+  U[Browser: builder + respondent] -->|SSR + server functions| V[Vercel · Nitro]
+  U -->|supabase-js, RLS applies| S[(Supabase Postgres + Auth)]
+  V -->|user JWT, RLS applies| S
   V -->|server-only API key| C[Claude API]
-  V -->|anon key + user JWT, RLS applies| S
-  S -->|pg_net trigger on signup| SL[Slack alert]
-  GH[GitHub Actions] -->|CI + keep-alive RPC| S
+  GH[GitHub Actions] -->|keep-alive RPC| S
 ```
 
 | Layer | Choices |
