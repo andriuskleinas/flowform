@@ -135,6 +135,26 @@ function snapshotKey(
   });
 }
 
+function toSnapshot(
+  sf: {
+    title: string;
+    description: string | null;
+    display_mode: string;
+    thank_you_message: string | null;
+  },
+  questions: Question[],
+): { form: DraftFormState; questions: Question[] } {
+  return {
+    form: {
+      title: sf.title === DEFAULT_FORM_TITLE ? "" : sf.title,
+      description: sf.description ?? null,
+      display_mode: sf.display_mode as DisplayMode,
+      thank_you_message: sf.thank_you_message ?? null,
+    },
+    questions,
+  };
+}
+
 function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -197,25 +217,21 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   // so the list stays put and the user can keep clicking "Add".
   const scrollAnchorRef = useRef<{ el: HTMLElement; top: number } | null>(null);
 
+  const resetDraftTo = (snap: { form: DraftFormState; questions: Question[] }) => {
+    setSnapshot(snap);
+    setDraftForm(snap.form);
+    setDraftQuestions(snap.questions.map((q) => ({ ...q })));
+  };
+
   // Initialize / re-sync draft from server when (a) we don't have one yet,
   // or (b) the server snapshot changed AND the user has no unsaved changes.
   useEffect(() => {
     const sf = formQ.data;
     if (!sf) return;
     const sq = questionsQ.data ?? [];
-    const newSnap = {
-      form: {
-        title: sf.title === DEFAULT_FORM_TITLE ? "" : sf.title,
-        description: sf.description ?? null,
-        display_mode: sf.display_mode as DisplayMode,
-        thank_you_message: sf.thank_you_message ?? null,
-      },
-      questions: sq,
-    };
+    const newSnap = toSnapshot(sf, sq);
     if (!snapshot) {
-      setSnapshot(newSnap);
-      setDraftForm(newSnap.form);
-      setDraftQuestions(sq.map((q) => ({ ...q })));
+      resetDraftTo(newSnap);
       return;
     }
     const visibleDraft = draftQuestions.filter((q) => !q.isDeleted);
@@ -226,9 +242,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       snapshotKey(snapshot.form, snapshot.questions) !==
       snapshotKey(newSnap.form, newSnap.questions);
     if (serverChanged && draftMatchesOldSnap) {
-      setSnapshot(newSnap);
-      setDraftForm(newSnap.form);
-      setDraftQuestions(sq.map((q) => ({ ...q })));
+      resetDraftTo(newSnap);
     } else if (serverChanged && !draftMatchesOldSnap) {
       // Keep user's edits; just update snapshot reference for future diffs.
       setSnapshot(newSnap);
@@ -454,8 +468,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         // Dashboard now uses an aggregated RPC under a separate query key.
         qc.invalidateQueries({ queryKey: ["dashboard-forms"] }),
       ]);
-      // Force draft to re-sync from fresh server data on the next effect tick.
-      setSnapshot(null);
+      // Re-sync the draft from the fresh server data directly. Clearing the
+      // snapshot and waiting for the sync effect doesn't work: the refetch has
+      // already landed by now, so the effect's deps never change again and the
+      // editor would sit on its loading skeleton forever.
+      const sf = qc.getQueryData<typeof formQ.data>(["form", formId]);
+      const sq = qc.getQueryData<Question[]>(["questions", formId]) ?? [];
+      if (sf) resetDraftTo(toSnapshot(sf, sq));
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -549,7 +568,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  if (formQ.isLoading || !snapshot) {
+  if (formQ.isLoading || (formQ.data && !snapshot)) {
     return (
       <Shell>
         <Skeleton className="h-10 w-64" />
