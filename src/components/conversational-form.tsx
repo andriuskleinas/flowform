@@ -3,6 +3,8 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 
 import { QuestionRender, type Question } from "@/components/question-render";
 import {
+  getChoiceConfig,
+  getRatingMax,
   isAnswered,
   resolveNextIndex,
   computeVisiblePath,
@@ -12,7 +14,7 @@ import {
 
 /**
  * One-question-at-a-time respondent experience: progress bar, Enter to
- * advance, back navigation, and logic-jump routing. Selecting a choice only
+ * advance, A–Z / 0–9 shortcuts, back navigation, and logic-jump routing. Selecting a choice only
  * records the answer — respondents always confirm with OK/Enter, so a
  * misclick can be corrected before moving on. Owns only navigation state —
  * answers live in the parent so persistence and submission stay in one place.
@@ -113,8 +115,22 @@ export function ConversationalForm({
   // a choice/rating button doesn't move focus at all in Safari.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Enter") return;
       const target = e.target as HTMLElement;
+      if (e.key !== "Enter") {
+        // Letter / number shortcuts, matching the lettered options on screen.
+        // Never while the respondent is typing into a field.
+        const typing =
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable;
+        if (!current || typing || e.metaKey || e.ctrlKey || e.altKey) return;
+        const value = shortcutAnswer(current, answers[current.id], e.key);
+        if (value === undefined) return;
+        e.preventDefault();
+        handleAnswer(value);
+        return;
+      }
       if (target.tagName === "TEXTAREA") {
         // Enter makes a newline in long answers; Ctrl/⌘+Enter advances.
         if (!(e.ctrlKey || e.metaKey)) return;
@@ -199,7 +215,7 @@ export function ConversationalForm({
               {current.required || isAnswered(current, answers[current.id]) ? "OK" : "Skip"}
             </button>
             <span className="hidden font-mono text-[11px] text-ink/45 sm:inline">
-              {current.type === "long_text" ? "⌘/Ctrl + Enter ↵" : "press Enter ↵"}
+              {shortcutHint(current)}
             </span>
           </div>
         </div>
@@ -247,4 +263,62 @@ export function ConversationalForm({
       )}
     </div>
   );
+}
+
+/**
+ * Maps a key press to an answer for the current question: A–Z picks (or, for
+ * multi-select, toggles) a lettered choice, Y/N answers yes/no, digits set an
+ * NPS (0–9) or rating (1–max) score. Returns undefined when the key means nothing.
+ */
+function shortcutAnswer(
+  question: Question,
+  current: AnswerValue | undefined,
+  key: string,
+): AnswerValue | undefined {
+  const k = key.toLowerCase();
+  if (question.type === "yes_no") {
+    if (k === "a" || k === "y") return "Yes";
+    if (k === "b" || k === "n") return "No";
+    return undefined;
+  }
+  if (question.type === "multiple_choice") {
+    const i = /^[a-z]$/.test(k) ? k.charCodeAt(0) - 97 : -1;
+    const { choices, multi } = getChoiceConfig(question.options);
+    const opt = choices[i];
+    if (i < 0 || opt === undefined) return undefined;
+    if (!multi) return opt;
+    const selected = Array.isArray(current)
+      ? current
+      : typeof current === "string" && current.length > 0
+        ? [current]
+        : [];
+    return selected.includes(opt) ? selected.filter((x) => x !== opt) : [...selected, opt];
+  }
+  if (/^[0-9]$/.test(key)) {
+    const n = Number(key);
+    if (question.type === "nps") return n;
+    if (question.type === "rating" && n >= 1 && n <= getRatingMax(question.options)) return n;
+  }
+  return undefined;
+}
+
+function shortcutHint(question: Question): string {
+  switch (question.type) {
+    case "long_text":
+      return "⌘/Ctrl + Enter ↵";
+    case "yes_no":
+      return "press Y or N, then Enter ↵";
+    case "multiple_choice": {
+      const n = getChoiceConfig(question.options).choices.length;
+      if (n === 0) return "press Enter ↵";
+      const last = String.fromCharCode(64 + Math.min(n, 26));
+      return n === 1 ? "press A, then Enter ↵" : `press A–${last}, then Enter ↵`;
+    }
+    case "nps":
+      return "press 0–9, then Enter ↵";
+    case "rating":
+      return `press 1–${Math.min(getRatingMax(question.options), 9)}, then Enter ↵`;
+    default:
+      return "press Enter ↵";
+  }
 }

@@ -435,7 +435,7 @@ const BUILT: Array<{ k: string; v: string }> = [
   },
   {
     k: "Respondent UX",
-    v: "Keyboard-first (Enter, A–D, 0–9), drafts saved locally, reduced-motion aware.",
+    v: "Keyboard-first (letters to pick, numbers to score, Enter to confirm), drafts saved locally.",
   },
   {
     k: "Accounts",
