@@ -9,6 +9,8 @@
   ·
   <a href="#features">Features</a>
   ·
+  <a href="#design">Design</a>
+  ·
   <a href="#how-its-built">How it's built</a>
   ·
   <a href="#run-it-yourself">Run it yourself</a>
@@ -36,31 +38,51 @@ exactly where people drop off.
 It's a deployed product, built end to end: product design, database security, AI integration,
 analytics and auth.
 
-🎥 [Watch a 60-second demo](https://www.loom.com/share/a067acd4829d4d5ba661f69df3316b3b) · no account needed for the [interactive demo](https://flowformapp.vercel.app/demo)
+[Watch a 60-second demo](https://www.loom.com/share/a067acd4829d4d5ba661f69df3316b3b) · no account needed for the [interactive demo](https://flowformapp.vercel.app/demo)
 
-> Portfolio project. The product works end to end, but testimonials and company names on the
-> landing page are illustrative.
+> Portfolio project. The product works end to end; the example numbers in the landing page's
+> product mock-ups are labelled as illustrative.
 
 ## Features
 
 | | Feature | What it does |
 |---|---|---|
-| 🧱 | **Drag-and-drop builder** | 7 question types: short & long text, single/multi choice, dropdown, yes/no, NPS and rating scales. Start from a template or a blank form, with a live preview of what respondents see. |
-| ✨ | **AI question suggestions** | Describe what you want to learn and Claude drafts well-worded, correctly typed questions you accept or edit with one click. |
-| 🔀 | **Conditional logic** | Forward-only jump rules ("if they answer X, skip to…"), with path-aware validation so a required question a respondent never sees can't block them. |
-| 💬 | **Conversational mode** | One question at a time with a progress bar, full keyboard navigation (Enter, A–D, 0–9) and back-navigation. Or a **classic** all-on-one-page mode. |
-| 💾 | **Drafts that persist** | Answers are saved locally so a respondent can come back and finish, with a guard against double submission. |
-| 📊 | **Analytics dashboard** | A real funnel (opened → started → completed), completion rate, average time-to-fill, per-question drop-off and a response trend over 7/30/90 days. |
-| 🧠 | **AI response summaries** | Claude reads open-text answers and pulls out themes, sentiment and representative quotes. |
-| 🔗 | **Sharing & export** | Shareable link, QR code, embed snippet, native share and CSV export. |
+| `01` | **Drag-and-drop builder** | 7 question types: short & long text, single/multi choice, dropdown, yes/no, NPS and rating scales. Start from a template or a blank form, with a live preview of what respondents see. |
+| `02` | **AI question suggestions** | Describe what you want to learn and Claude drafts well-worded, correctly typed questions you accept or edit with one click. |
+| `03` | **Conditional logic** | Forward-only jump rules ("if they answer X, skip to…"), with path-aware validation so a required question a respondent never sees can't block them. |
+| `04` | **Conversational mode** | One question at a time with a progress bar, keyboard shortcuts (Enter to confirm, A–Z or Y/N to pick, 0–9 to score) and back-navigation. Or a **classic** all-on-one-page mode. |
+| `05` | **Drafts that persist** | Answers are saved locally so a respondent can come back and finish, with a guard against double submission. |
+| `06` | **Analytics dashboard** | A real funnel (opened → started → completed), completion rate, average time-to-fill, per-question drop-off and a response trend over 7/30/90 days. |
+| `07` | **AI response summaries** | Claude reads open-text answers and pulls out themes, sentiment and representative quotes. |
+| `08` | **Sharing & export** | Shareable link, QR code, embed snippet, native share and CSV export. |
+
+### The landing page
+
+![Flowform landing page](docs/screenshots/landing.png)
 
 ### Filling a form
+
+One question at a time, set as a headline, with lettered options you can pick by keyboard.
 
 ![Conversational fill experience](docs/screenshots/fill.png)
 
 ### Measuring results
 
 ![Analytics dashboard](docs/screenshots/analytics.png)
+
+## Design
+
+The interface follows an editorial system rather than a SaaS template: near-black ink on warm
+paper, a single accent colour, hairline rules instead of drop shadows, and type doing most of the
+work.
+
+| | Choice |
+|---|---|
+| **Type** | [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif) for headlines and questions, [Instrument Sans](https://fonts.google.com/specimen/Instrument+Sans) for interface text, [Fragment Mono](https://fonts.google.com/specimen/Fragment+Mono) for labels, counters and numbers |
+| **Colour** | Ink `#14161A` on paper `#FBFAF7`, with one Klein-style blue (`#1244D0`) reserved for actions, selection, focus and live data |
+| **Shape** | Tight 6–8 px radii, 1 px hairline borders, one soft shadow for floating "product sheets" only |
+| **Motion** | A single step transition between questions; respects `prefers-reduced-motion` |
+| **Tokens** | All colours are `oklch` custom properties in [src/styles.css](src/styles.css), mapped to Tailwind utilities |
 
 ## How it's built
 
@@ -70,17 +92,17 @@ flowchart LR
   U -->|supabase-js, RLS applies| S[(Supabase Postgres + Auth)]
   V -->|user JWT, RLS applies| S
   V -->|server-only API key| C[Claude API]
-  GH[GitHub Actions] -->|keep-alive RPC| S
+  K[GitHub Actions + Vercel Cron] -->|keep-alive RPC| S
 ```
 
 | Layer | Choices |
 |---|---|
-| **Frontend** | [TanStack Start](https://tanstack.com/start) (file-based routing, SSR), React 19, Tailwind CSS 4, shadcn/ui on Radix primitives, dnd-kit for drag-and-drop, Recharts for analytics |
+| **Frontend** | [TanStack Start](https://tanstack.com/start) (file-based routing, SSR), React 19, Tailwind CSS 4 with `oklch` design tokens, shadcn/ui on Radix primitives, dnd-kit for drag-and-drop, Recharts for analytics |
 | **Backend** | TanStack Start server functions running as Vercel serverless functions via Nitro; Zod validation on AI input and output |
 | **Database** | Supabase Postgres with row-level security on every table, 24 versioned SQL migrations, transactional RPCs for editor saves and analytics, `CHECK` constraints on JSON shapes |
 | **AI** | Anthropic Claude Opus 5.5 for question suggestions and open-text summaries, called only from server functions, with refusal fallback and Zod-validated output |
 | **Auth** | Supabase Auth: email verification with branded emails, password reset, email change, 10-minute idle auto-logout |
-| **Automation** | Postgres trigger + `pg_net` posts a Slack alert on each confirmed signup (webhook URL kept in Vault); GitHub Actions runs CI and a keep-alive ping |
+| **Automation** | Postgres trigger + `pg_net` posts a Slack alert on each confirmed signup (webhook URL kept in Vault); GitHub Actions runs CI; a keep-alive write runs from both GitHub Actions and Vercel Cron, and the workflow restores the project through the Management API if it was paused anyway |
 | **Hosting** | Vercel, deployed from `main`; Bun for installs and scripts |
 
 ### Engineering highlights
@@ -137,12 +159,14 @@ The same three steps run in [CI](.github/workflows/ci.yml) on every push and pul
 
 ```
 src/routes/                 file-based routes: landing, demo, auth, dashboard, builder, fill, responses
-src/components/             conversational form, question renderer, share dialog, app shell
+src/components/             conversational form, question renderer, share dialog, logo, app shell
 src/components/ui/          shadcn/ui primitives
 src/lib/                    server functions (AI suggestions, summaries), form logic, CSV export
+src/styles.css              design tokens (colour, type, radius) and base styles
 src/integrations/supabase/  typed Supabase client
 supabase/migrations/        schema, RLS policies, RPCs, constraints, triggers
 .github/workflows/          CI and Supabase keep-alive
+docs/screenshots/           README screenshots
 ```
 
 ## License
