@@ -1,6 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight, Check, CornerDownLeft, Github } from "lucide-react";
-import { useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  BarChart3,
+  Check,
+  CornerDownLeft,
+  GitBranch,
+  Github,
+  PenLine,
+  RotateCcw,
+  type LucideIcon,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/user-menu";
@@ -49,13 +61,49 @@ function PrimaryCTA({
   );
 }
 
-function SectionLabel({ index, children }: { index: string; children: React.ReactNode }) {
+type Hue = "sky" | "coral" | "mint" | "sun";
+
+const HUE: Record<Hue, { tag: string; stage: string; dot: string }> = {
+  sky: { tag: "bg-sky-tint text-sky", stage: "bg-sky-tint", dot: "bg-sky" },
+  coral: { tag: "bg-coral-tint text-coral", stage: "bg-coral-tint", dot: "bg-coral" },
+  mint: { tag: "bg-mint-tint text-mint", stage: "bg-mint-tint", dot: "bg-mint" },
+  sun: { tag: "bg-sun-tint text-sun", stage: "bg-sun-tint", dot: "bg-sun" },
+};
+
+/** Feature category pill: a coloured tint, an icon, a plain word. */
+function FeatureTag({
+  hue,
+  icon: Icon,
+  children,
+}: {
+  hue: Hue;
+  icon: LucideIcon;
+  children: string;
+}) {
   return (
-    <p className="eyebrow flex items-center gap-3">
-      <span className="text-brand">{index}</span>
-      <span className="h-px w-8 bg-ink/20" />
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${HUE[hue].tag}`}
+    >
+      <Icon className="size-3.5" strokeWidth={2.25} />
       {children}
-    </p>
+    </span>
+  );
+}
+
+/** Soft coloured backdrop a product mock-up floats on. */
+function Stage({
+  hue,
+  children,
+  className = "",
+}: {
+  hue: Hue;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-2xl p-4 sm:p-8 lg:p-10 ${HUE[hue].stage} ${className}`}>
+      {children}
+    </div>
   );
 }
 
@@ -101,92 +149,269 @@ function Tag({ children, tone = "ink" }: { children: React.ReactNode; tone?: "in
 /* Hero vignette — a respondent mid-form, with the logic rule annotated     */
 /* ------------------------------------------------------------------------ */
 
-const HERO_OPTIONS = ["Pricing", "Setup time", "Missing integrations", "Nothing, really"];
+type HeroStepId = "blocker" | "integration" | "plan";
 
-function RespondentVignette() {
-  const [picked, setPicked] = useState(0);
-  const jumps = picked === 0;
+const HERO_STEPS: Record<HeroStepId, { n: number; title: string; options: string[] }> = {
+  blocker: {
+    n: 1,
+    title: "What almost stopped you from signing up?",
+    options: ["Pricing", "Setup time", "Missing integrations", "Nothing, really"],
+  },
+  integration: {
+    n: 2,
+    title: "Which integration were you missing?",
+    options: ["Slack", "Notion", "HubSpot", "Zapier"],
+  },
+  plan: {
+    n: 3,
+    title: "Which plan would fit your team?",
+    options: ["Just me", "A small team", "The whole company", "Not sure yet"],
+  },
+};
+const HERO_TOTAL = 3;
+
+/** The one jump rule in the example form: only "Missing integrations" asks Q2. */
+function heroNext(step: HeroStepId, answer: string | undefined): HeroStepId | "done" {
+  if (step === "blocker") return answer === "Missing integrations" ? "integration" : "plan";
+  if (step === "integration") return "plan";
+  return "done";
+}
+
+/**
+ * A working, three-question Flowform: click or use A–D and Enter, go back,
+ * and watch the logic jump skip Q2 unless the respondent picks
+ * "Missing integrations". Nothing is stored.
+ */
+function HeroForm() {
+  const [step, setStep] = useState<HeroStepId | "done">("blocker");
+  const [answers, setAnswers] = useState<Partial<Record<HeroStepId, string>>>({
+    blocker: "Pricing",
+  });
+  const [history, setHistory] = useState<HeroStepId[]>([]);
+
+  // Moving between steps unmounts the focused OK button, which would drop focus
+  // to <body> and kill the keyboard shortcuts. Once the visitor has used the
+  // form, keep focus on it (never on first load, so the page isn't hijacked).
+  const figureRef = useRef<HTMLElement>(null);
+  const engaged = useRef(false);
+  useEffect(() => {
+    if (engaged.current) figureRef.current?.focus({ preventScroll: true });
+  }, [step]);
+
+  const current = step === "done" ? null : HERO_STEPS[step];
+  const picked = step === "done" ? undefined : answers[step];
+  const skippedQ2 = history.length > 0 && !history.includes("integration") && step !== "blocker";
+  const progress = step === "done" ? 1 : (current!.n - 1) / HERO_TOTAL;
+
+  const pick = (opt: string) => {
+    if (step === "done") return;
+    setAnswers((a) => ({ ...a, [step]: opt }));
+  };
+  const advance = () => {
+    if (step === "done" || !picked) return;
+    setHistory((h) => [...h, step]);
+    setStep(heroNext(step, picked));
+  };
+  const back = () => {
+    const prev = history[history.length - 1];
+    if (!prev) return;
+    setHistory((h) => h.slice(0, -1));
+    setStep(prev);
+  };
+  const restart = () => {
+    setAnswers({ blocker: "Pricing" });
+    setHistory([]);
+    setStep("blocker");
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (step === "done") restart();
+      else advance();
+      return;
+    }
+    if (!current) return;
+    const i = "abcd".indexOf(e.key.toLowerCase());
+    if (i >= 0 && i < current.options.length) {
+      e.preventDefault();
+      pick(current.options[i]);
+    }
+  };
+
+  // The logic note narrates the jump rule for whatever is selected right now.
+  let note: React.ReactNode = null;
+  if (step === "blocker") {
+    note =
+      picked === "Missing integrations" ? (
+        <>
+          Continues to <span className="font-medium">Q2: Integrations</span>
+        </>
+      ) : (
+        <>
+          “{picked}” skips Q2, jumps to <span className="font-medium">Q3: Plan fit</span>
+        </>
+      );
+  } else if (step === "plan" && skippedQ2) {
+    note = <>Q2 was skipped by the jump rule</>;
+  }
 
   return (
-    <figure className="relative">
+    <figure
+      ref={figureRef}
+      tabIndex={-1}
+      className="relative outline-none"
+      onKeyDown={onKeyDown}
+      onPointerDown={() => (engaged.current = true)}
+      onFocus={() => (engaged.current = true)}
+    >
       <Sheet
         bar={
           <>
             <span className="truncate">flowformapp.vercel.app/f/trial-feedback</span>
-            <span className="shrink-0">3 / 5</span>
+            <span className="shrink-0">
+              {step === "done" ? "Done" : `${current!.n} / ${HERO_TOTAL}`}
+            </span>
           </>
         }
       >
         <div className="h-px bg-hairline">
-          <div className="h-px w-3/5 bg-brand" />
+          <div
+            className="h-px bg-brand transition-[width] duration-500 ease-out"
+            style={{ width: `${Math.max(progress, 0.04) * 100}%` }}
+          />
         </div>
-        <div className="px-6 pt-8 pb-7 sm:px-9 sm:pt-10">
-          <p className="eyebrow">
-            <span className="text-brand">03</span>
-            <span className="mx-1.5 text-ink/25">/</span>05
-          </p>
-          <h3 className="mt-3 font-display text-[2rem] leading-[1.08] text-ink sm:text-[2.4rem]">
-            What almost stopped you from signing up?
-          </h3>
-          <ul className="mt-7 grid gap-2" role="radiogroup" aria-label="Example answer options">
-            {HERO_OPTIONS.map((opt, i) => {
-              const active = i === picked;
-              return (
-                <li key={opt}>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => setPicked(i)}
-                    className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left text-[15px] transition-colors ${
-                      active
-                        ? "border-brand bg-accent text-ink"
-                        : "border-hairline bg-white text-ink/75 hover:border-ink/25"
-                    }`}
-                  >
-                    <span
-                      className={`grid size-6 shrink-0 place-items-center rounded-sm border font-mono text-[11px] ${
-                        active ? "border-brand bg-brand text-white" : "border-ink/15 text-ink/50"
+
+        {current ? (
+          <div
+            key={step}
+            className="min-h-[27rem] px-6 pt-7 pb-7 motion-safe:animate-[demo-step-in_0.35s_ease-out_both] sm:px-9 sm:pt-8"
+          >
+            <div className="flex h-7 items-center justify-between">
+              <p className="font-mono text-xs text-ink/50">
+                <span className="text-brand">{String(current.n).padStart(2, "0")}</span>
+                <span className="mx-1.5 text-ink/25">/</span>
+                {String(HERO_TOTAL).padStart(2, "0")}
+              </p>
+              {history.length > 0 && (
+                <button
+                  type="button"
+                  onClick={back}
+                  className="-mr-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-ink/55 transition-colors hover:bg-ink/5 hover:text-ink"
+                >
+                  <ArrowLeft className="size-3.5" /> Back
+                </button>
+              )}
+            </div>
+            <h3 className="mt-2 font-display text-[2rem] leading-[1.08] text-ink sm:text-[2.4rem]">
+              {current.title}
+            </h3>
+            <ul className="mt-6 grid gap-2" role="radiogroup" aria-label={current.title}>
+              {current.options.map((opt, i) => {
+                const active = opt === picked;
+                return (
+                  <li key={opt}>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => pick(opt)}
+                      className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left text-[15px] transition-colors ${
+                        active
+                          ? "border-brand bg-accent text-ink"
+                          : "border-hairline bg-white text-ink/75 hover:border-ink/25"
                       }`}
                     >
-                      {String.fromCharCode(65 + i)}
-                    </span>
-                    <span className="flex-1">{opt}</span>
-                    {active && <Check className="size-4 text-brand" strokeWidth={2.5} />}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="mt-7 flex items-center gap-4">
-            <span className="inline-flex h-10 items-center rounded-md bg-brand px-5 text-sm font-medium text-white">
-              OK
-            </span>
-            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-ink/45">
-              press Enter <CornerDownLeft className="size-3" />
-            </span>
+                      <span
+                        className={`grid size-6 shrink-0 place-items-center rounded-sm border font-mono text-[11px] ${
+                          active ? "border-brand bg-brand text-white" : "border-ink/15 text-ink/50"
+                        }`}
+                      >
+                        {String.fromCharCode(65 + i)}
+                      </span>
+                      <span className="flex-1">{opt}</span>
+                      {active && <Check className="size-4 text-brand" strokeWidth={2.5} />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="mt-6 flex items-center gap-4">
+              <button
+                type="button"
+                onClick={advance}
+                disabled={!picked}
+                className="inline-flex h-10 items-center rounded-md bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand/90 disabled:opacity-40"
+              >
+                OK
+              </button>
+              <span className="hidden items-center gap-1.5 font-mono text-[11px] text-ink/45 sm:inline-flex">
+                press A–D, then Enter <CornerDownLeft className="size-3" />
+              </span>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="min-h-[27rem] px-6 pt-8 pb-7 motion-safe:animate-[demo-step-in_0.35s_ease-out_both] sm:px-9">
+            <p className="inline-flex items-center gap-1.5 text-sm font-medium text-mint">
+              <Check className="size-4" strokeWidth={2.5} /> Response recorded (not really)
+            </p>
+            <h3 className="mt-3 font-display text-[2.4rem] leading-[1.05] text-ink">
+              That was a Flowform.
+            </h3>
+            <ol className="mt-5 divide-y divide-hairline border-y border-hairline text-[15px]">
+              {(Object.keys(HERO_STEPS) as HeroStepId[]).map((id) => {
+                const skipped = !history.includes(id);
+                return (
+                  <li key={id} className="flex items-baseline justify-between gap-4 py-2.5">
+                    <span className={skipped ? "text-ink/35" : "text-ink/60"}>
+                      Q{HERO_STEPS[id].n}
+                    </span>
+                    <span
+                      className={`text-right ${skipped ? "font-mono text-xs text-ink/40" : "text-ink"}`}
+                    >
+                      {skipped ? "skipped by logic" : answers[id]}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={restart}
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-input bg-white px-4 text-sm font-medium text-ink transition-colors hover:border-ink/35"
+              >
+                <RotateCcw className="size-3.5" /> Try another path
+              </button>
+              <Link
+                to="/demo"
+                className="inline-flex h-10 items-center gap-1.5 px-2 text-sm font-medium text-ink/65 transition-colors hover:text-ink"
+              >
+                Full demo <ArrowRight className="size-3.5" />
+              </Link>
+            </div>
+          </div>
+        )}
       </Sheet>
 
-      {/* Margin note: the logic rule this answer triggers */}
+      {/* The note sits under the card; its slot is reserved so steps without
+          a rule don't make the layout jump. */}
       <figcaption
-        className={`mt-4 flex items-start gap-3 rounded-lg border border-dashed px-4 py-3 text-sm transition-colors lg:absolute lg:right-[-2.5rem] lg:bottom-6 lg:mt-0 lg:w-60 lg:bg-paper lg:shadow-[0_12px_30px_-18px_rgb(20_22_30/0.35)] ${
-          jumps ? "border-brand/40 text-ink" : "border-ink/20 text-ink/55"
+        aria-live="polite"
+        className={`mt-4 flex min-h-[3.25rem] items-start gap-3 rounded-lg border border-dashed px-4 py-3 text-sm transition-opacity duration-300 ${
+          note ? "border-brand/40 bg-white text-ink opacity-100" : "border-transparent opacity-0"
         }`}
       >
-        <span className="mt-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-brand">
-          Logic
-        </span>
-        <span className="leading-snug">
-          {jumps ? (
-            <>
-              “Pricing” skips ahead to <span className="font-medium">Q5: Plan fit</span>
-            </>
-          ) : (
-            <>Other answers continue to Q4</>
-          )}
-        </span>
+        {note && (
+          <>
+            <span className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] font-medium uppercase tracking-wide text-brand">
+              <GitBranch className="size-3" />
+              Logic
+            </span>
+            <span className="leading-snug">{note}</span>
+          </>
+        )}
       </figcaption>
     </figure>
   );
@@ -207,7 +432,7 @@ function BuilderVignette() {
   return (
     <Sheet bar={<span>Editor · Trial feedback</span>}>
       <div className="p-5 sm:p-6">
-        <label className="eyebrow" htmlFor="vignette-goal">
+        <label className="text-sm font-medium text-ink/70" htmlFor="vignette-goal">
           What do you want to learn?
         </label>
         <div
@@ -313,7 +538,7 @@ function InsightVignette() {
         ].map(([k, v]) => (
           <div key={k} className="px-4 py-4 sm:px-5">
             <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">{k}</p>
-            <p className="mt-1 font-mono text-xl font-medium tracking-tight tabular-nums text-ink sm:text-2xl">
+            <p className="mt-1 font-mono text-lg font-medium tracking-tight whitespace-nowrap tabular-nums text-ink sm:text-2xl">
               {v}
             </p>
           </div>
@@ -359,7 +584,8 @@ function InsightVignette() {
 /* ------------------------------------------------------------------------ */
 
 const FEATURES: Array<{
-  index: string;
+  hue: Hue;
+  icon: LucideIcon;
   label: string;
   title: React.ReactNode;
   body: string;
@@ -367,7 +593,8 @@ const FEATURES: Array<{
   visual: React.ReactNode;
 }> = [
   {
-    index: "01",
+    hue: "sun",
+    icon: PenLine,
     label: "Build",
     title: (
       <>
@@ -383,7 +610,8 @@ const FEATURES: Array<{
     visual: <BuilderVignette />,
   },
   {
-    index: "02",
+    hue: "coral",
+    icon: GitBranch,
     label: "Branch",
     title: (
       <>
@@ -399,7 +627,8 @@ const FEATURES: Array<{
     visual: <LogicVignette />,
   },
   {
-    index: "03",
+    hue: "mint",
+    icon: BarChart3,
     label: "Learn",
     title: (
       <>
@@ -414,6 +643,13 @@ const FEATURES: Array<{
     ],
     visual: <InsightVignette />,
   },
+];
+
+const BUILT_DOTS = [
+  "bg-[oklch(0.72_0.14_255)]",
+  "bg-[oklch(0.75_0.14_40)]",
+  "bg-[oklch(0.75_0.11_165)]",
+  "bg-[oklch(0.85_0.13_88)]",
 ];
 
 const BUILT: Array<{ k: string; v: string }> = [
@@ -542,7 +778,12 @@ function Index() {
         <section className="px-4 pt-14 pb-20 sm:px-6 md:px-8 md:pt-20 lg:pb-28">
           <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
             <div>
-              <p className="eyebrow">Form builder · One question at a time</p>
+              <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-white py-1 pr-3 pl-1.5 text-sm text-ink/70">
+                <span className="rounded-full bg-mint-tint px-2 py-0.5 text-xs font-medium text-mint">
+                  Updated
+                </span>
+                AI features now run on Claude Opus 5.5
+              </span>
               <h1 className="mt-6 font-display text-[3.4rem] leading-[0.95] tracking-[-0.02em] text-ink sm:text-7xl lg:text-[5.6rem]">
                 Forms people actually <em className="text-brand">finish.</em>
               </h1>
@@ -559,11 +800,18 @@ function Index() {
                   Try the live demo
                 </Link>
               </div>
-              <p className="mt-8 font-mono text-[11px] text-ink/45">
-                No card · No respondent accounts · Open source
-              </p>
+              <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink/55">
+                {["No card needed", "No respondent accounts", "Open source"].map((t) => (
+                  <li key={t} className="inline-flex items-center gap-1.5">
+                    <Check className="size-3.5 text-mint" strokeWidth={2.5} />
+                    {t}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <RespondentVignette />
+            <Stage hue="sky" className="relative">
+              <HeroForm />
+            </Stage>
           </div>
         </section>
 
@@ -571,26 +819,30 @@ function Index() {
         <section id="product" className="border-t border-hairline">
           {FEATURES.map((f, i) => (
             <div
-              key={f.index}
+              key={f.label}
               className={`px-4 py-20 sm:px-6 md:px-8 md:py-28 ${i > 0 ? "border-t border-hairline" : ""}`}
             >
               <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
                 <div className={i % 2 === 1 ? "lg:order-2" : ""}>
-                  <SectionLabel index={f.index}>{f.label}</SectionLabel>
-                  <h2 className="mt-6 font-display text-[2.6rem] leading-[1.02] text-balance text-ink md:text-[3.4rem]">
+                  <FeatureTag hue={f.hue} icon={f.icon}>
+                    {f.label}
+                  </FeatureTag>
+                  <h2 className="mt-5 font-display text-[2.6rem] leading-[1.02] text-balance text-ink md:text-[3.4rem]">
                     {f.title}
                   </h2>
                   <p className="mt-6 max-w-md text-[17px] leading-relaxed text-ink/65">{f.body}</p>
                   <ul className="mt-8 max-w-md divide-y divide-hairline border-y border-hairline">
                     {f.points.map((p) => (
                       <li key={p} className="flex items-center gap-3 py-3 text-[15px] text-ink/80">
-                        <span className="size-1 rounded-full bg-brand" />
+                        <span className={`size-1.5 rounded-full ${HUE[f.hue].dot}`} />
                         {p}
                       </li>
                     ))}
                   </ul>
                 </div>
-                <div className={i % 2 === 1 ? "lg:order-1" : ""}>{f.visual}</div>
+                <Stage hue={f.hue} className={i % 2 === 1 ? "lg:order-1" : ""}>
+                  {f.visual}
+                </Stage>
               </div>
             </div>
           ))}
@@ -601,12 +853,7 @@ function Index() {
           <div className="mx-auto max-w-6xl">
             <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
               <div>
-                <p className="eyebrow flex items-center gap-3 text-paper/50">
-                  <span className="text-[oklch(0.7_0.16_264)]">04</span>
-                  <span className="h-px w-8 bg-paper/25" />
-                  Under the hood
-                </p>
-                <h2 className="mt-6 font-display text-[2.6rem] leading-[1.02] text-balance md:text-[3.4rem]">
+                <h2 className="font-display text-[2.6rem] leading-[1.02] text-balance md:text-[3.4rem]">
                   Built like a product, <em>not a prototype.</em>
                 </h2>
                 <p className="mt-6 max-w-sm text-[17px] leading-relaxed text-paper/60">
@@ -640,10 +887,13 @@ function Index() {
                     key={b.k}
                     className={`border-b border-paper/15 py-6 sm:py-7 ${i % 2 === 0 ? "sm:pr-8" : "sm:border-l sm:pl-8"}`}
                   >
-                    <dt className="font-mono text-[11px] uppercase tracking-wide text-paper/45">
+                    <dt className="flex items-center gap-2 text-sm font-medium text-paper">
+                      <span
+                        className={`size-1.5 rounded-full ${BUILT_DOTS[i % BUILT_DOTS.length]}`}
+                      />
                       {b.k}
                     </dt>
-                    <dd className="mt-2.5 text-[15px] leading-relaxed text-paper/85">{b.v}</dd>
+                    <dd className="mt-2 text-[15px] leading-relaxed text-paper/65">{b.v}</dd>
                   </div>
                 ))}
               </dl>
@@ -655,8 +905,7 @@ function Index() {
         <section id="faq" className="px-4 py-20 sm:px-6 md:px-8 md:py-28">
           <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
             <div>
-              <SectionLabel index="05">FAQ</SectionLabel>
-              <h2 className="mt-6 font-display text-[2.6rem] leading-[1.02] text-balance md:text-[3.4rem]">
+              <h2 className="font-display text-[2.6rem] leading-[1.02] text-balance md:text-[3.4rem]">
                 Before your <em>first form.</em>
               </h2>
             </div>
@@ -676,27 +925,39 @@ function Index() {
         </section>
 
         {/* Closing CTA + pricing */}
-        <section className="border-t border-hairline px-4 py-20 sm:px-6 md:px-8 md:py-28">
-          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-10 lg:flex-row lg:items-end">
-            <div>
-              <h2 className="font-display text-[3rem] leading-[0.98] md:text-[4.6rem]">
-                Ask one good question
-                <br />
-                <em className="text-brand">at a time.</em>
-              </h2>
-              <p className="mt-6 max-w-md text-[17px] text-ink/65">
-                Free while in early access. Every feature, every question type, no credit card.
-              </p>
+        <section className="px-4 pb-20 sm:px-6 md:px-8 md:pb-28">
+          <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-brand px-6 py-14 text-paper sm:px-12 md:py-20">
+            {/* Two oversized "answer bars" from the logo mark, as quiet texture */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-4 -right-20 hidden w-[26rem] space-y-6 opacity-[0.14] md:block"
+            >
+              <div className="h-16 rounded-xl bg-paper" />
+              <div className="h-16 w-3/5 rounded-xl bg-paper" />
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <PrimaryCTA>{session ? "Open dashboard" : "Create your first form"}</PrimaryCTA>
-              <Link
-                to="/demo"
-                className="inline-flex h-12 items-center gap-2 px-3 text-[15px] font-medium text-ink/70 transition-colors hover:text-ink"
-              >
-                Or try the demo
-                <ArrowRight className="size-4" />
-              </Link>
+            <div className="relative flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-end">
+              <div>
+                <h2 className="font-display text-[3rem] leading-[0.98] text-balance md:text-[4.6rem]">
+                  Ask one good question
+                  <br />
+                  <em>at a time.</em>
+                </h2>
+                <p className="mt-6 max-w-md text-[17px] text-paper/75">
+                  Free while in early access. Every feature, every question type, no credit card.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <PrimaryCTA tone="paper">
+                  {session ? "Open dashboard" : "Create your first form"}
+                </PrimaryCTA>
+                <Link
+                  to="/demo"
+                  className="inline-flex h-12 items-center gap-2 px-3 text-[15px] font-medium text-paper/80 transition-colors hover:text-paper"
+                >
+                  Or try the demo
+                  <ArrowRight className="size-4" />
+                </Link>
+              </div>
             </div>
           </div>
         </section>

@@ -257,7 +257,9 @@ function NewFormAuthed({ userId }: { userId: string }) {
         </button>
 
         {/* Templates */}
-        <h2 className="eyebrow mt-10">Or start from a template</h2>
+        <h2 className="mt-10 text-[15px] font-medium tracking-normal text-ink">
+          Or start from a template
+        </h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {TEMPLATES.map((t) => (
             <button

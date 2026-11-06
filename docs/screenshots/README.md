@@ -6,7 +6,7 @@ is a linked Loom video rather than a file in this folder, and the hero image is
 
 | File | Used for | Content |
 | --- | --- | --- |
-| `landing.png` | "The landing page" | Landing hero at 1440 × 800 |
+| `landing.png` | "The landing page" | Landing hero at 1440 × 900 |
 | `fill.png` | "Filling a form" | A respondent mid-flow on a multi-select question, two options picked |
 | `analytics.png` | "Measuring results" | Per-question charts from the responses dashboard of a real form |
 

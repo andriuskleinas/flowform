@@ -424,8 +424,7 @@ function DashboardAuthed({
 
             {!isLoading && !isError && forms.length === 0 && (
               <li className="flex flex-col items-center rounded-lg border border-dashed border-ink/20 bg-white/60 px-6 py-16 text-center">
-                <p className="eyebrow">Empty</p>
-                <h3 className="mt-3 font-display text-4xl">No forms yet</h3>
+                <h3 className="font-display text-4xl">No forms yet</h3>
                 <p className="mt-2 max-w-sm text-sm text-ink/60">
                   Start from a template, a blank page, or a one-line goal for Claude.
                 </p>

@@ -71,6 +71,14 @@
   --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-hairline: var(--hairline);
+  --color-sky: var(--sky);
+  --color-sky-tint: var(--sky-tint);
+  --color-coral: var(--coral);
+  --color-coral-tint: var(--coral-tint);
+  --color-mint: var(--mint);
+  --color-mint-tint: var(--mint-tint);
+  --color-sun: var(--sun);
+  --color-sun-tint: var(--sun-tint);
   --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Instrument Serif", ui-serif, Georgia, serif;
   --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -88,6 +96,20 @@
   --hairline: oklch(0.9 0.006 85);
   --brand: oklch(0.46 0.22 264);
   --brand-foreground: oklch(0.99 0.002 85);
+  /*
+   * Secondary palette — marketing surfaces only (feature tags, the soft
+   * "stages" behind product mock-ups). Each has a deep tone for text/icons
+   * and a tint for backgrounds. The product UI itself stays ink + brand.
+   */
+  --sky: oklch(0.46 0.2 258);
+  --sky-tint: oklch(0.935 0.04 255);
+  --coral: oklch(0.55 0.17 35);
+  --coral-tint: oklch(0.94 0.04 45);
+  --mint: oklch(0.47 0.1 165);
+  --mint-tint: oklch(0.94 0.04 165);
+  --sun: oklch(0.52 0.12 70);
+  --sun-tint: oklch(0.955 0.05 90);
+
   /* Rating stars only — a muted amber, never decoration. */
   --gold: oklch(0.76 0.14 75);
   --gold-foreground: oklch(0.3 0.06 75);

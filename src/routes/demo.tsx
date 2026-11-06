@@ -250,7 +250,9 @@ function DemoPage() {
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 pb-24">
         {phase === "intro" && (
           <div className="motion-safe:animate-[demo-step-in_0.5s_ease-out_both]">
-            <p className="eyebrow">Interactive demo · 4 questions · ~30 seconds</p>
+            <span className="inline-flex items-center gap-2 rounded-full bg-sky-tint px-3 py-1 text-sm font-medium text-sky">
+              Interactive demo · 4 questions · about 30 seconds
+            </span>
             <h1 className="mt-6 font-display text-6xl leading-[0.98] text-balance md:text-7xl">
               This is a <em className="text-brand">Flowform.</em>
             </h1>
@@ -400,8 +402,8 @@ function DemoPage() {
         {phase === "done" && (
           <div className="motion-safe:animate-[demo-step-in_0.5s_ease-out_both]">
             <div>
-              <p className="eyebrow flex items-center gap-2">
-                <CheckCircle2 className="size-3.5 text-brand" /> Demo complete
+              <p className="inline-flex items-center gap-1.5 rounded-full bg-mint-tint px-3 py-1 text-sm font-medium text-mint">
+                <CheckCircle2 className="size-3.5" /> Demo complete
               </p>
               <h1 className="mt-6 font-display text-5xl leading-[1.02] text-balance md:text-6xl">
                 That was a Flowform{name.trim() ? `, ${name.trim().split(/\s+/)[0]}` : ""}.
