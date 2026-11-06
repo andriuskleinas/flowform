@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
   ArrowRight,
-  ArrowUpRight,
   BarChart3,
   Check,
   CornerDownLeft,
@@ -29,7 +28,6 @@ export const Route = createFileRoute("/")({
 });
 
 const REPO_URL = "https://github.com/andriuskleinas/flowform";
-const DEMO_VIDEO_URL = "https://www.loom.com/share/a067acd4829d4d5ba661f69df3316b3b";
 
 /* ------------------------------------------------------------------------ */
 /* Shared bits                                                              */
@@ -691,7 +689,7 @@ const FAQS: Array<{ q: string; a: string }> = [
 
 const NAV_LINKS = [
   { href: "#product", label: "Product" },
-  { href: "#built", label: "Under the hood" },
+  { href: "#built", label: "Features" },
   { href: "#faq", label: "FAQ" },
 ];
 
@@ -833,7 +831,7 @@ function Index() {
           ))}
         </section>
 
-        {/* Under the hood */}
+        {/* Features: what runs behind the form */}
         <section id="built" className="bg-ink px-4 py-20 text-paper sm:px-6 md:px-8 md:py-28">
           <div className="mx-auto max-w-6xl">
             <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
@@ -854,15 +852,6 @@ function Index() {
                   >
                     <Github className="size-4" />
                     Read the source
-                  </a>
-                  <a
-                    href={DEMO_VIDEO_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-11 items-center gap-2 rounded-md border border-paper/20 px-4 text-sm font-medium text-paper transition-colors hover:border-paper/45"
-                  >
-                    Watch the 60-second demo
-                    <ArrowUpRight className="size-4" />
                   </a>
                 </div>
               </div>

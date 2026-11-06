@@ -1,7 +1,6 @@
 # Screenshots
 
-Static screenshots referenced from the root [README.md](../../README.md). The top-of-README demo
-is a linked Loom video rather than a file in this folder, and the hero image is
+Static screenshots referenced from the root [README.md](../../README.md). The hero image is
 [`public/og-image.png`](../../public/og-image.png), which doubles as the social preview.
 
 | File | Used for | Content |

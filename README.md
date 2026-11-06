@@ -38,7 +38,7 @@ exactly where people drop off.
 It's a deployed product, built end to end: product design, database security, AI integration,
 analytics and auth.
 
-[Watch a 60-second demo](https://www.loom.com/share/a067acd4829d4d5ba661f69df3316b3b) · no account needed for the [interactive demo](https://flowformapp.vercel.app/demo)
+No account needed for the [interactive demo](https://flowformapp.vercel.app/demo).
 
 > Portfolio project. The product works end to end; the example numbers in the landing page's
 > product mock-ups are labelled as illustrative.
