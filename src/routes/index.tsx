@@ -1,579 +1,510 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  BarChart3,
-  Check,
-  GitBranch,
-  Github,
-  LineChart,
-  Palette,
-  PenLine,
-  Quote,
-  Send,
-  Sparkles,
-  Star,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowRight, ArrowUpRight, Check, CornerDownLeft, Github } from "lucide-react";
+import { useState } from "react";
 
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/user-menu";
-import { getInitialsFromName } from "@/lib/utils";
+import { Logo } from "@/components/logo";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-  type CarouselApi,
-} from "@/components/ui/carousel";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
+const REPO_URL = "https://github.com/andriuskleinas/flowform";
+const DEMO_VIDEO_URL = "https://www.loom.com/share/a067acd4829d4d5ba661f69df3316b3b";
+
+/* ------------------------------------------------------------------------ */
+/* Shared bits                                                              */
+/* ------------------------------------------------------------------------ */
+
 function PrimaryCTA({
   children,
   size = "md",
-  variant = "brand",
+  tone = "ink",
 }: {
   children: React.ReactNode;
-  size?: "md" | "lg";
-  variant?: "brand" | "light";
+  size?: "sm" | "md";
+  tone?: "ink" | "paper";
 }) {
   const { session } = useAuth();
   const to = session ? "/dashboard" : "/signup";
-  const sizing = size === "lg" ? "px-8 py-4 text-base" : "px-3 py-2 text-sm sm:px-5 sm:py-2.5";
-  const variantClass =
-    variant === "brand"
-      ? "bg-brand text-brand-foreground hover:shadow-lg hover:shadow-brand/25"
-      : "bg-white text-ink hover:scale-[1.02]";
+  const sizing = size === "sm" ? "h-9 px-3.5 text-sm" : "h-12 px-6 text-[15px]";
+  const toneClass =
+    tone === "ink" ? "bg-ink text-paper hover:bg-ink/85" : "bg-paper text-ink hover:bg-white";
   return (
     <Link
       to={to}
       data-cta="get-started"
-      className={`inline-flex items-center gap-2 rounded-full font-semibold whitespace-nowrap transition-all ${sizing} ${variantClass}`}
+      className={`group inline-flex items-center gap-2 rounded-md font-medium whitespace-nowrap transition-colors ${sizing} ${toneClass}`}
     >
       {children}
-      <ArrowRight className="size-4" />
+      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
     </Link>
   );
 }
 
-type MockQuestion =
-  | { kind: "text"; label: string; placeholder: string }
-  | { kind: "choice"; label: string; options: string[] }
-  | { kind: "rating"; label: string };
+function SectionLabel({ index, children }: { index: string; children: React.ReactNode }) {
+  return (
+    <p className="eyebrow flex items-center gap-3">
+      <span className="text-brand">{index}</span>
+      <span className="h-px w-8 bg-ink/20" />
+      {children}
+    </p>
+  );
+}
 
-const MOCK_QUESTIONS: MockQuestion[] = [
-  { kind: "text", label: "What's your name?", placeholder: "Type your answer…" },
-  {
-    kind: "choice",
-    label: "Which best describes your team?",
-    options: ["Design", "Product", "Research", "Marketing"],
-  },
-  { kind: "rating", label: "How likely are you to recommend us?" },
-];
-
-const SHARDS = [
-  { top: "8%", left: "6%", size: 56, color: "brand", delay: "0s", duration: "11s" },
-  { top: "72%", left: "12%", size: 36, color: "gold", delay: "-3s", duration: "13s" },
-  { top: "20%", left: "88%", size: 44, color: "gold", delay: "-6s", duration: "15s" },
-  { top: "78%", left: "82%", size: 64, color: "brand", delay: "-2s", duration: "12s" },
-  { top: "50%", left: "94%", size: 28, color: "brand", delay: "-9s", duration: "17s" },
-];
-
-function AnimatedFormMock() {
-  const [step, setStep] = useState(0);
-  const [typed, setTyped] = useState("");
-
-  // Auto-advance the question every 3.6s
-  useEffect(() => {
-    const id = setInterval(() => {
-      setStep((s) => (s + 1) % MOCK_QUESTIONS.length);
-    }, 3600);
-    return () => clearInterval(id);
-  }, []);
-
-  // Typewriter effect for the active question label
-  useEffect(() => {
-    setTyped("");
-    const label = MOCK_QUESTIONS[step].label;
-    let i = 0;
-    const id = setInterval(() => {
-      i += 1;
-      setTyped(label.slice(0, i));
-      if (i >= label.length) clearInterval(id);
-    }, 28);
-    return () => clearInterval(id);
-  }, [step]);
-
-  const q = MOCK_QUESTIONS[step];
-  const progress = ((step + 1) / MOCK_QUESTIONS.length) * 100;
-
+/** A product "window": white sheet, hairline border, one soft ambient shadow. */
+function Sheet({
+  children,
+  className = "",
+  bar,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  bar?: React.ReactNode;
+}) {
   return (
     <div
-      className="relative aspect-[3/2] w-full overflow-hidden bg-gradient-to-br from-white via-surface to-white"
-      aria-label="Animated Flowform preview cycling through example questions"
+      className={`overflow-hidden rounded-xl border border-hairline bg-white shadow-[0_1px_0_rgb(0_0_0/0.03),0_30px_60px_-30px_rgb(20_22_30/0.22)] ${className}`}
     >
-      {/* Floating ambient shards */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        {SHARDS.map((s, i) => (
-          <div
-            key={i}
-            className={`absolute rounded-2xl opacity-40 blur-[2px] motion-safe:animate-[shard-drift_var(--dur)_ease-in-out_infinite] ${
-              s.color === "brand" ? "bg-brand/30" : "bg-gold/40"
-            }`}
-            style={{
-              top: s.top,
-              left: s.left,
-              width: s.size,
-              height: s.size * 0.6,
-              animationDelay: s.delay,
-              ["--dur" as string]: s.duration,
-              transform:
-                "translate3d(calc(var(--px, 0) * 0.04px), calc(var(--py, 0) * 0.04px), 0) rotate(-12deg)",
-            }}
-          />
-        ))}
-      </div>
+      {bar && (
+        <div className="flex items-center justify-between gap-4 border-b border-hairline px-4 py-2.5 font-mono text-[11px] text-ink/45">
+          {bar}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
 
-      {/* Form card */}
-      <div className="absolute inset-0 flex items-center justify-center p-[6%]">
-        <div className="relative w-full max-w-[78%] rounded-2xl border border-ink/5 bg-white/90 p-6 shadow-xl backdrop-blur-sm md:p-8">
-          {/* Progress */}
-          <div className="mb-6 flex items-center gap-3">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/40">
-              {step + 1} / {MOCK_QUESTIONS.length}
-            </span>
-            <div className="h-1 flex-1 overflow-hidden rounded-full bg-ink/5">
-              <div
-                className="h-full rounded-full bg-brand transition-all duration-700 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
+function Tag({ children, tone = "ink" }: { children: React.ReactNode; tone?: "ink" | "brand" }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-sm border px-1.5 py-px font-mono text-[10px] font-medium uppercase tracking-wide ${
+        tone === "brand"
+          ? "border-brand/25 bg-accent text-brand"
+          : "border-hairline bg-surface text-ink/55"
+      }`}
+    >
+      {children}
+    </span>
+  );
+}
 
-          {/* Question label with typewriter caret */}
-          <h3 className="min-h-[2.5em] text-xl font-bold tracking-tight text-ink md:text-2xl">
-            {typed}
-            <span
-              aria-hidden
-              className="ml-0.5 inline-block h-[1em] w-[2px] -translate-y-[2px] bg-brand align-middle motion-safe:animate-[caret-blink_1s_steps(2)_infinite]"
-            />
+/* ------------------------------------------------------------------------ */
+/* Hero vignette — a respondent mid-form, with the logic rule annotated     */
+/* ------------------------------------------------------------------------ */
+
+const HERO_OPTIONS = ["Pricing", "Setup time", "Missing integrations", "Nothing, really"];
+
+function RespondentVignette() {
+  const [picked, setPicked] = useState(0);
+  const jumps = picked === 0;
+
+  return (
+    <figure className="relative">
+      <Sheet
+        bar={
+          <>
+            <span className="truncate">flowformapp.vercel.app/f/trial-feedback</span>
+            <span className="shrink-0">3 / 5</span>
+          </>
+        }
+      >
+        <div className="h-px bg-hairline">
+          <div className="h-px w-3/5 bg-brand" />
+        </div>
+        <div className="px-6 pt-8 pb-7 sm:px-9 sm:pt-10">
+          <p className="eyebrow">Question 3</p>
+          <h3 className="mt-3 font-display text-[2rem] leading-[1.08] text-ink sm:text-[2.4rem]">
+            What almost stopped you from signing up?
           </h3>
-
-          {/* Answer area swaps per question */}
-          <div key={step} className="mt-5 motion-safe:animate-[fade-in_0.5s_ease-out_both]">
-            {q.kind === "text" && (
-              <div className="rounded-lg border border-ink/10 bg-surface px-4 py-3 text-sm text-ink/40">
-                {q.placeholder}
-              </div>
-            )}
-            {q.kind === "choice" && (
-              <ul className="grid grid-cols-2 gap-2">
-                {q.options.map((opt, i) => (
-                  <li
-                    key={opt}
-                    className="flex items-center gap-2 rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm font-medium text-ink/70"
-                    style={{ animationDelay: `${i * 60}ms` }}
-                  >
-                    <span className="grid size-5 place-items-center rounded border border-ink/15 text-[10px] font-bold text-ink/40">
-                      {String.fromCharCode(65 + i)}
-                    </span>
-                    {opt}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {q.kind === "rating" && (
-              <div className="flex items-center gap-2">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                  <span
-                    key={n}
-                    className={`grid h-9 flex-1 place-items-center rounded-md border text-sm font-semibold transition-colors ${
-                      n <= 8
-                        ? "border-brand/30 bg-brand/10 text-brand"
-                        : "border-ink/10 bg-white text-ink/50"
+          <ul className="mt-7 grid gap-2" role="radiogroup" aria-label="Example answer options">
+            {HERO_OPTIONS.map((opt, i) => {
+              const active = i === picked;
+              return (
+                <li key={opt}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setPicked(i)}
+                    className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left text-[15px] transition-colors ${
+                      active
+                        ? "border-brand bg-accent text-ink"
+                        : "border-hairline bg-white text-ink/75 hover:border-ink/25"
                     }`}
                   >
-                    {n}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Continue button */}
-          <div className="mt-6 flex items-center justify-between">
-            <span className="text-xs text-ink/40">Press Enter ↵</span>
-            <button
-              type="button"
-              tabIndex={-1}
-              aria-hidden
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground shadow-md shadow-brand/20 motion-safe:animate-[btn-breathe_2.6s_ease-in-out_infinite]"
-            >
-              Continue
-              <ArrowRight className="size-4" />
-            </button>
+                    <span
+                      className={`grid size-6 shrink-0 place-items-center rounded-sm border font-mono text-[11px] ${
+                        active ? "border-brand bg-brand text-white" : "border-ink/15 text-ink/50"
+                      }`}
+                    >
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    <span className="flex-1">{opt}</span>
+                    {active && <Check className="size-4 text-brand" strokeWidth={2.5} />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-7 flex items-center gap-4">
+            <span className="inline-flex h-10 items-center rounded-md bg-brand px-5 text-sm font-medium text-white">
+              OK
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-ink/45">
+              press Enter <CornerDownLeft className="size-3" />
+            </span>
           </div>
         </div>
-      </div>
-    </div>
+      </Sheet>
+
+      {/* Margin note: the logic rule this answer triggers */}
+      <figcaption
+        className={`mt-4 flex items-start gap-3 rounded-lg border border-dashed px-4 py-3 text-sm transition-colors lg:absolute lg:right-[-2.5rem] lg:bottom-6 lg:mt-0 lg:w-60 lg:bg-paper lg:shadow-[0_12px_30px_-18px_rgb(20_22_30/0.35)] ${
+          jumps ? "border-brand/40 text-ink" : "border-ink/20 text-ink/55"
+        }`}
+      >
+        <span className="mt-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-brand">
+          Logic
+        </span>
+        <span className="leading-snug">
+          {jumps ? (
+            <>
+              “Pricing” skips ahead to <span className="font-medium">Q5: Plan fit</span>
+            </>
+          ) : (
+            <>Other answers continue to Q4</>
+          )}
+        </span>
+      </figcaption>
+    </figure>
   );
 }
 
-function HeroPreview() {
-  return (
-    <div
-      className="group relative mt-16 motion-safe:animate-[hero-rise_0.7s_ease-out_both] md:mt-20"
-      style={{ perspective: "1200px" }}
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -inset-10 hidden overflow-hidden rounded-[48px] transition-opacity duration-500 md:block"
-        style={{ opacity: "calc(0.75 + 0.35 * var(--active, 0))" }}
-      >
-        <div
-          className="absolute left-1/2 top-1/2 size-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/40 blur-3xl will-change-transform motion-safe:animate-[aurora-drift-a_14s_ease-in-out_infinite]"
-          style={{ mixBlendMode: "screen" }}
-        />
-        <div
-          className="absolute left-1/2 top-1/2 size-[55%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/40 blur-3xl will-change-transform motion-safe:animate-[aurora-drift-b_18s_ease-in-out_infinite]"
-          style={{ mixBlendMode: "screen" }}
-        />
-        <div className="absolute inset-6 rounded-[40px] border border-brand/20 motion-safe:animate-[aurora-pulse_6s_ease-in-out_infinite]" />
-      </div>
-      <div
-        className="relative overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-2xl transition-transform duration-300 ease-out motion-safe:animate-[float_6s_ease-in-out_infinite] will-change-transform"
-        style={{
-          transform:
-            "perspective(1200px) rotateX(calc((0.5 - var(--sy, 0.5)) * 8deg)) rotateY(calc((var(--sx, 0.5) - 0.5) * 10deg))",
-          transformStyle: "preserve-3d",
-        }}
-      >
-        <AnimatedFormMock />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-          style={{
-            background:
-              "radial-gradient(circle 280px at calc(var(--sx, 0.5) * 100%) calc(var(--sy, 0.5) * 100%), rgba(255,255,255,0.55), transparent 70%)",
-            mixBlendMode: "soft-light",
-            opacity: "var(--active, 0)",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
+/* ------------------------------------------------------------------------ */
+/* Feature vignettes                                                        */
+/* ------------------------------------------------------------------------ */
 
-const testimonials: Array<{
-  quote: string;
-  name: string;
-  role: string;
-  company: string;
-}> = [
-  {
-    quote: "We replaced three survey tools with one Flowform. Response rates doubled in a week.",
-    name: "Maya Chen",
-    role: "Head of Research",
-    company: "Northwind",
-  },
-  {
-    quote: "It finally looks like our brand. Customers actually finish the form.",
-    name: "Daniel Ortiz",
-    role: "Design Lead",
-    company: "Lumen",
-  },
-  {
-    quote: "The drop-off insights are surgical. We rewrote our onboarding in an afternoon.",
-    name: "Priya Raman",
-    role: "Growth",
-    company: "Axiom",
-  },
-  {
-    quote: "Setup took an afternoon. Our reply rate hasn't dropped below 60% since.",
-    name: "Jordan Blake",
-    role: "Ops Lead",
-    company: "Fernbridge",
-  },
+const SUGGESTIONS: Array<{ type: string; text: string }> = [
+  { type: "Multiple choice", text: "What were you hoping Flowform would do for you?" },
+  { type: "NPS", text: "How likely are you to recommend us to a colleague?" },
+  { type: "Long answer", text: "What would make upgrading an easy decision?" },
 ];
 
-function TestimonialsCarousel() {
-  const [api, setApi] = useState<CarouselApi>();
-  const [selected, setSelected] = useState(0);
-  const [count, setCount] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [interacted, setInteracted] = useState(false);
-
-  useEffect(() => {
-    if (!api) return;
-    setCount(api.scrollSnapList().length);
-    setSelected(api.selectedScrollSnap());
-    api.on("select", () => setSelected(api.selectedScrollSnap()));
-  }, [api]);
-
-  // Autoplay pauses while hovered/focused and stops for good once the
-  // user takes over (WCAG 2.2.2 — no unstoppable auto-updating content).
-  useEffect(() => {
-    if (!api || paused || interacted) return;
-    const id = setInterval(() => api.scrollNext(), 6000);
-    return () => clearInterval(id);
-  }, [api, paused, interacted]);
-
+function BuilderVignette() {
+  const [added, setAdded] = useState<Record<number, boolean>>({ 0: true });
   return (
-    <Carousel
-      setApi={setApi}
-      opts={{ loop: true, align: "center" }}
-      className="mx-auto w-full max-w-6xl"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
-      onPointerDown={() => setInteracted(true)}
-    >
-      <CarouselContent className="-ml-6">
-        {testimonials.map((t, i) => {
-          const isActive = i === selected;
-          return (
-            <CarouselItem key={t.name} className="pl-6 md:basis-1/2 lg:basis-1/3">
-              <article
-                className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border bg-white p-10 transition-all duration-300 hover:-translate-y-1 ${
-                  isActive
-                    ? "border-brand/20 shadow-2xl shadow-brand/10 ring-1 ring-brand/20"
-                    : "border-ink/5 shadow-xl shadow-ink/5 hover:shadow-2xl hover:shadow-brand/10"
+    <Sheet bar={<span>Editor · Trial feedback</span>}>
+      <div className="p-5 sm:p-6">
+        <label className="eyebrow" htmlFor="vignette-goal">
+          What do you want to learn?
+        </label>
+        <div
+          id="vignette-goal"
+          className="mt-2 rounded-md border border-input bg-surface px-3 py-2.5 text-[15px] text-ink"
+        >
+          Why trial users don’t upgrade
+        </div>
+        <ul className="mt-5 divide-y divide-hairline border-y border-hairline">
+          {SUGGESTIONS.map((s, i) => (
+            <li key={s.text} className="flex items-center gap-4 py-3.5">
+              <div className="min-w-0 flex-1">
+                <Tag>{s.type}</Tag>
+                <p className="mt-1.5 text-[15px] leading-snug text-ink">{s.text}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdded((a) => ({ ...a, [i]: !a[i] }))}
+                className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors ${
+                  added[i]
+                    ? "border-transparent bg-ink text-paper"
+                    : "border-hairline bg-white text-ink hover:border-ink/30"
                 }`}
               >
-                {/* Watermark quote glyph */}
-                <Quote
-                  aria-hidden
-                  className="pointer-events-none absolute -top-2 -left-2 size-28 rotate-180 text-brand/10 transition-colors duration-300 group-hover:text-brand/15"
-                  strokeWidth={1}
-                />
-
-                {/* Stars */}
-                <div className="relative flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, s) => (
-                    <Star key={s} className="size-4 fill-gold text-gold" strokeWidth={0} />
-                  ))}
-                </div>
-
-                {/* Quote */}
-                <p className="relative mt-6 flex-1 text-xl font-medium leading-snug tracking-tight text-ink md:text-2xl">
-                  &ldquo;{t.quote}&rdquo;
-                </p>
-
-                {/* Footer */}
-                <div className="relative mt-10 flex items-center gap-4 border-t border-ink/5 pt-6">
-                  <div className="grid size-12 shrink-0 place-items-center rounded-full bg-brand/10 text-sm font-bold text-brand">
-                    {getInitialsFromName(t.name)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate font-bold text-ink">{t.name}</div>
-                    <div className="truncate text-sm text-ink/50">
-                      {t.role} · {t.company}
-                    </div>
-                  </div>
-                </div>
-              </article>
-            </CarouselItem>
-          );
-        })}
-      </CarouselContent>
-      <CarouselPrevious className="hidden border-ink/5 bg-white text-ink shadow-md hover:bg-brand hover:text-brand-foreground md:-left-14 md:flex" />
-      <CarouselNext className="hidden border-ink/5 bg-white text-ink shadow-md hover:bg-brand hover:text-brand-foreground md:-right-14 md:flex" />
-
-      <div className="mt-10 flex justify-center gap-2">
-        {Array.from({ length: count }).map((_, i) => (
-          <button
-            key={i}
-            type="button"
-            aria-label={`Go to testimonial ${i + 1}`}
-            onClick={() => api?.scrollTo(i)}
-            className={`h-1.5 rounded-full transition-all ${
-              i === selected ? "w-8 bg-brand" : "w-2 bg-ink/15 hover:bg-ink/30"
-            }`}
-          />
-        ))}
+                {added[i] ? (
+                  <>
+                    <Check className="size-3.5" /> Added
+                  </>
+                ) : (
+                  "Add"
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 font-mono text-[11px] text-ink/45">Drafted by Claude · edit anything</p>
       </div>
-    </Carousel>
+    </Sheet>
   );
 }
 
-type FeatureAccent = "brand" | "gold";
+const LOGIC_ROWS: Array<{ answer: string; to: string; jump?: boolean }> = [
+  { answer: "A friend or colleague", to: "Next question" },
+  { answer: "Search", to: "Next question" },
+  { answer: "Just browsing", to: "Q6 · Anything else?", jump: true },
+];
 
-const features: Array<{
-  icon: typeof GitBranch;
-  title: string;
+function LogicVignette() {
+  return (
+    <Sheet bar={<span>Q2 · Jump rules</span>}>
+      <div className="p-5 sm:p-6">
+        <p className="font-display text-2xl leading-tight text-ink">How did you find us?</p>
+        <div className="mt-5 overflow-hidden rounded-md border border-hairline">
+          <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-hairline bg-surface px-4 py-2 font-mono text-[10px] uppercase tracking-wide text-ink/45">
+            <span>If they answer</span>
+            <span>Go to</span>
+          </div>
+          {LOGIC_ROWS.map((r) => (
+            <div
+              key={r.answer}
+              className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-hairline px-4 py-3 text-[14px] last:border-b-0"
+            >
+              <span className="text-ink">{r.answer}</span>
+              <span
+                className={`inline-flex items-center gap-1.5 ${r.jump ? "font-medium text-brand" : "text-ink/45"}`}
+              >
+                <ArrowRight className="size-3.5" />
+                {r.to}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 font-mono text-[11px] text-ink/45">
+          Forward-only, and required questions on skipped paths never block a submit
+        </p>
+      </div>
+    </Sheet>
+  );
+}
+
+const FUNNEL = [
+  { label: "Opened", value: 1240 },
+  { label: "Started", value: 912 },
+  { label: "Completed", value: 688 },
+];
+
+function InsightVignette() {
+  const max = FUNNEL[0].value;
+  return (
+    <Sheet
+      bar={
+        <>
+          <span>Responses · last 30 days</span>
+          <span>Illustrative data</span>
+        </>
+      }
+    >
+      <div className="grid grid-cols-3 divide-x divide-hairline border-b border-hairline">
+        {[
+          ["Responses", "688"],
+          ["Completion", "55%"],
+          ["Avg. time", "1m 42s"],
+        ].map(([k, v]) => (
+          <div key={k} className="px-4 py-4 sm:px-5">
+            <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">{k}</p>
+            <p className="mt-1 font-mono text-xl font-medium tracking-tight tabular-nums text-ink sm:text-2xl">
+              {v}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2.5 px-5 py-5 sm:px-6">
+        {FUNNEL.map((f, i) => (
+          <div key={f.label} className="grid grid-cols-[5.5rem_1fr_3rem] items-center gap-3">
+            <span className="text-[13px] text-ink/60">{f.label}</span>
+            <div className="h-2 rounded-sm bg-surface">
+              <div
+                className={`h-2 rounded-sm ${i === FUNNEL.length - 1 ? "bg-brand" : "bg-ink/70"}`}
+                style={{ width: `${(f.value / max) * 100}%` }}
+              />
+            </div>
+            <span className="text-right font-mono text-[12px] tabular-nums text-ink/60">
+              {f.value.toLocaleString("en-US")}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-hairline bg-paper px-5 py-5 sm:px-6">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">
+            Summary of 214 open answers
+          </p>
+          <Tag tone="brand">Claude</Tag>
+        </div>
+        <p className="mt-2.5 text-[15px] leading-relaxed text-ink">
+          Most people stall at the pricing question. Teams want a monthly plan before committing to
+          annual.
+        </p>
+        <blockquote className="mt-3 border-l-2 border-ink/15 pl-3 font-display text-lg italic leading-snug text-ink/70">
+          “Would happily pay monthly — annual feels like a big jump for a tool we’re still trying.”
+        </blockquote>
+      </div>
+    </Sheet>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
+/* Content                                                                  */
+/* ------------------------------------------------------------------------ */
+
+const FEATURES: Array<{
+  index: string;
+  label: string;
+  title: React.ReactNode;
   body: string;
-  accent?: FeatureAccent;
+  points: string[];
+  visual: React.ReactNode;
 }> = [
   {
-    icon: Sparkles,
-    title: "AI that drafts your questions.",
-    body: "Describe what you want to learn and Flowform suggests sharp, well-worded questions — powered by Claude. Accept, edit, or riff.",
-    accent: "gold",
+    index: "01",
+    label: "Build",
+    title: (
+      <>
+        Start from a goal, <em>not</em> a blank page.
+      </>
+    ),
+    body: "Say what you want to learn and Claude drafts well-worded, correctly typed questions. Keep the ones you like, rewrite the rest, and reorder by drag and drop.",
+    points: [
+      "Seven question types, from short text to NPS",
+      "Templates, or start from scratch",
+      "Live preview of exactly what respondents see",
+    ],
+    visual: <BuilderVignette />,
   },
   {
-    icon: GitBranch,
-    title: "Logic that adapts.",
-    body: "Branch, skip, and personalize in real time. Every respondent gets a path built just for them — no spreadsheets required.",
+    index: "02",
+    label: "Branch",
+    title: (
+      <>
+        Skip what doesn’t <em>apply.</em>
+      </>
+    ),
+    body: "Jump rules send each respondent down the path that fits their answers, so nobody is asked a question that doesn’t concern them.",
+    points: [
+      "Answer-based jumps on any choice question",
+      "Path-aware validation for required questions",
+      "Conversational or classic one-page layout",
+    ],
+    visual: <LogicVignette />,
   },
   {
-    icon: Palette,
-    title: "Design that owns the room.",
-    body: "Pixel-perfect themes, your typography, your palette. A form that looks like it belongs on your homepage.",
-  },
-  {
-    icon: BarChart3,
-    title: "Insight, not just data.",
-    body: "Drop-off heatmaps, completion velocity, and live response streams — the signal behind every answer.",
-    accent: "gold",
+    index: "03",
+    label: "Learn",
+    title: (
+      <>
+        See where people stop, <em>and why.</em>
+      </>
+    ),
+    body: "A real funnel from opened to completed, drop-off per question, and a Claude summary that turns hundreds of open answers into a few themes, with quotes to back them up.",
+    points: [
+      "Completion rate and time to fill",
+      "7, 30 and 90-day response trends",
+      "CSV export whenever you need the raw data",
+    ],
+    visual: <InsightVignette />,
   },
 ];
 
-const HOW_IT_WORKS: Array<{
-  icon: typeof PenLine;
-  step: string;
-  title: string;
-  body: string;
-}> = [
+const BUILT: Array<{ k: string; v: string }> = [
   {
-    icon: PenLine,
-    step: "1",
-    title: "Build",
-    body: "Start from a blank canvas, add questions in the drag-and-drop editor, or let AI draft them from a one-line goal.",
+    k: "Rendering",
+    v: "TanStack Start with server-side rendering, deployed on Vercel.",
   },
   {
-    icon: Send,
-    step: "2",
-    title: "Share",
-    body: "Publish to a link your audience can open anywhere. No accounts, no downloads — one question at a time.",
+    k: "Data & security",
+    v: "Postgres on Supabase. Every table is guarded by row-level security policies.",
   },
   {
-    icon: LineChart,
-    step: "3",
-    title: "Learn",
-    body: "Watch responses stream into your dashboard the moment they arrive, and spot where people drop off.",
+    k: "AI",
+    v: "Claude drafts questions and summarises open answers, called server-side only.",
+  },
+  {
+    k: "Analytics",
+    v: "An event stream of opens, starts and submits powers the funnel and drop-off views.",
+  },
+  {
+    k: "Respondent UX",
+    v: "Keyboard-first (Enter, A–D, 0–9), drafts saved locally, reduced-motion aware.",
+  },
+  {
+    k: "Accounts",
+    v: "Email sign-up with confirmation, password reset and idle sign-out.",
   },
 ];
 
 const FAQS: Array<{ q: string; a: string }> = [
   {
-    q: "Is Flowform really free?",
-    a: "Yes. Flowform is free while in early access — every feature included, no credit card required. If that ever changes, you'll hear about it well in advance.",
+    q: "Is Flowform free?",
+    a: "Yes. Flowform is free while it’s in early access, with every feature included and no credit card required.",
   },
   {
-    q: "Do my respondents need an account?",
-    a: "No. You share a link and it opens straight in the browser, on any device. Respondents answer one question at a time and they're done — no sign-up, no app.",
+    q: "Do respondents need an account?",
+    a: "No. You share a link (or a QR code, or an embed) and it opens straight in the browser on any device.",
   },
   {
-    q: "How do the AI question suggestions work?",
-    a: "Describe what you're trying to learn and Flowform — powered by Anthropic's Claude — drafts well-worded questions for you. You stay in control: accept them as-is, edit them, or use them as a starting point.",
+    q: "How do the AI features work?",
+    a: "Describe what you want to learn and Claude drafts questions you can accept or edit. On the results side, Claude reads your open-text answers and pulls out themes, sentiment and representative quotes. Summaries are labelled as AI-generated.",
   },
   {
-    q: "Can I see responses as they come in?",
-    a: "Yes. Every response appears in your dashboard in real time, per form, so you can act on feedback the moment it lands instead of waiting for a weekly export.",
-  },
-  {
-    q: "How is this different from a classic survey tool?",
-    a: "Classic surveys show a wall of questions and most people bail. Flowform shows one question at a time, like a conversation — which keeps people engaged all the way to the last answer.",
+    q: "How is this different from a classic survey?",
+    a: "A classic survey shows a wall of questions at once. Flowform shows one question at a time, skips what doesn’t apply, and tells you exactly where people drop off so you can fix it.",
   },
   {
     q: "Where is my data stored?",
-    a: "Your forms and responses are stored securely in a managed Postgres database (Supabase), protected with row-level security so only you can access your data. We don't sell or share it.",
+    a: "In a managed Postgres database on Supabase, protected by row-level security so only you can read your forms and responses. It isn’t sold or shared.",
   },
 ];
 
-const featureAccentStyles: Record<
-  FeatureAccent,
-  {
-    border: string;
-    iconBg: string;
-    iconText: string;
-    glow: string;
-    shadow: string;
-    bar: string;
-  }
-> = {
-  brand: {
-    border: "border-brand/10",
-    iconBg: "bg-brand/10",
-    iconText: "text-brand",
-    glow: "bg-brand/20",
-    shadow: "hover:shadow-[0_24px_60px_-20px_color-mix(in_oklch,var(--brand)_35%,transparent)]",
-    bar: "bg-brand/40",
-  },
-  gold: {
-    border: "border-gold/20",
-    iconBg: "bg-gold/10",
-    iconText: "text-gold",
-    glow: "bg-gold/25",
-    shadow: "hover:shadow-[0_24px_60px_-20px_color-mix(in_oklch,var(--gold)_35%,transparent)]",
-    bar: "bg-gold/50",
-  },
-};
-
 const NAV_LINKS = [
-  { href: "#features", label: "Features" },
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "#product", label: "Product" },
+  { href: "#built", label: "Under the hood" },
   { href: "#faq", label: "FAQ" },
 ];
 
+/* ------------------------------------------------------------------------ */
+/* Page                                                                     */
+/* ------------------------------------------------------------------------ */
+
 function SiteHeader() {
   const { session } = useAuth();
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   return (
-    <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "border-b border-ink/5 bg-surface/85 shadow-[0_4px_20px_rgb(0,0,0,0.04)] backdrop-blur-md"
-          : "border-b border-transparent bg-transparent"
-      }`}
-    >
-      <nav
-        className={`mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 transition-[padding] duration-300 sm:gap-3 sm:px-6 md:px-8 ${
-          scrolled ? "py-3.5" : "py-6"
-        }`}
-      >
-        <a href="/" className="flex shrink-0 items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
-            <span className="size-3 rounded-sm bg-white" />
-          </span>
-          <span className="text-xl font-bold tracking-tight">Flowform</span>
+    <header className="sticky top-0 z-50 border-b border-hairline bg-paper/85 backdrop-blur-md">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 md:px-8">
+        <a href="/" aria-label="Flowform home" className="shrink-0">
+          <Logo />
         </a>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-6 md:gap-8">
-          <div className="hidden items-center gap-6 md:flex">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <div className="hidden items-center md:flex">
             {NAV_LINKS.map((l) => (
               <a
                 key={l.href}
                 href={l.href}
-                className="text-sm font-medium text-ink/60 transition-colors hover:text-ink"
+                className="rounded-md px-3 py-2 text-sm text-ink/60 transition-colors hover:text-ink"
               >
                 {l.label}
               </a>
             ))}
+            <Link
+              to="/demo"
+              className="rounded-md px-3 py-2 text-sm text-ink/60 transition-colors hover:text-ink"
+            >
+              Demo
+            </Link>
           </div>
+          <span className="mx-2 hidden h-5 w-px bg-hairline md:block" />
           {session ? (
             <>
               <Link
                 to="/dashboard"
-                className="text-sm font-medium whitespace-nowrap text-ink/60 transition-colors hover:text-ink"
+                className="rounded-md px-3 py-2 text-sm whitespace-nowrap text-ink/70 transition-colors hover:text-ink"
               >
                 Dashboard
               </Link>
@@ -584,11 +515,11 @@ function SiteHeader() {
               <Link
                 to="/login"
                 search={{ redirect: "/dashboard" }}
-                className="text-sm font-medium whitespace-nowrap text-ink/60 transition-colors hover:text-ink"
+                className="rounded-md px-3 py-2 text-sm whitespace-nowrap text-ink/70 transition-colors hover:text-ink"
               >
                 Log in
               </Link>
-              <PrimaryCTA>Get started</PrimaryCTA>
+              <PrimaryCTA size="sm">Get started</PrimaryCTA>
             </>
           )}
         </div>
@@ -600,281 +531,139 @@ function SiteHeader() {
 function Index() {
   const { session } = useAuth();
   return (
-    <div className="min-h-screen bg-surface text-ink">
+    <div className="min-h-screen bg-paper text-ink">
       <SiteHeader />
 
       <main>
         {/* Hero */}
-        <section
-          className="relative overflow-hidden bg-gradient-to-b from-surface via-surface to-white px-6 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32"
-          onPointerMove={(e) => {
-            const el = e.currentTarget;
-            const r = el.getBoundingClientRect();
-            const sx = (e.clientX - r.left) / r.width;
-            const sy = (e.clientY - r.top) / r.height;
-            el.style.setProperty("--sx", `${sx}`);
-            el.style.setProperty("--sy", `${sy}`);
-            el.style.setProperty("--px", `${(sx - 0.5) * r.width}`);
-            el.style.setProperty("--py", `${(sy - 0.5) * r.height}`);
-            el.style.setProperty("--active", "1");
-          }}
-          onPointerLeave={(e) => {
-            const el = e.currentTarget;
-            el.style.setProperty("--sx", "0.5");
-            el.style.setProperty("--sy", "0.5");
-            el.style.setProperty("--px", "0");
-            el.style.setProperty("--py", "0");
-            el.style.setProperty("--active", "0");
-          }}
-        >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 transition-opacity duration-500"
-            style={{
-              background:
-                "radial-gradient(circle 600px at calc(var(--sx, 0.5) * 100%) calc(var(--sy, 0.5) * 100%), color-mix(in oklch, var(--brand) 18%, transparent), transparent 70%)",
-              opacity: "var(--active, 0)",
-            }}
-          />
-          <div className="relative mx-auto max-w-4xl text-center">
-            <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-7xl">
-              Forms people <span className="text-brand">actually finish.</span>
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink/60 md:mt-8 md:text-xl">
-              Craft beautifully simple, one-question-at-a-time experiences that feel less like a
-              survey and more like a conversation worth having.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4 md:mt-12">
-              <PrimaryCTA size="lg">Start building</PrimaryCTA>
-              {session ? (
-                <Link
-                  to="/dashboard"
-                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-ink/70 transition-colors hover:text-ink"
-                >
-                  Go to dashboard
-                  <ArrowRight className="size-4" />
-                </Link>
-              ) : (
+        <section className="px-4 pt-14 pb-20 sm:px-6 md:px-8 md:pt-20 lg:pb-28">
+          <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
+            <div>
+              <p className="eyebrow">Form builder · One question at a time</p>
+              <h1 className="mt-6 font-display text-[3.4rem] leading-[0.95] tracking-[-0.02em] text-ink sm:text-7xl lg:text-[5.6rem]">
+                Forms people actually <em className="text-brand">finish.</em>
+              </h1>
+              <p className="mt-7 max-w-lg text-lg leading-relaxed text-ink/65">
+                Flowform turns a survey into a conversation: one question at a time, skipping what
+                doesn’t apply, with Claude helping you write the questions and read the answers.
+              </p>
+              <div className="mt-9 flex flex-wrap items-center gap-3">
+                <PrimaryCTA>{session ? "Open dashboard" : "Start building, free"}</PrimaryCTA>
                 <Link
                   to="/demo"
-                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-ink/70 transition-colors hover:text-ink"
+                  className="inline-flex h-12 items-center gap-2 rounded-md border border-ink/15 bg-white px-5 text-[15px] font-medium text-ink transition-colors hover:border-ink/35"
                 >
-                  See it in action
-                  <ArrowRight className="size-4" />
+                  Try the live demo
                 </Link>
-              )}
+              </div>
+              <p className="mt-8 font-mono text-[11px] text-ink/45">
+                No card · No respondent accounts · Open source
+              </p>
             </div>
-
-            {/* Preview */}
-            <HeroPreview />
+            <RespondentVignette />
           </div>
         </section>
 
         {/* Features */}
-        <section
-          id="features"
-          className="relative overflow-hidden bg-gradient-to-b from-white via-white to-surface px-6 py-24 md:px-8 md:py-32"
-        >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -top-32 -left-32 hidden size-[480px] rounded-full bg-brand/5 blur-[120px] md:block"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -bottom-32 -right-32 hidden size-[460px] rounded-full bg-gold/5 blur-[120px] md:block"
-          />
-
-          <div className="relative mx-auto max-w-7xl">
-            <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-5xl">
-                Built for the questions
-                <br />
-                <span className="text-brand">that matter.</span>
-              </h2>
-              <p className="mx-auto mt-5 max-w-xl text-base text-ink/60 md:text-lg">
-                A precise toolkit for teams who treat every interaction like a first impression.
-              </p>
-            </div>
-
-            <ul className="mx-auto mt-16 grid max-w-5xl gap-6 md:grid-cols-2 lg:gap-8">
-              {features.map(({ icon: Icon, title, body, accent = "brand" }) => {
-                const a = featureAccentStyles[accent];
-                return (
-                  <li
-                    key={title}
-                    className={`group relative rounded-[28px] border ${a.border} bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition-all duration-500 hover:-translate-y-1 ${a.shadow} lg:p-10`}
-                  >
-                    <div className="relative mb-8">
-                      <div
-                        aria-hidden
-                        className={`pointer-events-none absolute -top-6 -left-6 size-28 rounded-full ${a.glow} opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100`}
-                      />
-                      <div
-                        className={`relative flex size-14 items-center justify-center rounded-2xl ${a.iconBg} ${a.iconText} transition-transform duration-500 group-hover:scale-110`}
-                      >
-                        <Icon className="size-6" strokeWidth={2} />
-                      </div>
-                    </div>
-                    <h3 className="text-2xl font-bold tracking-tight text-ink">{title}</h3>
-                    <p className="mt-4 text-base leading-relaxed text-ink/60 md:text-lg">{body}</p>
-                    <div
-                      aria-hidden
-                      className={`mt-8 h-px w-12 ${a.bar} opacity-60 transition-all duration-500 group-hover:w-20 group-hover:opacity-100`}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </section>
-
-        {/* How it works */}
-        <section
-          id="how-it-works"
-          className="relative overflow-hidden bg-surface px-6 py-24 md:px-8 md:py-32"
-        >
-          <div className="relative mx-auto max-w-7xl">
-            <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-5xl">
-                Live in <span className="text-brand">three steps.</span>
-              </h2>
-              <p className="mx-auto mt-5 max-w-xl text-base text-ink/60 md:text-lg">
-                From blank page to answers rolling in — without reading a manual.
-              </p>
-            </div>
-
-            <ol className="relative mx-auto mt-16 grid max-w-5xl gap-10 md:grid-cols-3 md:gap-8">
-              {/* Connecting line (desktop) */}
-              <div
-                aria-hidden
-                className="absolute top-7 right-[16%] left-[16%] hidden h-px bg-gradient-to-r from-brand/10 via-brand/30 to-brand/10 md:block"
-              />
-              {HOW_IT_WORKS.map(({ icon: Icon, step, title, body }) => (
-                <li key={step} className="relative flex flex-col items-center text-center">
-                  <div className="relative z-10 grid size-14 place-items-center rounded-2xl border border-brand/15 bg-white text-brand shadow-sm">
-                    <Icon className="size-6" strokeWidth={2} />
-                  </div>
-                  <span className="mt-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand/70">
-                    Step {step}
-                  </span>
-                  <h3 className="mt-2 text-xl font-bold tracking-tight text-ink">{title}</h3>
-                  <p className="mt-3 max-w-xs text-base leading-relaxed text-ink/60">{body}</p>
-                </li>
-              ))}
-            </ol>
-
-            <div className="mt-14 flex justify-center">
-              <Link
-                to="/demo"
-                className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white px-6 py-3 text-sm font-semibold text-ink transition-all hover:border-brand/30 hover:text-brand"
-              >
-                Try a live example form
-                <ArrowRight className="size-4" />
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-surface via-white to-surface px-6 py-24 md:px-8 md:py-32">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -top-24 -left-24 hidden size-[420px] rounded-full bg-brand/15 blur-[120px] md:block"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -bottom-24 -right-24 hidden size-[420px] rounded-full bg-gold/20 blur-[120px] md:block"
-          />
-          <div className="relative mx-auto max-w-7xl">
-            <div className="mx-auto max-w-2xl text-center">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand/70">
-                Early access feedback
-              </span>
-              <h2 className="mt-5 text-3xl font-extrabold tracking-tight text-balance md:text-5xl">
-                Loved by teams who ask better questions.
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-base text-ink/60 md:text-lg">
-                What early users say after swapping clunky surveys for conversations their customers
-                actually finish.
-              </p>
-            </div>
-
-            <div className="mt-16">
-              <TestimonialsCarousel />
-            </div>
-          </div>
-        </section>
-
-        {/* Pricing */}
-        <section
-          id="pricing"
-          className="relative overflow-hidden bg-gradient-to-b from-surface to-white px-6 py-24 md:px-8 md:py-32"
-        >
-          <div className="relative mx-auto max-w-7xl">
-            <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-5xl">
-                Pricing that's easy to say <span className="text-brand">yes to.</span>
-              </h2>
-              <p className="mx-auto mt-5 max-w-xl text-base text-ink/60 md:text-lg">
-                One plan while we're in early access: everything, for everyone, for free.
-              </p>
-            </div>
-
-            <div className="mx-auto mt-14 max-w-md">
-              <div className="relative rounded-[28px] border border-brand/15 bg-white p-8 shadow-[0_24px_60px_-20px_color-mix(in_oklch,var(--brand)_25%,transparent)] md:p-10">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-brand">
-                  <Sparkles className="size-3" />
-                  Early access
-                </span>
-                <div className="mt-6 flex items-baseline gap-2">
-                  <span className="text-6xl font-extrabold tracking-tight text-ink">$0</span>
-                  <span className="text-sm font-medium text-ink/50">/ month</span>
+        <section id="product" className="border-t border-hairline">
+          {FEATURES.map((f, i) => (
+            <div
+              key={f.index}
+              className={`px-4 py-20 sm:px-6 md:px-8 md:py-28 ${i > 0 ? "border-t border-hairline" : ""}`}
+            >
+              <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
+                <div className={i % 2 === 1 ? "lg:order-2" : ""}>
+                  <SectionLabel index={f.index}>{f.label}</SectionLabel>
+                  <h2 className="mt-6 font-display text-[2.6rem] leading-[1.02] text-balance text-ink md:text-[3.4rem]">
+                    {f.title}
+                  </h2>
+                  <p className="mt-6 max-w-md text-[17px] leading-relaxed text-ink/65">{f.body}</p>
+                  <ul className="mt-8 max-w-md divide-y divide-hairline border-y border-hairline">
+                    {f.points.map((p) => (
+                      <li key={p} className="flex items-center gap-3 py-3 text-[15px] text-ink/80">
+                        <span className="size-1 rounded-full bg-brand" />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <p className="mt-3 text-sm text-ink/60">
-                  Free forever for early users. No credit card required.
+                <div className={i % 2 === 1 ? "lg:order-1" : ""}>{f.visual}</div>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* Under the hood */}
+        <section id="built" className="bg-ink px-4 py-20 text-paper sm:px-6 md:px-8 md:py-28">
+          <div className="mx-auto max-w-6xl">
+            <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
+              <div>
+                <p className="eyebrow flex items-center gap-3 text-paper/50">
+                  <span className="text-[oklch(0.7_0.16_264)]">04</span>
+                  <span className="h-px w-8 bg-paper/25" />
+                  Under the hood
                 </p>
-                <ul className="mt-8 space-y-3">
-                  {[
-                    "Every feature included",
-                    "AI question suggestions",
-                    "Real-time response dashboard",
-                    "One-question-at-a-time forms",
-                  ].map((item) => (
-                    <li key={item} className="flex items-center gap-3 text-sm text-ink/80">
-                      <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
-                        <Check className="size-3" strokeWidth={3} />
-                      </span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-8">
-                  <PrimaryCTA size="lg">Claim your free account</PrimaryCTA>
+                <h2 className="mt-6 font-display text-[2.6rem] leading-[1.02] text-balance md:text-[3.4rem]">
+                  Built like a product, <em>not a prototype.</em>
+                </h2>
+                <p className="mt-6 max-w-sm text-[17px] leading-relaxed text-paper/60">
+                  Flowform is a portfolio project, designed, built and deployed end to end. This is
+                  what runs behind the form.
+                </p>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <a
+                    href={REPO_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-11 items-center gap-2 rounded-md bg-paper px-4 text-sm font-medium text-ink transition-colors hover:bg-white"
+                  >
+                    <Github className="size-4" />
+                    Read the source
+                  </a>
+                  <a
+                    href={DEMO_VIDEO_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-11 items-center gap-2 rounded-md border border-paper/20 px-4 text-sm font-medium text-paper transition-colors hover:border-paper/45"
+                  >
+                    Watch the 60-second demo
+                    <ArrowUpRight className="size-4" />
+                  </a>
                 </div>
               </div>
+              <dl className="grid border-t border-paper/15 sm:grid-cols-2">
+                {BUILT.map((b, i) => (
+                  <div
+                    key={b.k}
+                    className={`border-b border-paper/15 py-6 sm:py-7 ${i % 2 === 0 ? "sm:pr-8" : "sm:border-l sm:pl-8"}`}
+                  >
+                    <dt className="font-mono text-[11px] uppercase tracking-wide text-paper/45">
+                      {b.k}
+                    </dt>
+                    <dd className="mt-2.5 text-[15px] leading-relaxed text-paper/85">{b.v}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           </div>
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="relative overflow-hidden bg-white px-6 py-24 md:px-8 md:py-32">
-          <div className="relative mx-auto max-w-3xl">
-            <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-5xl">
-                Questions? <span className="text-brand">Answered.</span>
+        <section id="faq" className="px-4 py-20 sm:px-6 md:px-8 md:py-28">
+          <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
+            <div>
+              <SectionLabel index="05">FAQ</SectionLabel>
+              <h2 className="mt-6 font-display text-[2.6rem] leading-[1.02] text-balance md:text-[3.4rem]">
+                Before your <em>first form.</em>
               </h2>
-              <p className="mx-auto mt-5 max-w-xl text-base text-ink/60 md:text-lg">
-                The things people usually want to know before their first form.
-              </p>
             </div>
-
-            <Accordion type="single" collapsible className="mt-12">
+            <Accordion type="single" collapsible className="border-t border-hairline">
               {FAQS.map(({ q, a }) => (
-                <AccordionItem key={q} value={q} className="border-ink/10">
-                  <AccordionTrigger className="py-5 text-left text-base font-semibold text-ink hover:no-underline md:text-lg">
+                <AccordionItem key={q} value={q} className="border-hairline">
+                  <AccordionTrigger className="py-5 text-left text-[17px] font-medium text-ink hover:no-underline">
                     {q}
                   </AccordionTrigger>
-                  <AccordionContent className="pb-5 text-base leading-relaxed text-ink/60">
+                  <AccordionContent className="pb-6 text-[15px] leading-relaxed text-ink/65">
                     {a}
                   </AccordionContent>
                 </AccordionItem>
@@ -883,117 +672,77 @@ function Index() {
           </div>
         </section>
 
-        {/* Closing CTA */}
-        <section className="relative overflow-hidden bg-ink px-6 py-24 md:px-8 md:py-32">
-          <div className="relative mx-auto max-w-3xl text-center text-white">
-            <h2 className="text-4xl font-extrabold tracking-tight text-balance md:text-6xl">
-              Ask sharper. Learn faster.
-            </h2>
-            <p className="mx-auto mt-6 max-w-xl text-lg text-white/60 md:text-xl">
-              Ship your first Flowform in minutes — and never send a flat survey again.
-            </p>
-            <div className="mt-10 flex justify-center">
-              <PrimaryCTA size="lg" variant="light">
-                Start for free
-              </PrimaryCTA>
+        {/* Closing CTA + pricing */}
+        <section className="border-t border-hairline px-4 py-20 sm:px-6 md:px-8 md:py-28">
+          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-10 lg:flex-row lg:items-end">
+            <div>
+              <h2 className="font-display text-[3rem] leading-[0.98] md:text-[4.6rem]">
+                Ask one good question
+                <br />
+                <em className="text-brand">at a time.</em>
+              </h2>
+              <p className="mt-6 max-w-md text-[17px] text-ink/65">
+                Free while in early access. Every feature, every question type, no credit card.
+              </p>
             </div>
-            <p className="mt-8 text-xs font-medium uppercase tracking-[0.2em] text-white/90">
-              Free forever · No card required
-            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <PrimaryCTA>{session ? "Open dashboard" : "Create your first form"}</PrimaryCTA>
+              <Link
+                to="/demo"
+                className="inline-flex h-12 items-center gap-2 px-3 text-[15px] font-medium text-ink/70 transition-colors hover:text-ink"
+              >
+                Or try the demo
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-white/5 bg-ink px-6 pt-16 pb-10 md:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <a href="/" className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
-                  <span className="size-3 rounded-sm bg-white" />
-                </span>
-                <span className="text-xl font-bold tracking-tight text-white">Flowform</span>
-              </a>
-              <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/40">
-                One-question-at-a-time forms that feel like a conversation — and get finished.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">
-                Product
-              </h3>
-              <ul className="mt-4 space-y-3 text-sm">
-                {[...NAV_LINKS, { href: "/demo", label: "Live demo" }].map((l) => (
-                  <li key={l.href}>
-                    <a href={l.href} className="text-white/60 transition-colors hover:text-white">
-                      {l.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">
-                Account
-              </h3>
-              <ul className="mt-4 space-y-3 text-sm">
-                <li>
-                  <Link
-                    to="/login"
-                    search={{ redirect: "/dashboard" }}
-                    className="text-white/60 transition-colors hover:text-white"
-                  >
-                    Log in
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/signup" className="text-white/60 transition-colors hover:text-white">
-                    Sign up
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/dashboard"
-                    className="text-white/60 transition-colors hover:text-white"
-                  >
-                    Dashboard
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">
-                Legal
-              </h3>
-              <ul className="mt-4 space-y-3 text-sm">
-                <li>
-                  <Link to="/privacy" className="text-white/60 transition-colors hover:text-white">
-                    Privacy policy
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/terms" className="text-white/60 transition-colors hover:text-white">
-                    Terms of service
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-14 flex flex-col items-center gap-4 border-t border-white/10 pt-8 text-sm text-white/40 sm:flex-row sm:justify-between">
-            <p>&copy; {new Date().getFullYear()} Flowform. All rights reserved.</p>
-            <p className="flex items-center gap-1.5">
-              Built by Andrius
+      <footer className="border-t border-hairline px-4 py-10 sm:px-6 md:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+            <Logo />
+            <p className="text-sm text-ink/50">
+              Built by{" "}
               <a
                 href="https://github.com/andriuskleinas"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 font-medium text-white/60 transition-colors hover:text-white"
+                className="text-ink/75 underline decoration-ink/20 underline-offset-4 transition-colors hover:text-ink hover:decoration-ink/50"
               >
-                <Github className="size-4" />
-                andriuskleinas
+                Andrius Kleinas
               </a>
             </p>
           </div>
+          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink/55">
+            <li>
+              <Link to="/demo" className="transition-colors hover:text-ink">
+                Demo
+              </Link>
+            </li>
+            <li>
+              <a
+                href={REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-ink"
+              >
+                GitHub
+              </a>
+            </li>
+            <li>
+              <Link to="/privacy" className="transition-colors hover:text-ink">
+                Privacy
+              </Link>
+            </li>
+            <li>
+              <Link to="/terms" className="transition-colors hover:text-ink">
+                Terms
+              </Link>
+            </li>
+            <li className="font-mono text-[12px] text-ink/40">© {new Date().getFullYear()}</li>
+          </ul>
         </div>
       </footer>
     </div>

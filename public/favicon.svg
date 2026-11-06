@@ -1,10 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <style>
-    .bg { fill: #7C3EB3; }
+    .tile { fill: #16171B; }
+    .top { fill: #FBFAF7; }
     @media (prefers-color-scheme: dark) {
-      .bg { fill: #A35DE4; }
+      .tile { fill: #FBFAF7; }
+      .top { fill: #16171B; }
     }
   </style>
-  <rect class="bg" width="32" height="32" rx="8"/>
-  <rect x="13" y="13" width="6" height="6" rx="1" fill="#ffffff"/>
+  <rect class="tile" width="32" height="32" rx="7"/>
+  <rect class="top" x="8" y="10" width="16" height="4" rx="1.5"/>
+  <rect x="8" y="18" width="9" height="4" rx="1.5" fill="#4A6BFF"/>
 </svg>

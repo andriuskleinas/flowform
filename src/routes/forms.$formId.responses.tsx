@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, Loader2, Sparkles, Trash2, WandSparkles } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -165,7 +165,7 @@ function ResponsesPage() {
   if (!formQ.data || (user && formQ.data.user_id !== user.id)) {
     return (
       <Shell width="md">
-        <h1 className="text-2xl font-bold">Form not found</h1>
+        <h1 className="font-display text-4xl">Form not found</h1>
         <Link to="/dashboard" className="mt-6 inline-block text-brand underline">
           Back to dashboard
         </Link>
@@ -189,7 +189,7 @@ function ResponsesPage() {
 
       <header className="mt-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{formQ.data.title}</h1>
+          <h1 className="font-display text-4xl md:text-5xl">{formQ.data.title}</h1>
           <p className="mt-1 text-ink/60">
             {(() => {
               const total = analyticsQ.data?.totals.responses ?? responses.length;
@@ -211,7 +211,7 @@ function ResponsesPage() {
               setExporting(false);
             }
           }}
-          className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {exporting ? (
             <Loader2 className="size-4 animate-spin" />
@@ -335,7 +335,7 @@ function Overview({
 
   if (totals.responses === 0 && funnel.views === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-ink/15 bg-white/50 p-10 text-center">
+      <div className="rounded-lg border border-dashed border-ink/15 bg-white/50 p-10 text-center">
         <p className="text-ink/60">
           No responses yet. Share your form to start collecting answers.
         </p>
@@ -366,23 +366,30 @@ function Overview({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end gap-1">
-        {RANGE_CHOICES.map((d) => (
-          <button
-            key={d}
-            type="button"
-            onClick={() => onDaysChange(d)}
-            className={
-              "rounded-full px-3 py-1 text-xs font-semibold transition-colors " +
-              (days === d ? "bg-brand/10 text-brand" : "text-ink/50 hover:bg-ink/5 hover:text-ink")
-            }
-          >
-            {d}d
-          </button>
-        ))}
+      <div className="flex justify-end">
+        <div
+          role="group"
+          aria-label="Date range"
+          className="inline-flex rounded-md border border-hairline bg-white p-0.5"
+        >
+          {RANGE_CHOICES.map((d) => (
+            <button
+              key={d}
+              type="button"
+              aria-pressed={days === d}
+              onClick={() => onDaysChange(d)}
+              className={
+                "rounded-sm px-2.5 py-1 font-mono text-xs transition-colors " +
+                (days === d ? "bg-ink text-paper" : "text-ink/55 hover:text-ink")
+              }
+            >
+              {d}d
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-hairline bg-hairline md:grid-cols-4">
         <StatCard label="Total responses" value={String(totals.responses)} hint="All time" />
         <StatCard label="Views" value={String(viewed)} hint={`Last ${days} days`} />
         <StatCard
@@ -400,83 +407,101 @@ function Overview({
       </div>
 
       {hasTextQuestions && (
-        <div className="rounded-2xl border border-brand/20 bg-gradient-to-br from-brand/[0.04] to-transparent p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="rounded-lg border border-hairline bg-white">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-5 py-4">
             <div>
-              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-                <Sparkles className="size-4 text-brand" />
-                AI summary
+              <h3 className="flex items-center gap-2 text-sm font-medium text-ink">
+                Summary of open answers
+                <span className="rounded-sm border border-brand/25 bg-accent px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-brand">
+                  Claude
+                </span>
               </h3>
-              <p className="text-xs text-ink/50">
-                Claude reads your open-text answers and pulls out themes and sentiment.
+              <p className="mt-0.5 text-xs text-ink/55">
+                Themes, sentiment and representative quotes from your text answers.
               </p>
             </div>
             <button
               type="button"
               onClick={() => summarize.mutate()}
               disabled={summarize.isPending || totals.responses === 0}
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-white px-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/35 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {summarize.isPending ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" /> Analyzing…
+                  <Loader2 className="size-4 animate-spin" /> Reading answers…
+                </>
+              ) : summary ? (
+                <>
+                  <RefreshCw className="size-3.5" /> Refresh
                 </>
               ) : (
-                <>
-                  <WandSparkles className="size-4" />
-                  {summary ? "Refresh summary" : "Summarize with AI"}
-                </>
+                "Summarize answers"
               )}
             </button>
           </div>
 
           {summary && (
-            <div className="mt-4 space-y-4">
+            <div className="space-y-5 px-5 py-5">
               <div className="flex items-start gap-3">
                 <span
                   className={
-                    "mt-0.5 inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold " +
+                    "mt-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-sm border border-hairline px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide " +
                     (summary.sentiment === "positive"
-                      ? "bg-emerald-100 text-emerald-700"
+                      ? "text-emerald-800"
                       : summary.sentiment === "negative"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-amber-100 text-amber-700")
+                        ? "text-destructive"
+                        : "text-amber-800")
                   }
                 >
+                  <span
+                    className={
+                      "size-1.5 rounded-full " +
+                      (summary.sentiment === "positive"
+                        ? "bg-emerald-500"
+                        : summary.sentiment === "negative"
+                          ? "bg-destructive"
+                          : "bg-amber-500")
+                    }
+                  />
                   {summary.sentiment === "positive"
                     ? "Positive"
                     : summary.sentiment === "negative"
                       ? "Negative"
                       : "Mixed"}
                 </span>
-                <p className="text-sm leading-relaxed text-ink/80">{summary.summary}</p>
+                <p className="text-[15px] leading-relaxed text-ink">{summary.summary}</p>
               </div>
 
               {summary.themes.length > 0 && (
-                <ul className="grid gap-2 md:grid-cols-2">
+                <ol className="grid border-t border-hairline md:grid-cols-2 md:gap-x-8">
                   {summary.themes.map((t, i) => (
-                    <li key={i} className="rounded-xl border border-ink/5 bg-white px-3 py-2.5">
-                      <p className="text-sm font-semibold text-ink">{t.name}</p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-ink/60">{t.detail}</p>
+                    <li key={i} className="flex gap-3 border-b border-hairline py-3">
+                      <span className="font-mono text-[11px] text-brand">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-ink">{t.name}</p>
+                        <p className="mt-0.5 text-[13px] leading-relaxed text-ink/60">{t.detail}</p>
+                      </div>
                     </li>
                   ))}
-                </ul>
+                </ol>
               )}
 
               {summary.quotes.length > 0 && (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {summary.quotes.map((q, i) => (
                     <blockquote
                       key={i}
-                      className="border-l-2 border-brand/40 pl-3 text-sm italic text-ink/60"
+                      className="border-l-2 border-ink/15 pl-3 font-display text-lg italic leading-snug text-ink/70"
                     >
-                      "{q}"
+                      “{q}”
                     </blockquote>
                   ))}
                 </div>
               )}
 
-              <p className="text-xs text-ink/40">
+              <p className="font-mono text-[11px] text-ink/45">
                 Analyzed {summary.analyzed_count}{" "}
                 {summary.analyzed_count === 1 ? "answer" : "answers"} · AI-generated, may contain
                 inaccuracies.
@@ -494,18 +519,21 @@ function Overview({
               ["Started", started],
               ["Completed", submitted],
             ] as const
-          ).map(([label, n]) => (
+          ).map(([label, n], i) => (
             <div key={label} className="flex items-center gap-3">
-              <span className="w-20 shrink-0 text-xs font-semibold text-ink/60">{label}</span>
-              <div className="h-6 flex-1 overflow-hidden rounded-md bg-ink/5">
+              <span className="w-20 shrink-0 text-[13px] text-ink/60">{label}</span>
+              <div className="h-2 flex-1 overflow-hidden rounded-sm bg-surface">
                 <div
-                  className="flex h-full items-center rounded-md bg-brand/80 px-2 text-xs font-semibold text-brand-foreground transition-all duration-500"
+                  className={`h-full rounded-sm transition-all duration-500 ${i === 2 ? "bg-brand" : "bg-ink/70"}`}
                   style={{ width: barWidth(n) }}
-                >
-                  {n > 0 ? n : ""}
-                </div>
+                />
               </div>
-              <span className="w-12 shrink-0 text-right text-xs text-ink/50">{pctOfViews(n)}</span>
+              <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-ink">
+                {n}
+              </span>
+              <span className="w-12 shrink-0 text-right font-mono text-xs tabular-nums text-ink/45">
+                {pctOfViews(n)}
+              </span>
             </div>
           ))}
           {viewed === 0 && (
@@ -522,22 +550,22 @@ function Overview({
           <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
             <ResponsiveContainer>
               <LineChart data={trend} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke="var(--border)" strokeDasharray="2 4" vertical={false} />
                 <XAxis
                   dataKey="label"
                   stroke="currentColor"
                   className="text-ink/50"
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
                 />
                 <YAxis
                   allowDecimals={false}
                   stroke="currentColor"
                   className="text-ink/50"
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
                 />
                 <Tooltip content={<MiniTooltip />} />
                 <Line
-                  type="monotone"
+                  type="linear"
                   dataKey="count"
                   stroke="var(--primary)"
                   strokeWidth={2}
@@ -563,17 +591,17 @@ function Overview({
               const n = reachByQuestion.get(q.id) ?? 0;
               return (
                 <div key={q.id} className="flex items-center gap-3">
-                  <span className="w-8 shrink-0 text-xs font-semibold text-ink/40">Q{i + 1}</span>
-                  <div className="h-5 flex-1 overflow-hidden rounded-md bg-ink/5">
+                  <span className="w-8 shrink-0 font-mono text-xs text-ink/45">Q{i + 1}</span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-sm bg-surface">
                     <div
-                      className="h-full rounded-md bg-brand/70 transition-all duration-500"
+                      className="h-full rounded-sm bg-ink/70 transition-all duration-500"
                       style={{ width: `${(n / maxReach) * 100}%` }}
                     />
                   </div>
                   <span className="w-24 shrink-0 truncate text-xs text-ink/50" title={q.label}>
                     {q.label}
                   </span>
-                  <span className="w-10 shrink-0 text-right text-xs font-semibold text-ink/70">
+                  <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-ink">
                     {n}
                   </span>
                 </div>
@@ -663,7 +691,7 @@ function QuestionAnalytics({
             {recent.map((r) => (
               <li
                 key={r.id}
-                className="rounded-lg border border-ink/5 bg-surface/50 px-3 py-2 text-sm text-ink/80"
+                className="rounded-lg border border-hairline bg-surface/50 px-3 py-2 text-sm text-ink/80"
               >
                 {truncate(String(r.answers[question.id]), 160)}
               </li>
@@ -701,11 +729,11 @@ function QuestionAnalytics({
                   layout="vertical"
                   margin={{ top: 4, right: 12, left: 8, bottom: 0 }}
                 >
-                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="2 4" horizontal={false} />
                   <XAxis
                     type="number"
                     allowDecimals={false}
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
                     stroke="currentColor"
                     className="text-ink/50"
                   />
@@ -713,12 +741,12 @@ function QuestionAnalytics({
                     type="category"
                     dataKey="name"
                     width={110}
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
                     stroke="currentColor"
                     className="text-ink/50"
                   />
                   <Tooltip content={<MiniTooltip />} />
-                  <Bar dataKey="count" fill="var(--primary)" radius={[0, 6, 6, 0]} />
+                  <Bar dataKey="count" fill="var(--primary)" radius={[0, 2, 2, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ClientOnly>
@@ -747,21 +775,21 @@ function QuestionAnalytics({
           <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
             <ResponsiveContainer>
               <BarChart data={d.bars} margin={{ top: 4, right: 12, left: -16, bottom: 0 }}>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke="var(--border)" strokeDasharray="2 4" vertical={false} />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
                   stroke="currentColor"
                   className="text-ink/50"
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
                   stroke="currentColor"
                   className="text-ink/50"
                 />
                 <Tooltip content={<MiniTooltip />} />
-                <Bar dataKey="count" fill="var(--primary)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="count" fill="var(--primary)" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ClientOnly>
@@ -781,21 +809,21 @@ function QuestionAnalytics({
           <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
             <ResponsiveContainer>
               <BarChart data={d.bars} margin={{ top: 4, right: 12, left: -16, bottom: 0 }}>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke="var(--border)" strokeDasharray="2 4" vertical={false} />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
                   stroke="currentColor"
                   className="text-ink/50"
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
                   stroke="currentColor"
                   className="text-ink/50"
                 />
                 <Tooltip content={<MiniTooltip />} />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="count" radius={[2, 2, 0, 0]}>
                   {d.bars.map((_, i) => (
                     <Cell key={i} fill="var(--primary)" />
                   ))}
@@ -826,7 +854,7 @@ function IndividualList({
 }) {
   if (responses.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-ink/15 bg-white/50 p-10 text-center">
+      <div className="rounded-lg border border-dashed border-ink/15 bg-white/50 p-10 text-center">
         <p className="text-ink/60">No responses yet.</p>
       </div>
     );
@@ -840,9 +868,9 @@ function IndividualList({
               ? (new Date(r.submitted_at).getTime() - new Date(r.started_at).getTime()) / 1000
               : null;
           return (
-            <li key={r.id} className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
+            <li key={r.id} className="rounded-lg border border-hairline bg-white p-6">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink/40">
+                <p className="eyebrow">
                   {new Date(r.submitted_at).toLocaleString()}
                   {dur != null && dur > 0 && dur < 2 * 3600 && (
                     <span className="ml-2 text-ink/60 normal-case">
@@ -880,7 +908,7 @@ function IndividualList({
           <button
             type="button"
             onClick={onLoadMore}
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
+            className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
           >
             Load more responses
           </button>
@@ -915,10 +943,12 @@ function AnswerView({ question, value }: { question: Question; value: AnswerValu
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-2xl border border-ink/5 bg-white p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink/40">{label}</p>
-      <p className="mt-2 text-2xl font-extrabold tracking-tight text-ink">{value}</p>
-      {hint && <p className="mt-1 text-xs text-ink/40">{hint}</p>}
+    <div className="bg-white px-5 py-4">
+      <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">{label}</p>
+      <p className="mt-1.5 font-mono text-2xl font-medium tabular-nums tracking-tight text-ink">
+        {value}
+      </p>
+      {hint && <p className="mt-1 text-xs text-ink/45">{hint}</p>}
     </div>
   );
 }
@@ -933,10 +963,10 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-ink">{title}</h3>
-        {subtitle && <p className="text-xs text-ink/50">{subtitle}</p>}
+    <div className="rounded-lg border border-hairline bg-white p-5">
+      <div className="mb-5">
+        <h3 className="text-sm font-medium text-ink">{title}</h3>
+        {subtitle && <p className="mt-0.5 text-xs text-ink/55">{subtitle}</p>}
       </div>
       {children}
     </div>
@@ -946,7 +976,7 @@ function Card({
 function MiniTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-ink/10 bg-white px-2.5 py-1.5 text-xs shadow-md">
+    <div className="rounded-md border border-hairline bg-white px-2.5 py-1.5 text-xs">
       <p className="font-medium text-ink">{label}</p>
       <p className="text-ink/60">
         {payload[0].value} {payload[0].value === 1 ? "response" : "responses"}

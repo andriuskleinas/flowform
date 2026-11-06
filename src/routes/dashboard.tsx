@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusPill } from "@/components/status-pill";
 import { getInitialsFromProfile, timeAgo } from "@/lib/utils";
 import type { FormStatus } from "@/lib/form-utils";
+import { Logo } from "@/components/logo";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -312,13 +313,10 @@ function DashboardAuthed({
 
   return (
     <div className="min-h-screen bg-surface text-ink">
-      <header className="border-b border-ink/5">
+      <header className="border-b border-hairline">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 md:px-8">
           <Link to="/" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
-              <span className="size-3 rounded-sm bg-white" />
-            </span>
-            <span className="text-xl font-bold tracking-tight">Flowform</span>
+            <Logo />
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -359,37 +357,44 @@ function DashboardAuthed({
 
       <main className="mx-auto max-w-4xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
         <div className="max-w-2xl">
-          <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">Your forms</h1>
-          <p className="mt-3 text-base text-ink/60 md:text-lg">
-            Welcome, <span className="font-semibold text-ink">{greetingName}</span>.
+          <h1 className="font-display text-5xl md:text-6xl">Your forms</h1>
+          <p className="mt-3 text-base text-ink/60">
+            Welcome back, <span className="text-ink">{greetingName}</span>.
           </p>
         </div>
 
-        <section aria-labelledby="forms-list-heading" className="mt-6">
+        <section aria-labelledby="forms-list-heading" className="mt-12">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <h2 id="forms-list-heading" className="text-lg font-bold tracking-tight">
+              <h2 id="forms-list-heading" className="text-[15px] font-medium tracking-normal">
                 All forms
               </h2>
               {!isLoading && !isError && (
-                <span className="inline-flex items-center rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink/70">
+                <span className="font-mono text-xs text-ink/45">
                   {forms.length} {forms.length === 1 ? "form" : "forms"}
                 </span>
               )}
             </div>
             <Link
               to="/forms/new"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-ink px-3.5 text-sm font-medium text-paper transition-colors hover:bg-ink/85"
             >
               <Plus className="size-4" />
               New form
             </Link>
           </div>
 
-          <ul className="mt-4 space-y-3">
+          <ul
+            className={
+              "mt-4 " +
+              (isError || (!isLoading && forms.length === 0)
+                ? ""
+                : "divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-white")
+            }
+          >
             {isLoading &&
               Array.from({ length: 3 }).map((_, i) => (
-                <li key={i} className="rounded-2xl border border-ink/5 bg-white p-4 shadow-sm">
+                <li key={i} className="p-4">
                   <div className="flex items-start justify-between gap-4">
                     <Skeleton className="h-5 w-1/2" />
                     <Skeleton className="h-3 w-16" />
@@ -400,11 +405,9 @@ function DashboardAuthed({
               ))}
 
             {!isLoading && isError && (
-              <li className="flex flex-col items-center rounded-2xl border border-dashed border-red-200 bg-red-50/50 px-6 py-14 text-center">
-                <span className="flex size-14 items-center justify-center rounded-full bg-red-100 text-red-600">
-                  <FileText className="size-7" />
-                </span>
-                <h3 className="mt-5 text-xl font-bold tracking-tight">Couldn't load your forms</h3>
+              <li className="flex flex-col items-center rounded-lg border border-dashed border-destructive/30 bg-white px-6 py-14 text-center">
+                <FileText className="size-6 text-destructive" strokeWidth={1.5} />
+                <h3 className="mt-4 font-display text-3xl">Couldn't load your forms</h3>
                 <p className="mt-2 max-w-sm text-sm text-ink/60">
                   Something went wrong fetching your forms. Your forms are safe — this is just a
                   loading issue.
@@ -412,7 +415,7 @@ function DashboardAuthed({
                 <button
                   type="button"
                   onClick={() => refetchDashboardForms()}
-                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25"
+                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-md bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:bg-brand/90"
                 >
                   Try again
                 </button>
@@ -420,17 +423,15 @@ function DashboardAuthed({
             )}
 
             {!isLoading && !isError && forms.length === 0 && (
-              <li className="flex flex-col items-center rounded-2xl border border-dashed border-ink/15 bg-white/50 px-6 py-14 text-center">
-                <span className="flex size-14 items-center justify-center rounded-full bg-brand/10 text-brand">
-                  <FileText className="size-7" />
-                </span>
-                <h3 className="mt-5 text-xl font-bold tracking-tight">No forms yet</h3>
+              <li className="flex flex-col items-center rounded-lg border border-dashed border-ink/20 bg-white/60 px-6 py-16 text-center">
+                <p className="eyebrow">Empty</p>
+                <h3 className="mt-3 font-display text-4xl">No forms yet</h3>
                 <p className="mt-2 max-w-sm text-sm text-ink/60">
-                  You haven't created any forms yet. Get started below.
+                  Start from a template, a blank page, or a one-line goal for Claude.
                 </p>
                 <Link
                   to="/forms/new"
-                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25"
+                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-md bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:bg-brand/90"
                 >
                   <Plus className="size-4" />
                   Create your first form
@@ -452,22 +453,19 @@ function DashboardAuthed({
                   setShareTarget(f);
                 };
                 return (
-                  <li
-                    key={f.id}
-                    className="group rounded-2xl border border-ink/5 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-                  >
+                  <li key={f.id} className="group p-4 transition-colors hover:bg-paper">
                     <div className="flex items-start justify-between gap-4">
                       <Link
                         to="/forms/$formId/edit"
                         params={{ formId: f.id }}
                         className="flex min-w-0 flex-1 items-start gap-3"
                       >
-                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
+                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border border-hairline bg-surface text-ink/50">
                           <FileText className="size-4" />
                         </span>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate text-base font-bold tracking-tight md:text-lg">
+                            <h3 className="truncate text-[15px] font-medium tracking-normal">
                               {f.title}
                             </h3>
                             <StatusPill status={f.status} />
@@ -477,7 +475,7 @@ function DashboardAuthed({
                               {f.description}
                             </p>
                           )}
-                          <p className="mt-2 text-xs font-medium text-ink/50">
+                          <p className="mt-1.5 font-mono text-[11px] text-ink/45">
                             {qCount} {qCount === 1 ? "question" : "questions"} · {rCount}{" "}
                             {rCount === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
                           </p>
@@ -489,7 +487,7 @@ function DashboardAuthed({
                           params={{ formId: f.id }}
                           aria-label="Edit form"
                           title="Edit"
-                          className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
+                          className="rounded-md p-2 text-ink/50 hover:bg-ink/5 hover:text-ink"
                         >
                           <Pencil className="size-4" />
                         </Link>
@@ -498,7 +496,7 @@ function DashboardAuthed({
                           onClick={openShare}
                           aria-label={isDraft ? "Publish and share" : "Share form"}
                           title={isDraft ? "Publish and share" : "Share"}
-                          className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
+                          className="rounded-md p-2 text-ink/50 hover:bg-ink/5 hover:text-ink"
                         >
                           <Share2 className="size-4" />
                         </button>
@@ -507,7 +505,7 @@ function DashboardAuthed({
                           params={{ formId: f.id }}
                           aria-label="View responses"
                           title="View responses"
-                          className="rounded-lg p-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
+                          className="rounded-md p-2 text-ink/50 hover:bg-ink/5 hover:text-ink"
                         >
                           <BarChart3 className="size-4" />
                         </Link>
@@ -515,7 +513,7 @@ function DashboardAuthed({
                           <DropdownMenuTrigger
                             aria-label="More actions"
                             title="More actions"
-                            className="rounded-lg p-2 text-ink/60 outline-none hover:bg-ink/5 hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40"
+                            className="rounded-md p-2 text-ink/50 outline-none hover:bg-ink/5 hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40"
                           >
                             <MoreHorizontal className="size-4" />
                           </DropdownMenuTrigger>

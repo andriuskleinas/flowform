@@ -87,7 +87,7 @@ export function ShareFormDialog({
               <button
                 type="button"
                 onClick={() => copy(url, "link")}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:bg-brand/90 transition-colors"
               >
                 {copied === "link" ? <Check className="size-4" /> : <Copy className="size-4" />}
                 {copied === "link" ? "Copied" : "Copy"}
@@ -95,7 +95,7 @@ export function ShareFormDialog({
             </div>
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl border border-ink/10 bg-white p-4">
+          <div className="flex items-center gap-4 rounded-2xl border border-hairline bg-white p-4">
             <div className="shrink-0 rounded-lg bg-white p-1.5">
               {origin && <QRCode value={url} size={104} aria-label="QR code for form link" />}
             </div>
@@ -139,7 +139,7 @@ export function ShareFormDialog({
             <button
               type="button"
               onClick={nativeShare}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
             >
               <Share2 className="size-4" /> Share via…
             </button>

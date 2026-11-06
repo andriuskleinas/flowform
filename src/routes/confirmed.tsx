@@ -54,8 +54,8 @@ function ConfirmedPage() {
   if (expired) {
     return (
       <AuthShell>
-        <div className="rounded-2xl border border-ink/5 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-2xl font-extrabold tracking-tight">This link has expired</h1>
+        <div className="rounded-2xl border border-hairline bg-white p-8 text-center">
+          <h1 className="font-display text-3xl">This link has expired</h1>
           <p className="mt-3 text-ink/60">
             Confirmation links work once. Log in and we'll send you a fresh one if your email still
             needs confirming.
@@ -63,7 +63,7 @@ function ConfirmedPage() {
           <Link
             to="/login"
             search={{ redirect: "/dashboard" }}
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25"
+            className="mt-6 inline-flex items-center justify-center rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:bg-brand/90"
           >
             Go to log in
           </Link>

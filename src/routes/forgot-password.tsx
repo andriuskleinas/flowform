@@ -53,9 +53,9 @@ function ForgotPasswordPage() {
   if (sentTo) {
     return (
       <AuthShell>
-        <div className="rounded-2xl border border-ink/5 bg-white p-8 text-center shadow-sm">
+        <div className="rounded-2xl border border-hairline bg-white p-8 text-center">
           <MailCheck className="mx-auto size-12 text-brand" />
-          <h1 className="mt-4 text-2xl font-extrabold tracking-tight">Check your inbox</h1>
+          <h1 className="font-display mt-4 text-3xl">Check your inbox</h1>
           <p className="mt-3 text-ink/60">
             If <span className="font-semibold text-ink">{sentTo}</span> has a Flowform account, we
             just sent it a link to choose a new password. The link expires in an hour.
@@ -64,7 +64,7 @@ function ForgotPasswordPage() {
           <Link
             to="/login"
             search={{ redirect: "/dashboard" }}
-            className="mt-6 inline-flex items-center justify-center rounded-full border border-ink/15 px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink/30"
+            className="mt-6 inline-flex items-center justify-center rounded-md border border-ink/15 px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink/30"
           >
             Back to log in
           </Link>
@@ -75,13 +75,13 @@ function ForgotPasswordPage() {
 
   return (
     <AuthShell>
-      <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Reset your password</h1>
+      <h1 className="font-display text-4xl md:text-5xl">Reset your password</h1>
       <p className="mt-2 text-ink/60">
         Enter your email and we'll send you a link to choose a new one.
       </p>
       <form
         onSubmit={onSubmit}
-        className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
+        className="mt-8 space-y-5 rounded-2xl border border-hairline bg-white p-6"
       >
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -97,7 +97,7 @@ function ForgotPasswordPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex w-full items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all disabled:opacity-50 hover:bg-brand/90"
         >
           {submitting ? "Sending link…" : "Send reset link"}
         </button>

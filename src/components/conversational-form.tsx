@@ -132,7 +132,7 @@ export function ConversationalForm({
 
   if (total === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-ink/15 bg-white/50 p-8 text-center text-ink/60">
+      <p className="rounded-lg border border-dashed border-ink/15 bg-white/50 p-8 text-center text-ink/60">
         This form has no questions yet.
       </p>
     );
@@ -141,7 +141,7 @@ export function ConversationalForm({
   return (
     <div>
       <div
-        className="h-1.5 w-full overflow-hidden rounded-full bg-ink/10"
+        className="h-0.5 w-full overflow-hidden bg-hairline"
         role="progressbar"
         aria-valuenow={progress}
         aria-valuemin={0}
@@ -162,19 +162,22 @@ export function ConversationalForm({
             <button
               type="button"
               onClick={back}
-              className="mb-6 inline-flex w-fit items-center gap-1.5 rounded-full border border-ink/15 bg-white/70 px-3.5 py-1.5 text-sm font-medium text-ink/70 transition-colors hover:border-ink/30 hover:text-ink"
+              className="mb-6 inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 -ml-2 text-sm text-ink/55 transition-colors hover:bg-ink/5 hover:text-ink"
             >
               <ArrowLeft className="size-4" /> Back
             </button>
           )}
 
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink/40">
+          <p className="eyebrow">
+            <span className="text-brand">{String(history.length + 1).padStart(2, "0")}</span>
+            <span className="mx-2 text-ink/25">/</span>
             Question {history.length + 1}
-            {!current.required && <span className="ml-2 font-medium text-ink/35">· Optional</span>}
+            {!current.required && <span className="ml-2 text-ink/40">· Optional</span>}
           </p>
 
           <div className="mt-4">
             <QuestionRender
+              variant="conversational"
               question={current}
               value={answers[current.id]}
               onChange={handleAnswer}
@@ -182,18 +185,20 @@ export function ConversationalForm({
           </div>
 
           {error && (
-            <p className="mt-4 text-sm font-medium text-red-600">This question needs an answer.</p>
+            <p className="mt-4 text-sm font-medium text-destructive">
+              This question needs an answer.
+            </p>
           )}
 
           <div className="mt-8 flex items-center gap-4">
             <button
               type="button"
               onClick={advance}
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground shadow-md shadow-brand/20 transition-all hover:scale-[1.02]"
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-brand px-6 text-[15px] font-medium text-brand-foreground transition-colors hover:bg-brand/90"
             >
               {current.required || isAnswered(current, answers[current.id]) ? "OK" : "Skip"}
             </button>
-            <span className="hidden text-xs text-ink/40 sm:inline">
+            <span className="hidden font-mono text-[11px] text-ink/45 sm:inline">
               {current.type === "long_text" ? "⌘/Ctrl + Enter ↵" : "press Enter ↵"}
             </span>
           </div>
@@ -201,11 +206,11 @@ export function ConversationalForm({
       )}
 
       {atSubmit && (
-        <div className="mt-10 text-center motion-safe:animate-[demo-step-in_0.4s_ease-out_both]">
-          <CheckCircle2 className="mx-auto size-12 text-brand" />
+        <div className="mt-12 text-center motion-safe:animate-[demo-step-in_0.4s_ease-out_both]">
+          <CheckCircle2 className="mx-auto size-10 text-brand" strokeWidth={1.5} />
           {preview && previewSubmitted ? (
             <>
-              <h2 className="mt-4 text-2xl font-extrabold tracking-tight">Preview complete</h2>
+              <h2 className="font-display mt-4 text-4xl">Preview complete</h2>
               <p className="mt-2 text-sm text-ink/60">
                 In the live form this submits the response and shows your thank-you message. Nothing
                 is recorded in preview.
@@ -213,7 +218,7 @@ export function ConversationalForm({
             </>
           ) : (
             <>
-              <h2 className="mt-4 text-2xl font-extrabold tracking-tight">You're all set</h2>
+              <h2 className="font-display mt-4 text-4xl">You're all set</h2>
               <p className="mt-2 text-sm text-ink/60">
                 {answeredCount} of {total} questions answered.
               </p>
@@ -225,7 +230,7 @@ export function ConversationalForm({
                 type="button"
                 disabled={submitting}
                 onClick={preview ? () => setPreviewSubmitted(true) : onSubmit}
-                className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-3.5 text-base font-semibold text-brand-foreground shadow-lg shadow-brand/25 transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-12 items-center gap-2 rounded-md bg-brand px-8 text-base font-medium text-brand-foreground transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? "Submitting…" : preview ? "Submit (preview)" : "Submit"}
               </button>

@@ -241,7 +241,7 @@ function PublicFormPage() {
   if (!formQ.data) {
     return (
       <Shell width="sm">
-        <h1 className="text-3xl font-extrabold tracking-tight">Form not found</h1>
+        <h1 className="font-display text-4xl">Form not found</h1>
         <p className="mt-3 text-ink/60">
           This form may have been deleted or the link is incorrect.
         </p>
@@ -282,7 +282,7 @@ function PublicFormPage() {
         <Link
           to="/forms/$formId/edit"
           params={{ formId }}
-          className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25"
+          className="inline-flex items-center gap-1.5 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:bg-brand/90 transition-colors"
         >
           <Pencil className="size-4" /> Edit form
         </Link>
@@ -298,7 +298,7 @@ function PublicFormPage() {
           <span className="flex size-14 items-center justify-center rounded-full bg-amber-100 text-amber-600">
             <CircleSlash className="size-7" />
           </span>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">This survey is closed</h1>
+          <h1 className="font-display mt-4 text-4xl">This survey is closed</h1>
           <p className="mt-3 max-w-sm text-ink/60">
             <span className="font-semibold text-ink">{formQ.data.title}</span> is no longer
             accepting responses. Thanks to everyone who took part.
@@ -311,7 +311,7 @@ function PublicFormPage() {
   if (status === "draft" && !isOwner) {
     return (
       <Shell width="sm">
-        <h1 className="text-3xl font-extrabold tracking-tight">This form isn't published yet</h1>
+        <h1 className="font-display text-4xl">This form isn't published yet</h1>
         <p className="mt-3 text-ink/60">The owner hasn't published this form. Check back later.</p>
         <Link to="/" className="mt-6 inline-block text-brand underline">
           Go home
@@ -326,9 +326,7 @@ function PublicFormPage() {
         {ownerNav}
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">
-            {isOwner ? "Test submission" : "Thanks!"}
-          </h1>
+          <h1 className="font-display mt-4 text-4xl">{isOwner ? "Test submission" : "Thanks!"}</h1>
           <p className="mt-2 max-w-md whitespace-pre-line text-ink/60">
             {isOwner
               ? "This was a preview of your own form — nothing was recorded, and it isn't counted in analytics."
@@ -345,7 +343,7 @@ function PublicFormPage() {
         {ownerNav}
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">You've already responded</h1>
+          <h1 className="font-display mt-4 text-4xl">You've already responded</h1>
           <p className="mt-2 max-w-sm text-ink/60">
             Looks like this form was already submitted from this device.
           </p>
@@ -362,7 +360,7 @@ function PublicFormPage() {
               setShowErrors(false);
               startedAtRef.current = null;
             }}
-            className="mt-6 inline-flex items-center justify-center rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
+            className="mt-6 inline-flex items-center justify-center rounded-md border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
           >
             Submit another response
           </button>
@@ -375,13 +373,15 @@ function PublicFormPage() {
     return (
       <Shell width="sm">
         {ownerNav}
-        <header>
-          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{formQ.data.title}</h1>
+        {/* In conversational mode the question is the hero; the form title
+            sits quietly above it like a running head. */}
+        <header className="border-b border-hairline pb-5">
+          <h1 className="text-[15px] font-medium tracking-normal text-ink">{formQ.data.title}</h1>
           {formQ.data.description && (
-            <p className="mt-3 text-base text-ink/60 md:text-lg">{formQ.data.description}</p>
+            <p className="mt-1 text-sm leading-relaxed text-ink/55">{formQ.data.description}</p>
           )}
         </header>
-        <div className="mt-10">
+        <div className="mt-8">
           <ConversationalForm
             questions={questions}
             answers={answers}
@@ -419,7 +419,7 @@ function PublicFormPage() {
     <Shell width="sm">
       {ownerNav}
       <header>
-        <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{formQ.data.title}</h1>
+        <h1 className="font-display text-4xl md:text-5xl">{formQ.data.title}</h1>
         {formQ.data.description && (
           <p className="mt-3 text-base text-ink/60 md:text-lg">{formQ.data.description}</p>
         )}
@@ -446,7 +446,7 @@ function PublicFormPage() {
         }}
       >
         {questions.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-ink/15 bg-white/50 p-8 text-center text-ink/60">
+          <p className="rounded-lg border border-dashed border-ink/15 bg-white/50 p-8 text-center text-ink/60">
             This form has no questions yet.
           </p>
         )}
@@ -458,13 +458,13 @@ function PublicFormPage() {
               key={q.id}
               id={`qcard-${q.id}`}
               className={
-                "rounded-2xl border bg-white p-6 shadow-sm transition-colors " +
-                (missing ? "border-red-300 ring-1 ring-red-200" : "border-ink/5")
+                "rounded-lg border bg-white p-6 transition-colors " +
+                (missing ? "border-destructive/50 ring-1 ring-destructive/20" : "border-hairline")
               }
             >
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/40">
-                Question {i + 1}
-                {!q.required && <span className="ml-2 font-medium text-ink/35">· Optional</span>}
+              <p className="eyebrow mb-3">
+                <span className="text-brand">{String(i + 1).padStart(2, "0")}</span>
+                {!q.required && <span className="ml-2 text-ink/40">· Optional</span>}
               </p>
               <QuestionRender
                 question={q}
@@ -475,7 +475,7 @@ function PublicFormPage() {
                 }}
               />
               {missing && (
-                <p className="mt-3 text-sm font-medium text-red-600">
+                <p className="mt-3 text-sm font-medium text-destructive">
                   This question needs an answer.
                 </p>
               )}
@@ -486,7 +486,7 @@ function PublicFormPage() {
         {questions.length > 0 && (
           <div className="flex items-center justify-end gap-4">
             {showErrors && missingRequired.length > 0 && (
-              <p className="text-sm font-medium text-red-600">
+              <p className="text-sm font-medium text-destructive">
                 {missingRequired.length} required{" "}
                 {missingRequired.length === 1 ? "question needs" : "questions need"} an answer.
               </p>
@@ -494,7 +494,7 @@ function PublicFormPage() {
             <button
               type="submit"
               disabled={submit.isPending}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-brand px-6 text-[15px] font-medium text-brand-foreground transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submit.isPending ? "Submitting…" : "Submit"}
             </button>

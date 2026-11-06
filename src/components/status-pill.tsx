@@ -1,23 +1,19 @@
 import type { FormStatus } from "@/lib/form-utils";
 
+const STYLES: Record<FormStatus, { label: string; dot: string; text: string }> = {
+  published: { label: "Live", dot: "bg-emerald-500", text: "text-emerald-800" },
+  closed: { label: "Closed", dot: "bg-amber-500", text: "text-amber-800" },
+  draft: { label: "Draft", dot: "bg-ink/30", text: "text-ink/60" },
+};
+
 export function StatusPill({ status }: { status: FormStatus }) {
-  if (status === "published") {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-        <span className="size-1.5 rounded-full bg-emerald-500" /> Published live
-      </span>
-    );
-  }
-  if (status === "closed") {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-        <span className="size-1.5 rounded-full bg-amber-500" /> Closed
-      </span>
-    );
-  }
+  const s = STYLES[status] ?? STYLES.draft;
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-ink/10 px-2.5 py-0.5 text-xs font-semibold text-ink/60">
-      <span className="size-1.5 rounded-full bg-ink/40" /> Draft
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-sm border border-hairline bg-white px-2 py-0.5 font-mono text-[11px] font-medium uppercase tracking-wide ${s.text}`}
+    >
+      <span className={`size-1.5 rounded-full ${s.dot}`} />
+      {s.label}
     </span>
   );
 }

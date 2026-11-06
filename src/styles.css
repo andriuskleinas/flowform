@@ -2,6 +2,8 @@
 @source "../src";
 @import "tw-animate-css";
 
+/* Keeps shadcn `dark:` utilities inert (no .dark class is ever applied) instead
+   of letting them follow the OS colour scheme. */
 @custom-variant dark (&:is(.dark *));
 
 /*
@@ -10,22 +12,24 @@
  * The @theme inline block maps CSS custom properties to Tailwind utility
  * classes (e.g. --color-primary -> bg-primary, text-primary).
  *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
+ * The :root block defines the actual color values using oklch.
+ * The app is light-only by design; there is no dark theme to keep in sync.
  *
  * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
+ * 1. Add the variable to :root
  * 2. Register it in @theme inline as --color-<name>: var(--<name>)
  */
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  /* Radius scale — deliberately tight. Editorial, not bubbly. */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-3xl: 14px;
+  --radius-4xl: 16px;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -64,90 +68,63 @@
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
   --color-surface: var(--surface);
+  --color-paper: var(--paper);
   --color-ink: var(--ink);
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-hairline: var(--hairline);
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/*
+ * Editorial Ink — near-black ink on warm paper, one accent (Klein blue)
+ * reserved for actions, focus and live data. Hairlines instead of shadows.
+ */
 :root {
-  --radius: 0.75rem;
-  --brand: oklch(0.5 0.18 305);
-  --brand-foreground: oklch(0.99 0 0);
-  --gold: oklch(0.8 0.16 85);
-  --gold-foreground: oklch(0.2 0.04 85);
-  --surface: oklch(0.96 0 0);
-  --ink: oklch(0.25 0 0);
-  --background: oklch(0.96 0 0);
-  --foreground: oklch(0.25 0 0);
-  --card: oklch(0.98 0 0);
-  --card-foreground: oklch(0.25 0 0);
-  --popover: oklch(0.98 0 0);
-  --popover-foreground: oklch(0.25 0 0);
-  /* Primary = purple (#9151B8). Secondary = lighter gray. Text = dark gray. */
-  --primary: oklch(0.5 0.18 305);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.88 0 0);
-  --secondary-foreground: oklch(0.25 0 0);
-  --muted: oklch(0.92 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --accent: oklch(0.94 0.06 305);
-  --accent-foreground: oklch(0.5 0.18 305);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.88 0 0);
-  --input: oklch(0.88 0 0);
-  --ring: oklch(0.5 0.18 305);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
-}
+  --radius: 8px;
+  --ink: oklch(0.2 0.008 265);
+  --paper: oklch(0.985 0.004 85);
+  --surface: oklch(0.972 0.005 85);
+  --hairline: oklch(0.9 0.006 85);
+  --brand: oklch(0.46 0.22 264);
+  --brand-foreground: oklch(0.99 0.002 85);
+  /* Rating stars only — a muted amber, never decoration. */
+  --gold: oklch(0.76 0.14 75);
+  --gold-foreground: oklch(0.3 0.06 75);
 
-.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
-  --brand: oklch(0.62 0.2 305);
-  --brand-foreground: oklch(0.12 0.04 305);
-  --gold: oklch(0.82 0.16 85);
-  --gold-foreground: oklch(0.18 0.04 85);
+  --background: var(--surface);
+  --foreground: var(--ink);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--ink);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--ink);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --secondary: oklch(0.94 0.005 85);
+  --secondary-foreground: var(--ink);
+  --muted: oklch(0.945 0.005 85);
+  --muted-foreground: oklch(0.5 0.01 265);
+  --accent: oklch(0.95 0.025 264);
+  --accent-foreground: var(--brand);
+  --destructive: oklch(0.55 0.2 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: var(--hairline);
+  --input: oklch(0.87 0.006 85);
+  --ring: var(--brand);
+  /* Charts: one ink-family ramp plus the accent for the key series. */
+  --chart-1: var(--brand);
+  --chart-2: oklch(0.35 0.01 265);
+  --chart-3: oklch(0.6 0.01 265);
+  --chart-4: oklch(0.72 0.1 264);
+  --chart-5: oklch(0.8 0.008 265);
+  --sidebar: var(--paper);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--paper);
+  --sidebar-accent: var(--muted);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--hairline);
+  --sidebar-ring: var(--brand);
 }
 
 @layer base {
@@ -172,6 +149,15 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--brand) 18%, transparent);
+  }
+
+  :focus-visible {
+    outline-color: var(--brand);
   }
 
   /* Type scale — stronger hierarchy with consistent rhythm.
@@ -179,14 +165,14 @@
   h1 {
     font-size: 2.25rem; /* 36px */
     line-height: 1.1;
-    font-weight: 800;
-    letter-spacing: -0.025em;
+    font-weight: 600;
+    letter-spacing: -0.03em;
   }
   h2 {
     font-size: 1.5rem; /* 24px */
     line-height: 1.2;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-weight: 600;
+    letter-spacing: -0.025em;
   }
   h3 {
     font-size: 1.125rem; /* 18px */
@@ -210,66 +196,6 @@
   }
 }
 
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes hero-rise {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes aurora-drift-a {
-  0% {
-    transform: translate(-10%, -10%) scale(1);
-  }
-  33% {
-    transform: translate(15%, 5%) scale(1.15);
-  }
-  66% {
-    transform: translate(-5%, 15%) scale(0.95);
-  }
-  100% {
-    transform: translate(-10%, -10%) scale(1);
-  }
-}
-
-@keyframes aurora-drift-b {
-  0% {
-    transform: translate(15%, 10%) scale(1);
-  }
-  50% {
-    transform: translate(-15%, -5%) scale(1.2);
-  }
-  100% {
-    transform: translate(15%, 10%) scale(1);
-  }
-}
-
-@keyframes aurora-pulse {
-  0%,
-  100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.05);
-  }
-}
-
 @keyframes caret-blink {
   0%,
   100% {
@@ -277,18 +203,6 @@
   }
   50% {
     opacity: 0;
-  }
-}
-
-@keyframes btn-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-    box-shadow: 0 8px 20px -8px color-mix(in oklch, var(--brand) 40%, transparent);
-  }
-  50% {
-    transform: scale(1.035);
-    box-shadow: 0 14px 32px -8px color-mix(in oklch, var(--brand) 60%, transparent);
   }
 }
 
@@ -303,14 +217,21 @@
   }
 }
 
-@keyframes shard-drift {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(-12deg);
+@layer components {
+  /* Display serif reads best with optical tightening and no faux bold. */
+  .font-display {
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    font-synthesis: none;
   }
-  50% {
-    transform: translate3d(8px, -14px, 0) rotate(-6deg);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) rotate(-12deg);
+
+  /* Small mono eyebrow labels (section numbers, metadata). */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: color-mix(in oklch, var(--ink) 55%, transparent);
   }
 }

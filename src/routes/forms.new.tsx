@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { DEFAULT_FORM_TITLE, type QuestionType, type QuestionOptions } from "@/lib/form-utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Logo } from "@/components/logo";
 
 export const Route = createFileRoute("/forms/new")({
   head: () => ({
@@ -208,13 +209,10 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
   return (
     <div className="min-h-screen bg-surface text-ink">
-      <header className="border-b border-ink/5">
+      <header className="border-b border-hairline">
         <nav className="mx-auto flex max-w-4xl items-center justify-between px-6 py-6 md:px-8">
           <Link to="/" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
-              <span className="size-3 rounded-sm bg-white" />
-            </span>
-            <span className="text-xl font-bold tracking-tight">Flowform</span>
+            <Logo />
           </Link>
           <Link
             to="/dashboard"
@@ -228,7 +226,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
       <main className="mx-auto max-w-4xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
         <div className="max-w-2xl">
-          <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">Create a new form</h1>
+          <h1 className="font-display text-5xl md:text-6xl">Create a new form</h1>
           <p className="mt-3 text-base text-ink/60 md:text-lg">
             Start blank or from a template. You'll add questions, logic, and AI suggestions in the
             editor.
@@ -240,10 +238,10 @@ function NewFormAuthed({ userId }: { userId: string }) {
           type="button"
           onClick={() => start("blank", null)}
           disabled={busy}
-          className="group mt-8 flex w-full items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+          className="group mt-8 flex w-full items-center justify-between gap-4 rounded-2xl border border-hairline bg-white p-5 text-left transition-all hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <div className="flex items-center gap-4">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-md border border-hairline bg-surface text-ink/60">
               {pendingId === "blank" ? (
                 <Loader2 className="size-5 animate-spin" />
               ) : (
@@ -251,7 +249,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
               )}
             </span>
             <div>
-              <p className="text-base font-bold text-ink">Blank form</p>
+              <p className="text-base font-semibold text-ink">Blank form</p>
               <p className="mt-0.5 text-sm text-ink/50">Start from scratch with an empty form.</p>
             </div>
           </div>
@@ -259,9 +257,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
         </button>
 
         {/* Templates */}
-        <h2 className="mt-10 text-sm font-semibold uppercase tracking-[0.15em] text-ink/40">
-          Or start from a template
-        </h2>
+        <h2 className="eyebrow mt-10">Or start from a template</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {TEMPLATES.map((t) => (
             <button
@@ -269,10 +265,12 @@ function NewFormAuthed({ userId }: { userId: string }) {
               type="button"
               onClick={() => start(t.id, t)}
               disabled={busy}
-              className="relative flex flex-col rounded-2xl border border-ink/10 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+              className="relative flex flex-col rounded-2xl border border-hairline bg-white p-5 text-left transition-all hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <span className="text-2xl">{t.emoji}</span>
-              <p className="mt-3 text-sm font-bold text-ink">{t.name}</p>
+              <span className="font-mono text-[11px] text-brand">
+                {String(TEMPLATES.indexOf(t) + 1).padStart(2, "0")}
+              </span>
+              <p className="mt-3 text-sm font-semibold text-ink">{t.name}</p>
               <p className="mt-0.5 text-xs text-ink/50">{t.blurb}</p>
               <p className="mt-3 text-xs font-medium text-ink/40">{t.questions.length} questions</p>
               {pendingId === t.id && (

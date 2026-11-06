@@ -88,7 +88,7 @@ function LoginPage() {
 
   return (
     <AuthShell>
-      <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Welcome back</h1>
+      <h1 className="font-display text-4xl md:text-5xl">Welcome back</h1>
       <p className="mt-2 text-ink/60">
         New here?{" "}
         <Link to="/signup" className="font-semibold text-brand hover:underline">
@@ -105,7 +105,7 @@ function LoginPage() {
       )}
       <form
         onSubmit={onSubmit}
-        className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
+        className="mt-8 space-y-5 rounded-2xl border border-hairline bg-white p-6"
       >
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -157,7 +157,7 @@ function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex w-full items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all disabled:opacity-50 hover:bg-brand/90"
         >
           {submitting ? "Logging in…" : "Log in"}
         </button>

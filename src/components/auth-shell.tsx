@@ -1,16 +1,14 @@
 import { Link } from "@tanstack/react-router";
+import { Logo } from "@/components/logo";
 
 /** Shared chrome for the signed-out auth pages (login, signup, password reset). */
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-surface text-ink">
-      <header className="border-b border-ink/5">
+      <header className="border-b border-hairline">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 md:px-8">
           <Link to="/" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
-              <span className="size-3 rounded-sm bg-white" />
-            </span>
-            <span className="text-xl font-bold tracking-tight">Flowform</span>
+            <Logo />
           </Link>
         </nav>
       </header>

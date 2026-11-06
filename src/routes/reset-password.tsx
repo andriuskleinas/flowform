@@ -96,8 +96,8 @@ function ResetPasswordPage() {
   if (!session) {
     return (
       <AuthShell>
-        <div className="rounded-2xl border border-ink/5 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-2xl font-extrabold tracking-tight">This link has expired</h1>
+        <div className="rounded-2xl border border-hairline bg-white p-8 text-center">
+          <h1 className="font-display text-3xl">This link has expired</h1>
           <p className="mt-3 text-ink/60">
             Password reset links work once and expire after an hour. Request a fresh one and we'll
             email it right over.
@@ -105,7 +105,7 @@ function ResetPasswordPage() {
           <Link
             to="/forgot-password"
             search={{ email: undefined }}
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25"
+            className="mt-6 inline-flex items-center justify-center rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:bg-brand/90"
           >
             Send a new link
           </Link>
@@ -116,14 +116,14 @@ function ResetPasswordPage() {
 
   return (
     <AuthShell>
-      <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Choose a new password</h1>
+      <h1 className="font-display text-4xl md:text-5xl">Choose a new password</h1>
       <p className="mt-2 text-ink/60">
         Setting a new password for{" "}
         <span className="font-semibold text-ink">{session.user.email}</span>.
       </p>
       <form
         onSubmit={onSubmit}
-        className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
+        className="mt-8 space-y-5 rounded-2xl border border-hairline bg-white p-6"
       >
         <div className="space-y-2">
           <Label htmlFor="password">New password</Label>
@@ -152,7 +152,7 @@ function ResetPasswordPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex w-full items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all disabled:opacity-50 hover:bg-brand/90"
         >
           <KeyRound className="mr-2 size-4" />
           {submitting ? "Saving…" : "Save new password"}

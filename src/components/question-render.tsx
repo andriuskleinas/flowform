@@ -1,4 +1,4 @@
-import { Star } from "lucide-react";
+import { Check, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,14 +32,51 @@ type Props = {
   value: AnswerValue | undefined;
   onChange?: (v: AnswerValue) => void;
   disabled?: boolean;
+  /**
+   * "conversational" is the one-question-at-a-time view: the question is the
+   * hero (display serif) and choices become large lettered options.
+   */
+  variant?: "default" | "conversational";
 };
 
-export function QuestionRender({ question, value, onChange, disabled }: Props) {
+export function QuestionRender({
+  question,
+  value,
+  onChange,
+  disabled,
+  variant = "default",
+}: Props) {
   const id = `q-${question.id}`;
+  const big = variant === "conversational";
+  const label = question.label || <span className="italic text-ink/40">Untitled question</span>;
+
+  if (big) {
+    return (
+      <div>
+        <Label
+          htmlFor={id}
+          id={`${id}-label`}
+          className="block font-display text-[2rem] leading-[1.1] font-normal text-balance text-ink md:text-[2.6rem]"
+        >
+          {label}
+        </Label>
+        <div className="mt-7">
+          <BigAnswer
+            id={id}
+            question={question}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      <Label htmlFor={id} className="text-base font-semibold text-ink">
-        {question.label || <span className="italic text-ink/40">Untitled question</span>}
+      <Label htmlFor={id} className="text-[15px] font-medium text-ink">
+        {label}
       </Label>
 
       {question.type === "text" && (
@@ -211,13 +248,15 @@ export function NpsScale({
   value,
   onChange,
   disabled,
+  big = false,
 }: {
   value: number | null;
   onChange?: (n: number) => void;
   disabled?: boolean;
+  big?: boolean;
 }) {
   return (
-    <div>
+    <div className={big ? "max-w-2xl" : undefined}>
       <div className="flex flex-wrap gap-1.5">
         {Array.from({ length: 11 }).map((_, n) => {
           const active = value === n;
@@ -230,10 +269,12 @@ export function NpsScale({
               aria-label={`${n} out of 10`}
               aria-pressed={active}
               className={
-                "flex size-9 items-center justify-center rounded-lg border text-sm font-semibold transition-colors disabled:cursor-default " +
+                (big
+                  ? "flex h-12 min-w-11 flex-1 items-center justify-center rounded-md border font-mono text-base transition-colors disabled:cursor-default "
+                  : "flex size-9 items-center justify-center rounded-md border font-mono text-sm transition-colors disabled:cursor-default ") +
                 (active
                   ? "border-brand bg-brand text-brand-foreground"
-                  : "border-ink/15 bg-white text-ink hover:border-brand/50 hover:bg-brand/5")
+                  : "border-input bg-white text-ink hover:border-ink/40")
               }
             >
               {n}
@@ -241,7 +282,9 @@ export function NpsScale({
           );
         })}
       </div>
-      <div className="mt-1.5 flex max-w-[29rem] justify-between text-xs text-ink/40">
+      <div
+        className={`mt-2 flex justify-between font-mono text-[11px] text-ink/45 ${big ? "" : "max-w-[29rem]"}`}
+      >
         <span>Not at all likely</span>
         <span>Extremely likely</span>
       </div>
@@ -273,16 +316,192 @@ export function StarRating({
             type="button"
             disabled={disabled}
             onClick={() => onChange?.(n)}
-            className="rounded p-1 text-amber-500 transition-transform hover:scale-110 disabled:cursor-default disabled:hover:scale-100"
+            className="rounded-sm p-1 transition-opacity hover:opacity-80 disabled:cursor-default disabled:hover:opacity-100"
             aria-label={`${n} star${n > 1 ? "s" : ""}`}
           >
             <Star
               style={{ width: size, height: size }}
-              className={filled ? "fill-amber-400 stroke-amber-500" : "stroke-ink/30"}
+              strokeWidth={1.5}
+              className={filled ? "fill-gold stroke-gold" : "stroke-ink/25"}
             />
           </button>
         );
       })}
     </div>
   );
+}
+
+/** Large lettered option, used for choice and yes/no in conversational mode. */
+function OptionButton({
+  index,
+  label,
+  selected,
+  multi,
+  disabled,
+  onClick,
+}: {
+  index: number;
+  label: React.ReactNode;
+  selected: boolean;
+  multi?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role={multi ? "checkbox" : "radio"}
+      aria-checked={selected}
+      disabled={disabled}
+      onClick={onClick}
+      className={`flex w-full max-w-xl items-center gap-3 rounded-md border px-3.5 py-3 text-left text-base transition-colors disabled:cursor-default ${
+        selected
+          ? "border-brand bg-accent text-ink"
+          : "border-input bg-white text-ink/80 hover:border-ink/35"
+      }`}
+    >
+      <span
+        className={`grid size-6 shrink-0 place-items-center rounded-sm border font-mono text-[11px] ${
+          selected ? "border-brand bg-brand text-white" : "border-ink/15 text-ink/50"
+        }`}
+      >
+        {String.fromCharCode(65 + (index % 26))}
+      </span>
+      <span className="flex-1">{label}</span>
+      {selected && <Check className="size-4 text-brand" strokeWidth={2.5} />}
+    </button>
+  );
+}
+
+function BigAnswer({
+  id,
+  question,
+  value,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  question: Question;
+  value: AnswerValue | undefined;
+  onChange?: (v: AnswerValue) => void;
+  disabled?: boolean;
+}) {
+  switch (question.type) {
+    case "text":
+      return (
+        <Input
+          id={id}
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange?.(e.target.value)}
+          disabled={disabled}
+          placeholder="Type your answer…"
+          className="h-12 max-w-xl bg-white px-4 text-lg md:text-lg"
+        />
+      );
+    case "long_text":
+      return (
+        <Textarea
+          id={id}
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange?.(e.target.value)}
+          disabled={disabled}
+          rows={5}
+          placeholder="Type your answer…"
+          className="max-w-xl bg-white px-4 py-3 text-lg md:text-lg"
+        />
+      );
+    case "multiple_choice": {
+      const { choices, multi } = getChoiceConfig(question.options);
+      if (choices.length === 0) return <p className="text-sm text-ink/40">No options yet</p>;
+      const selected: string[] = Array.isArray(value)
+        ? value
+        : typeof value === "string" && value.length > 0
+          ? [value]
+          : [];
+      return (
+        <div
+          role={multi ? "group" : "radiogroup"}
+          aria-labelledby={`${id}-label`}
+          className="grid gap-2"
+        >
+          {choices.map((opt, i) => (
+            <OptionButton
+              key={i}
+              index={i}
+              multi={multi}
+              disabled={disabled}
+              selected={multi ? selected.includes(opt) : value === opt}
+              label={opt || <span className="italic text-ink/40">Option {i + 1}</span>}
+              onClick={() => {
+                if (!onChange) return;
+                if (!multi) return onChange(opt);
+                onChange(
+                  selected.includes(opt) ? selected.filter((x) => x !== opt) : [...selected, opt],
+                );
+              }}
+            />
+          ))}
+          {multi && <p className="mt-1 font-mono text-[11px] text-ink/45">Select all that apply</p>}
+        </div>
+      );
+    }
+    case "dropdown": {
+      const { choices } = getChoiceConfig(question.options);
+      if (choices.length === 0) return <p className="text-sm text-ink/40">No options yet</p>;
+      return (
+        <select
+          id={id}
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange?.(e.target.value)}
+          disabled={disabled}
+          className="flex h-12 w-full max-w-xl rounded-md border border-input bg-white px-4 text-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <option value="" disabled>
+            Select an option…
+          </option>
+          {choices.map((opt, i) => (
+            <option key={i} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    case "yes_no":
+      return (
+        <div role="radiogroup" aria-labelledby={`${id}-label`} className="grid max-w-xl gap-2">
+          {["Yes", "No"].map((opt, i) => (
+            <OptionButton
+              key={opt}
+              index={i}
+              disabled={disabled}
+              selected={value === opt}
+              label={opt}
+              onClick={() => onChange?.(opt)}
+            />
+          ))}
+        </div>
+      );
+    case "nps":
+      return (
+        <NpsScale
+          big
+          value={typeof value === "number" ? value : null}
+          onChange={(n) => onChange?.(n)}
+          disabled={disabled}
+        />
+      );
+    case "rating":
+      return (
+        <StarRating
+          size={36}
+          max={getRatingMax(question.options)}
+          value={typeof value === "number" ? value : 0}
+          onChange={(n) => onChange?.(n)}
+          disabled={disabled}
+        />
+      );
+    default:
+      return null;
+  }
 }

@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Logo } from "@/components/logo";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -155,13 +156,10 @@ function ProfileAuthed({
 
   return (
     <div className="min-h-screen bg-surface text-ink">
-      <header className="border-b border-ink/5">
+      <header className="border-b border-hairline">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 md:px-8">
           <Link to="/" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand">
-              <span className="size-3 rounded-sm bg-white" />
-            </span>
-            <span className="text-xl font-bold tracking-tight">Flowform</span>
+            <Logo />
           </Link>
           <Link
             to="/dashboard"
@@ -174,7 +172,7 @@ function ProfileAuthed({
       </header>
 
       <main className="mx-auto max-w-2xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
-        <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">Profile</h1>
+        <h1 className="font-display text-5xl md:text-6xl">Profile</h1>
         <p className="mt-3 text-base text-ink/60 md:text-lg">Manage your account details.</p>
 
         <p className="mt-2 text-sm text-ink/50">
@@ -184,7 +182,7 @@ function ProfileAuthed({
 
         <form
           onSubmit={onSubmit}
-          className="mt-8 space-y-5 rounded-2xl border border-ink/5 bg-white p-6 shadow-sm"
+          className="mt-8 space-y-5 rounded-2xl border border-hairline bg-white p-6"
         >
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-2">
@@ -230,7 +228,7 @@ function ProfileAuthed({
           <button
             type="submit"
             disabled={submitting || !hydrated}
-            className="inline-flex w-full items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:opacity-50 md:w-auto"
+            className="inline-flex w-full items-center justify-center rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all disabled:opacity-50 md:w-auto hover:bg-brand/90"
           >
             {submitting ? "Saving…" : "Save changes"}
           </button>

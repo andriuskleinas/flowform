@@ -11,9 +11,7 @@ import {
   Loader2,
   Plus,
   Share2,
-  Sparkles,
   Trash2,
-  WandSparkles,
   X,
 } from "lucide-react";
 import {
@@ -580,7 +578,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   if (!form || form.user_id !== userId) {
     return (
       <Shell>
-        <h1 className="text-2xl font-bold">Form not found</h1>
+        <h1 className="text-2xl font-semibold">Form not found</h1>
         <p className="mt-2 text-ink/60">It may have been deleted, or you don't have access.</p>
         <Link to="/dashboard" className="mt-6 inline-block text-brand underline">
           Back to dashboard
@@ -624,7 +622,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             <button
               type="button"
               onClick={() => setShareOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
+              className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
             >
               <Share2 className="size-4" /> Share
             </button>
@@ -632,7 +630,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           <button
             type="button"
             onClick={() => setPreviewOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
+            className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
           >
             <Eye className="size-4" /> Preview
           </button>
@@ -641,7 +639,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               type="button"
               onClick={() => setDiscardOpen(true)}
               disabled={saveAll.isPending}
-              className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
             >
               Discard
             </button>
@@ -650,14 +648,14 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             type="button"
             onClick={() => saveAll.mutate()}
             disabled={!isDirty || saveAll.isPending}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand/90 transition-colors"
           >
             {saveAll.isPending ? "Saving…" : "Save"}
           </button>
         </div>
       </div>
 
-      <header className="mt-6 rounded-2xl border border-ink/5 bg-white p-4 shadow-sm">
+      <header className="mt-6 rounded-lg border border-hairline bg-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex-1 min-w-0 space-y-3">
             <div className="space-y-1.5">
@@ -668,7 +666,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 value={draftForm.title}
                 onChange={(v) => setDraftForm((f) => ({ ...f, title: v }))}
                 placeholder="Start your best survey!"
-                className="text-2xl font-extrabold tracking-tight md:text-3xl"
+                className="font-display text-3xl md:text-4xl"
               />
             </div>
             <div className="space-y-1.5">
@@ -710,9 +708,9 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                     title={hint}
                     onClick={() => setDraftForm((f) => ({ ...f, display_mode: mode }))}
                     className={
-                      "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors " +
+                      "rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors " +
                       (draftForm.display_mode === mode
-                        ? "border-brand bg-brand/10 text-brand"
+                        ? "border-brand bg-accent text-brand"
                         : "border-ink/15 bg-white text-ink/60 hover:bg-ink/5")
                     }
                   >
@@ -749,7 +747,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                     ? "Add at least one question first"
                     : undefined
               }
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand/90 transition-colors"
             >
               Publish form
             </button>
@@ -761,7 +759,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 onClick={() => setStatus.mutate("closed")}
                 disabled={setStatus.isPending}
                 title="Stop accepting responses. The link keeps working and shows a closed notice."
-                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
               >
                 Close form
               </button>
@@ -770,7 +768,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 onClick={() => setStatus.mutate("draft")}
                 disabled={setStatus.isPending}
                 title="Take the form offline entirely — the link shows an unpublished notice."
-                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
               >
                 Unpublish
               </button>
@@ -782,7 +780,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 type="button"
                 onClick={() => setStatus.mutate("published")}
                 disabled={setStatus.isPending}
-                className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-50 hover:bg-brand/90 transition-colors"
               >
                 Reopen form
               </button>
@@ -796,7 +794,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
       <div className="mt-8">
         <section>
-          <h2 className="text-lg font-bold">Questions</h2>
+          <h2 className="text-lg font-semibold">Questions</h2>
           <p className="mt-1 text-xs text-ink/50">
             Drag the handle to reorder. Click <span className="font-semibold">Save</span> to keep
             your changes.
@@ -858,7 +856,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground hover:shadow-lg hover:shadow-brand/25"
+                  className="inline-flex items-center gap-2 rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground hover:bg-brand/90 transition-colors"
                 >
                   <Plus className="size-4" /> Add question
                 </button>
@@ -874,14 +872,16 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           </div>
 
           {/* AI suggestions */}
-          <div className="mt-8 rounded-2xl border border-brand/20 bg-gradient-to-br from-brand/[0.04] to-transparent p-5">
+          <div className="mt-8 rounded-lg border border-hairline bg-white p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-                  <Sparkles className="size-4 text-brand" />
-                  Suggest questions with AI
+                <h3 className="flex items-center gap-2 text-sm font-medium text-ink">
+                  Suggest questions
+                  <span className="rounded-sm border border-brand/25 bg-accent px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-brand">
+                    Claude
+                  </span>
                 </h3>
-                <p className="text-xs text-ink/50">
+                <p className="mt-0.5 text-xs text-ink/55">
                   Claude drafts questions from your form's title and description.
                 </p>
               </div>
@@ -890,38 +890,33 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 onClick={handleSuggest}
                 disabled={isSuggesting || !draftForm.title.trim()}
                 title={!draftForm.title.trim() ? "Add a title first" : undefined}
-                className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition-all hover:shadow-lg hover:shadow-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-white px-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/35 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSuggesting ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" /> Thinking…
+                    <Loader2 className="size-4 animate-spin" /> Drafting…
                   </>
                 ) : (
-                  <>
-                    <WandSparkles className="size-4" /> Suggest questions
-                  </>
+                  "Draft questions"
                 )}
               </button>
             </div>
 
             {suggestError && (
-              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p className="mt-3 rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 {suggestError}
               </p>
             )}
 
             {suggestions.length > 0 && (
-              <ul className="mt-4 space-y-2">
+              <ul className="mt-4 divide-y divide-hairline border-y border-hairline">
                 {suggestions.map((s) => {
                   const added = addedSuggestionIds.has(s.id);
                   return (
-                    <li
-                      key={s.id}
-                      className="flex items-start justify-between gap-3 rounded-xl border border-ink/10 bg-white px-3 py-2.5"
-                    >
+                    <li key={s.id} className="flex items-start justify-between gap-3 py-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium leading-snug text-ink">{s.label}</p>
-                        <p className="mt-0.5 text-xs text-ink/50">
+                        <p className="mt-1 font-mono text-[10px] uppercase tracking-wide text-ink/45">
                           {s.type === "rating"
                             ? `Rating scale (1–${getRatingMax(s.options)})`
                             : QUESTION_TYPE_LABELS[s.type]}
@@ -937,7 +932,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                           addSuggestion(s);
                         }}
                         disabled={added}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-brand hover:bg-brand/5 hover:text-brand disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/35 disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
                       >
                         {added ? (
                           "Added"
@@ -955,8 +950,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           </div>
         </section>
 
-        <section className="mt-12 rounded-2xl border border-destructive/20 bg-destructive/[0.03] p-5">
-          <h2 className="text-sm font-bold text-destructive">Danger zone</h2>
+        <section className="mt-12 rounded-lg border border-destructive/20 bg-destructive/[0.03] p-5">
+          <h2 className="text-sm font-semibold text-destructive">Danger zone</h2>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-ink/60">
               Permanently delete this form
@@ -968,7 +963,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             <button
               type="button"
               onClick={() => setDeleteOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-white px-4 py-2 text-sm font-semibold text-destructive hover:bg-destructive/5"
+              className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-white px-4 py-2 text-sm font-semibold text-destructive hover:bg-destructive/5"
             >
               <Trash2 className="size-4" /> Delete form
             </button>
@@ -1001,7 +996,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-extrabold tracking-tight">
+            <DialogTitle className="font-display text-3xl">
               {draftForm.title || DEFAULT_FORM_TITLE}
             </DialogTitle>
             {draftForm.description ? (
@@ -1009,7 +1004,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 {draftForm.description}
               </DialogDescription>
             ) : null}
-            <p className="mt-2 text-xs uppercase tracking-wide text-ink/40">
+            <p className="eyebrow mt-2">
               {isDirty
                 ? "Preview — includes unsaved changes"
                 : "Preview — this is what respondents will see"}
@@ -1031,8 +1026,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               />
             ) : (
               visibleDraftQuestions.map((q, i) => (
-                <div key={q.id} className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/40">
+                <div key={q.id} className="rounded-lg border border-hairline bg-white p-5">
+                  <p className="eyebrow mb-3">
                     Question {i + 1}
                     {!q.required && (
                       <span className="ml-2 font-medium text-ink/35">· Optional</span>
@@ -1053,7 +1048,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 <button
                   type="button"
                   disabled
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground opacity-60 hover:bg-brand/90 transition-colors"
                 >
                   Submit
                 </button>
@@ -1135,11 +1130,7 @@ function SortableQuestionCard({
   };
 
   return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm"
-    >
+    <li ref={setNodeRef} style={style} className="rounded-lg border border-hairline bg-white p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <button
@@ -1152,9 +1143,7 @@ function SortableQuestionCard({
           >
             <GripVertical className="size-4" />
           </button>
-          <span className="text-xs font-semibold uppercase tracking-wide text-ink/40">
-            Q{index + 1}
-          </span>
+          <span className="eyebrow">Q{index + 1}</span>
         </div>
         <div className="flex items-center gap-1">
           <IconBtn label="Move up" onClick={onMoveUp} disabled={index === 0}>
@@ -1302,7 +1291,7 @@ function SortableQuestionCard({
         );
       })()}
 
-      <div className="mt-4 flex items-center gap-2 border-t border-ink/5 pt-3">
+      <div className="mt-4 flex items-center gap-2 border-t border-hairline pt-3">
         <Switch
           id={`q-${question.id}-required`}
           checked={question.required}
