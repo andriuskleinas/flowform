@@ -8,8 +8,9 @@ is a linked Loom video rather than a file in this folder, and the hero image is
 | --- | --- | --- |
 | `landing.png` | "The landing page" | Landing hero at 1440 × 800 |
 | `fill.png` | "Filling a form" | A respondent mid-flow on a multi-select question, two options picked |
-| `analytics.png` | "Measuring results" | The responses dashboard: metrics, Claude summary and funnel |
+| `analytics.png` | "Measuring results" | Per-question charts from the responses dashboard of a real form |
 
-All shots are taken at 2× device scale against the local dev server. When capturing a real
+`landing.png` and `fill.png` are taken at 2× device scale against the local dev server;
+`analytics.png` comes from the signed-in production dashboard. When capturing a real
 published form, block the `record_form_event` RPC (or use a form you own while signed in) so the
 visit doesn't add views to that form's funnel.

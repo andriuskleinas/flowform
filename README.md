@@ -68,7 +68,10 @@ One question at a time, set as a headline, with lettered options you can pick by
 
 ### Measuring results
 
-![Analytics dashboard](docs/screenshots/analytics.png)
+Per-question results from a real form, alongside the funnel, trend, drop-off and Claude summary
+views on the same dashboard.
+
+![Per-question analytics](docs/screenshots/analytics.png)
 
 ## Design
 
