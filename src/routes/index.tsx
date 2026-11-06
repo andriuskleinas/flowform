@@ -169,6 +169,11 @@ const HERO_STEPS: Record<HeroStepId, { n: number; title: string; options: string
   },
 };
 const HERO_TOTAL = 3;
+const HERO_SHORT: Record<HeroStepId, string> = {
+  blocker: "What almost stopped you",
+  integration: "Missing integration",
+  plan: "Plan that fits",
+};
 
 /** The one jump rule in the example form: only "Missing integrations" asks Q2. */
 function heroNext(step: HeroStepId, answer: string | undefined): HeroStepId | "done" {
@@ -240,21 +245,15 @@ function HeroForm() {
     }
   };
 
-  // The logic note narrates the jump rule for whatever is selected right now.
+  // A plain-language hint under the form: how it adapts, in respondent terms.
   let note: React.ReactNode = null;
   if (step === "blocker") {
     note =
-      picked === "Missing integrations" ? (
-        <>
-          Continues to <span className="font-medium">Q2: Integrations</span>
-        </>
-      ) : (
-        <>
-          “{picked}” skips Q2, jumps to <span className="font-medium">Q3: Plan fit</span>
-        </>
-      );
+      picked === "Missing integrations"
+        ? "You’ll get one follow-up question about integrations."
+        : "Tip: pick “Missing integrations” and the form adds a follow-up question.";
   } else if (step === "plan" && skippedQ2) {
-    note = <>Q2 was skipped by the jump rule</>;
+    note = "One question was skipped because it didn’t apply to you.";
   }
 
   return (
@@ -364,13 +363,11 @@ function HeroForm() {
                 const skipped = !history.includes(id);
                 return (
                   <li key={id} className="flex items-baseline justify-between gap-4 py-2.5">
-                    <span className={skipped ? "text-ink/35" : "text-ink/60"}>
-                      Q{HERO_STEPS[id].n}
+                    <span className={skipped ? "text-ink/40" : "text-ink/60"}>
+                      {HERO_SHORT[id]}
                     </span>
-                    <span
-                      className={`text-right ${skipped ? "font-mono text-xs text-ink/40" : "text-ink"}`}
-                    >
-                      {skipped ? "skipped by logic" : answers[id]}
+                    <span className={`text-right ${skipped ? "text-ink/40 italic" : "text-ink"}`}>
+                      {skipped ? "Not asked, didn’t apply" : answers[id]}
                     </span>
                   </li>
                 );
@@ -395,23 +392,13 @@ function HeroForm() {
         )}
       </Sheet>
 
-      {/* The note sits under the card; its slot is reserved so steps without
-          a rule don't make the layout jump. */}
+      {/* Slot reserved so steps without a hint don't make the layout jump. */}
       <figcaption
         aria-live="polite"
-        className={`mt-4 flex min-h-[3.25rem] items-start gap-3 rounded-lg border border-dashed px-4 py-3 text-sm transition-opacity duration-300 ${
-          note ? "border-brand/40 bg-white text-ink opacity-100" : "border-transparent opacity-0"
-        }`}
+        className="mt-4 min-h-[1.5rem] px-1 text-sm leading-relaxed text-ink/60 transition-opacity duration-300"
+        style={{ opacity: note ? 1 : 0 }}
       >
-        {note && (
-          <>
-            <span className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] font-medium uppercase tracking-wide text-brand">
-              <GitBranch className="size-3" />
-              Logic
-            </span>
-            <span className="leading-snug">{note}</span>
-          </>
-        )}
+        {note}
       </figcaption>
     </figure>
   );
@@ -782,7 +769,7 @@ function Index() {
                 <span className="rounded-full bg-mint-tint px-2 py-0.5 text-xs font-medium text-mint">
                   Updated
                 </span>
-                AI features now run on Claude Opus 5.5
+                AI features now run on Claude Sonnet 5.5
               </span>
               <h1 className="mt-6 font-display text-[3.4rem] leading-[0.95] tracking-[-0.02em] text-ink sm:text-7xl lg:text-[5.6rem]">
                 Forms people actually <em className="text-brand">finish.</em>
@@ -809,9 +796,7 @@ function Index() {
                 ))}
               </ul>
             </div>
-            <Stage hue="sky" className="relative">
-              <HeroForm />
-            </Stage>
+            <HeroForm />
           </div>
         </section>
 

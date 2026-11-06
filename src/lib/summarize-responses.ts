@@ -126,7 +126,7 @@ export const summarizeResponses = createServerFn({ method: "POST" })
 
     const client = new Anthropic({ apiKey });
     const message = await client.beta.messages.create({
-      model: "claude-opus-5-5",
+      model: "claude-sonnet-5-5",
       // Thinking tokens count toward max_tokens, so leave room beyond the JSON.
       max_tokens: 16000,
       // Reading up to 300 answers for themes benefits from a bit more thought.
@@ -138,8 +138,8 @@ export const summarizeResponses = createServerFn({ method: "POST" })
       messages: [{ role: "user", content: userContent }],
     });
 
-    // Opus 5.5 always thinks, so the reply can start with (empty) thinking
-    // blocks; read by block type and check why generation stopped.
+    // Sonnet 5.5 thinks adaptively by default, so the reply can start with
+    // (empty) thinking blocks; read by block type and check why it stopped.
     if (message.stop_reason === "refusal") {
       throw new Error("Claude declined this request. Try rewording it.");
     }

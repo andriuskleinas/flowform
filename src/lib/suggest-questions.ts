@@ -55,7 +55,7 @@ export const suggestQuestions = createServerFn({ method: "POST" })
       (data.description?.trim() ? `\nDescription: ${data.description.trim()}` : "");
 
     const message = await client.beta.messages.create({
-      model: "claude-opus-5-5",
+      model: "claude-sonnet-5-5",
       // Thinking tokens count toward max_tokens, so leave room beyond the JSON.
       max_tokens: 16000,
       // Interactive and well-specified: keep thinking short for snappy suggestions.
@@ -67,8 +67,8 @@ export const suggestQuestions = createServerFn({ method: "POST" })
       messages: [{ role: "user", content: userContent }],
     });
 
-    // Opus 5.5 always thinks, so the reply can start with (empty) thinking
-    // blocks; read by block type and check why generation stopped.
+    // Sonnet 5.5 thinks adaptively by default, so the reply can start with
+    // (empty) thinking blocks; read by block type and check why it stopped.
     if (message.stop_reason === "refusal") {
       throw new Error("Claude declined this request. Try rewording it.");
     }
