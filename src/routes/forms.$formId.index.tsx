@@ -375,13 +375,13 @@ function PublicFormPage() {
         {ownerNav}
         {/* In conversational mode the question is the hero; the form title
             sits quietly above it like a running head. */}
-        <header className="border-b border-hairline pb-5">
+        <header>
           <h1 className="text-[15px] font-medium tracking-normal text-ink">{formQ.data.title}</h1>
           {formQ.data.description && (
             <p className="mt-1 text-sm leading-relaxed text-ink/55">{formQ.data.description}</p>
           )}
         </header>
-        <div className="mt-8">
+        <div className="mt-6">
           <ConversationalForm
             questions={questions}
             answers={answers}

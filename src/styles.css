@@ -71,9 +71,9 @@
   --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-hairline: var(--hairline);
-  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Instrument Serif", ui-serif, Georgia, serif;
-  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /*
@@ -149,7 +149,8 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    font-feature-settings: "ss01", "cv11";
+    /* Instrument Sans is set slightly tight, Bending Spoons-style. */
+    letter-spacing: -0.015em;
   }
 
   ::selection {
@@ -225,13 +226,20 @@
     font-synthesis: none;
   }
 
+  /* Fragment Mono ships one weight; never fake a bold. */
+  .font-mono {
+    font-synthesis: none;
+    letter-spacing: 0;
+  }
+
   /* Small mono eyebrow labels (section numbers, metadata). */
   .eyebrow {
     font-family: var(--font-mono);
     font-size: 0.75rem;
     line-height: 1rem;
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
     text-transform: uppercase;
+    font-synthesis: none;
     color: color-mix(in oklch, var(--ink) 55%, transparent);
   }
 }

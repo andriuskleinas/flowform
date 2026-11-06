@@ -121,7 +121,10 @@ function RespondentVignette() {
           <div className="h-px w-3/5 bg-brand" />
         </div>
         <div className="px-6 pt-8 pb-7 sm:px-9 sm:pt-10">
-          <p className="eyebrow">Question 3</p>
+          <p className="eyebrow">
+            <span className="text-brand">03</span>
+            <span className="mx-1.5 text-ink/25">/</span>05
+          </p>
           <h3 className="mt-3 font-display text-[2rem] leading-[1.08] text-ink sm:text-[2.4rem]">
             What almost stopped you from signing up?
           </h3>

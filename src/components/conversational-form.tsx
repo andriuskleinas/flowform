@@ -170,8 +170,8 @@ export function ConversationalForm({
 
           <p className="eyebrow">
             <span className="text-brand">{String(history.length + 1).padStart(2, "0")}</span>
-            <span className="mx-2 text-ink/25">/</span>
-            Question {history.length + 1}
+            <span className="mx-1.5 text-ink/25">/</span>
+            {String(total).padStart(2, "0")}
             {!current.required && <span className="ml-2 text-ink/40">· Optional</span>}
           </p>
 
