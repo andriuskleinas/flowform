@@ -48,17 +48,27 @@ No account needed for the [interactive demo](https://flowformapp.vercel.app/demo
 | | Feature | What it does |
 |---|---|---|
 | `01` | **Drag-and-drop builder** | 7 question types: short & long text, single/multi choice, dropdown, yes/no, NPS and rating scales. Start from a template or a blank form, with a live preview of what respondents see. |
-| `02` | **AI question suggestions** | Describe what you want to learn and Claude drafts well-worded, correctly typed questions you accept or edit with one click. |
+| `02` | **AI question drafting** | Give the form a title and goal and Claude (Sonnet 5.5) drafts five to eight questions, each with the right type and answer options. Add the ones you want with one click and edit anything. |
 | `03` | **Conditional logic** | Forward-only jump rules ("if they answer X, skip to…"), with path-aware validation so a required question a respondent never sees can't block them. |
 | `04` | **Conversational mode** | One question at a time with a progress bar, keyboard shortcuts (Enter to confirm, A–Z or Y/N to pick, 0–9 to score) and back-navigation. Or a **classic** all-on-one-page mode. |
 | `05` | **Drafts that persist** | Answers are saved locally so a respondent can come back and finish, with a guard against double submission. |
 | `06` | **Analytics dashboard** | A real funnel (opened → started → completed), completion rate, average time-to-fill, per-question drop-off and a response trend over 7/30/90 days. |
-| `07` | **AI response summaries** | Claude reads open-text answers and pulls out themes, sentiment and representative quotes. |
+| `07` | **AI response summaries** | Claude reads every open-text answer and returns the main themes (with how common each was), the overall sentiment and verbatim quotes, and says so when there's too little data to be confident. |
 | `08` | **Sharing & export** | Shareable link, QR code, embed snippet, native share and CSV export. |
 
 ### The landing page
 
+The hero card is a working three-question form with a real jump rule; further down, the Build and
+Learn sections have hands-on demos of the two AI features.
+
 ![Flowform landing page](docs/screenshots/landing.png)
+
+### Drafting questions with Claude
+
+Real output in the editor for a form titled "Customer feedback survey": eight questions, each with
+its type picked. Nothing is added until you click Add.
+
+![Claude question suggestions in the editor](docs/screenshots/ai-suggestions.png)
 
 ### Filling a form
 
@@ -66,12 +76,13 @@ One question at a time, set as a headline, with lettered options you can pick by
 
 ![Conversational fill experience](docs/screenshots/fill.png)
 
-### Measuring results
+### Reading the results
 
-Per-question results from a real form, alongside the funnel, trend, drop-off and Claude summary
-views on the same dashboard.
+The responses dashboard for a real form: headline metrics, then Claude's summary of the open
+answers with themes, sentiment and quotes. It even flags the placeholder test answers rather than
+reading meaning into them. Funnel, trend, drop-off and per-question charts follow below.
 
-![Per-question analytics](docs/screenshots/analytics.png)
+![Analytics with the Claude summary](docs/screenshots/analytics.png)
 
 ## Design
 
@@ -82,7 +93,8 @@ work.
 | | Choice |
 |---|---|
 | **Type** | [Roboto](https://fonts.google.com/specimen/Roboto) throughout: semibold and tightly tracked for headlines and questions, regular for interface text, with [Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono) for labels, counters and numbers |
-| **Colour** | Ink `#14161A` on paper `#FBFAF7`, with one Klein-style blue (`#1244D0`) reserved for actions, selection, focus and live data |
+| **Colour** | Ink `#14161A` on paper `#FBFAF7`, with one Klein-style blue (`#1244D0`) reserved for actions, selection, focus and live data. The landing page adds soft sky, sun, coral and mint tints behind its product demos |
+| **Marks** | The logo is an ink tile with two "answer bars"; the Build / Branch / Learn icons are drawn from the same shapes rather than a stock icon set |
 | **Shape** | Tight 6–8 px radii, 1 px hairline borders, one soft shadow for floating "product sheets" only |
 | **Motion** | A single step transition between questions; respects `prefers-reduced-motion` |
 | **Tokens** | All colours are `oklch` custom properties in [src/styles.css](src/styles.css), mapped to Tailwind utilities |
