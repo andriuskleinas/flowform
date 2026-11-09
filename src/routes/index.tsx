@@ -8,10 +8,12 @@ import {
   Download,
   GitBranch,
   History,
+  Lightbulb,
   ListChecks,
   PenLine,
   Power,
   QrCode,
+  Quote,
   RotateCcw,
   Rows3,
   type LucideIcon,
@@ -411,54 +413,200 @@ function HeroForm() {
 /* Feature vignettes                                                        */
 /* ------------------------------------------------------------------------ */
 
-const SUGGESTIONS: Array<{ type: string; text: string }> = [
-  { type: "Multiple choice", text: "What were you hoping Flowform would do for you?" },
-  { type: "NPS", text: "How likely are you to recommend us to a colleague?" },
-  { type: "Long answer", text: "What would make upgrading an easy decision?" },
+type DraftQ = { type: string; label: string; options?: string[] };
+
+const DRAFT_GOALS: Array<{ goal: string; questions: DraftQ[] }> = [
+  {
+    goal: "Why trial users don’t upgrade",
+    questions: [
+      {
+        type: "Multiple choice",
+        label: "What were you hoping Flowform would help you do?",
+        options: ["Collect feedback", "Run research", "Qualify leads"],
+      },
+      { type: "NPS", label: "How likely are you to recommend Flowform to a colleague?" },
+      {
+        type: "Dropdown",
+        label: "Which plan did you look at?",
+        options: ["Free", "Team", "Business"],
+      },
+      { type: "Long answer", label: "What would make upgrading an easy decision?" },
+    ],
+  },
+  {
+    goal: "Feedback after a workshop",
+    questions: [
+      { type: "Rating · 5 stars", label: "How would you rate the workshop overall?" },
+      {
+        type: "Multiple choice",
+        label: "Which sessions were most useful?",
+        options: ["Hands-on lab", "Panel", "Open Q&A"],
+      },
+      { type: "Yes / No", label: "Would you come to the next one?" },
+      { type: "Long answer", label: "What should we change next time?" },
+    ],
+  },
+  {
+    goal: "How the team is feeling",
+    questions: [
+      { type: "Rating · 5 stars", label: "How manageable was your workload this month?" },
+      { type: "Yes / No", label: "Do you feel your work is recognised?" },
+      { type: "NPS", label: "How likely are you to recommend the team as a place to work?" },
+      { type: "Long answer", label: "What’s one thing that would make next month better?" },
+    ],
+  },
 ];
 
-function BuilderVignette() {
-  const [added, setAdded] = useState<Record<number, boolean>>({ 0: true });
+/** Small "Claude" marker used wherever AI did the work. */
+function ClaudeTag() {
+  return <Tag tone="brand">Claude</Tag>;
+}
+
+/** Placeholder rows shown while Claude is "drafting" / "reading". */
+function DraftingRows({ rows = 3 }: { rows?: number }) {
   return (
-    <Sheet bar={<span>Editor · Trial feedback</span>}>
-      <div className="p-5 sm:p-6">
-        <label className="text-sm font-medium text-ink/70" htmlFor="vignette-goal">
-          What do you want to learn?
-        </label>
-        <div
-          id="vignette-goal"
-          className="mt-2 rounded-md border border-input bg-surface px-3 py-2.5 text-[15px] text-ink"
-        >
-          Why trial users don’t upgrade
+    <div className="space-y-4 py-4" aria-hidden>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="space-y-2 motion-safe:animate-pulse">
+          <div className="h-3.5 w-20 rounded-sm bg-surface" />
+          <div className="h-4 rounded-sm bg-surface" style={{ width: `${88 - i * 14}%` }} />
         </div>
-        <ul className="mt-5 divide-y divide-hairline border-y border-hairline">
-          {SUGGESTIONS.map((s, i) => (
-            <li key={s.text} className="flex items-center gap-4 py-3.5">
-              <div className="min-w-0 flex-1">
-                <Tag>{s.type}</Tag>
-                <p className="mt-1.5 text-[15px] leading-snug text-ink">{s.text}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAdded((a) => ({ ...a, [i]: !a[i] }))}
-                className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors ${
-                  added[i]
-                    ? "border-transparent bg-ink text-paper"
-                    : "border-hairline bg-white text-ink hover:border-ink/30"
-                }`}
-              >
-                {added[i] ? (
-                  <>
-                    <Check className="size-3.5" /> Added
-                  </>
-                ) : (
-                  "Add"
-                )}
-              </button>
-            </li>
+      ))}
+    </div>
+  );
+}
+
+/** Lets a visitor pick a goal and watch Claude draft typed questions for it. */
+function BuilderVignette() {
+  const [goalIdx, setGoalIdx] = useState(0);
+  const [drafting, setDrafting] = useState(false);
+  const [added, setAdded] = useState<Record<string, boolean>>({});
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const draft = (i: number) => {
+    setGoalIdx(i);
+    setAdded({});
+    setDrafting(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setDrafting(false), 1100);
+  };
+  const { goal, questions } = DRAFT_GOALS[goalIdx];
+
+  return (
+    <Sheet
+      bar={
+        <>
+          <span className="truncate">New form · Draft with Claude</span>
+          <span className="shrink-0">Example output</span>
+        </>
+      }
+    >
+      <div className="p-5 sm:p-6">
+        <p className="text-sm font-medium text-ink/70">What do you want to learn?</p>
+        <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Example goals">
+          {DRAFT_GOALS.map((g, i) => (
+            <button
+              key={g.goal}
+              type="button"
+              role="radio"
+              aria-checked={i === goalIdx}
+              onClick={() => draft(i)}
+              className={`rounded-full border px-3 py-1 text-[13px] transition-colors ${
+                i === goalIdx
+                  ? "border-brand bg-accent text-ink"
+                  : "border-hairline bg-white text-ink/65 hover:border-ink/30"
+              }`}
+            >
+              {g.goal}
+            </button>
           ))}
-        </ul>
-        <p className="mt-4 font-mono text-[11px] text-ink/45">Drafted by Claude · edit anything</p>
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <div className="min-w-0 flex-1 truncate rounded-md border border-input bg-surface px-3 py-2.5 text-[15px] text-ink">
+            {goal}
+          </div>
+          <button
+            type="button"
+            onClick={() => draft(goalIdx)}
+            disabled={drafting}
+            className="inline-flex h-[2.65rem] shrink-0 items-center gap-1.5 rounded-md bg-brand px-3.5 text-sm font-medium text-white transition-colors hover:bg-brand/90 disabled:opacity-60"
+          >
+            {drafting ? (
+              "Drafting…"
+            ) : (
+              <>
+                <RotateCcw className="size-3.5" /> Redraft
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between border-t border-hairline pt-4">
+          <p className="text-sm text-ink/60" aria-live="polite">
+            {drafting
+              ? "Claude is drafting questions…"
+              : `Showing ${questions.length} of 6 drafted questions`}
+          </p>
+          <ClaudeTag />
+        </div>
+
+        {drafting ? (
+          <DraftingRows />
+        ) : (
+          <ul className="mt-1 divide-y divide-hairline">
+            {questions.map((q, i) => {
+              const key = `${goalIdx}-${i}`;
+              const on = added[key] ?? i === 0;
+              return (
+                <li
+                  key={key}
+                  className="flex items-start gap-4 py-3.5 motion-safe:animate-[demo-step-in_0.35s_ease-out_both]"
+                  style={{ animationDelay: `${i * 90}ms` }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <Tag>{q.type}</Tag>
+                    <p className="mt-1.5 text-[15px] leading-snug text-ink">{q.label}</p>
+                    {q.options && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {q.options.map((o) => (
+                          <span
+                            key={o}
+                            className="rounded-sm border border-hairline px-1.5 py-0.5 text-xs text-ink/60"
+                          >
+                            {o}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAdded((a) => ({ ...a, [key]: !on }))}
+                    className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors ${
+                      on
+                        ? "border-transparent bg-ink text-paper"
+                        : "border-hairline bg-white text-ink hover:border-ink/30"
+                    }`}
+                  >
+                    {on ? (
+                      <>
+                        <Check className="size-3.5" /> Added
+                      </>
+                    ) : (
+                      "Add"
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </Sheet>
   );
@@ -503,20 +651,46 @@ function LogicVignette() {
   );
 }
 
-const FUNNEL = [
-  { label: "Opened", value: 1240 },
-  { label: "Started", value: 912 },
-  { label: "Completed", value: 688 },
+const SUMMARY_THEMES: Array<{ name: string; detail: string; share: number }> = [
+  {
+    name: "Annual billing feels like a big jump",
+    detail: "Teams want a monthly plan before committing for a year.",
+    share: 46,
+  },
+  {
+    name: "Missing Slack and HubSpot integrations",
+    detail: "Mostly sales and support teams who live in those tools.",
+    share: 31,
+  },
+  {
+    name: "Setup took longer than expected",
+    detail: "Usually people building their first branching form.",
+    share: 18,
+  },
 ];
 
+/** Results view where the Claude summary is the headline, the funnel a footnote. */
 function InsightVignette() {
-  const max = FUNNEL[0].value;
+  const [reading, setReading] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+  const rerun = () => {
+    setReading(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setReading(false), 1200);
+  };
+
   return (
     <Sheet
       bar={
         <>
-          <span>Responses · last 30 days</span>
-          <span>Illustrative data</span>
+          <span className="truncate">Results · Trial feedback</span>
+          <span className="shrink-0">Illustrative data</span>
         </>
       }
     >
@@ -526,44 +700,75 @@ function InsightVignette() {
           ["Completion", "55%"],
           ["Avg. time", "1m 42s"],
         ].map(([k, v]) => (
-          <div key={k} className="px-4 py-4 sm:px-5">
+          <div key={k} className="px-4 py-3.5 sm:px-5">
             <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">{k}</p>
-            <p className="mt-1 font-mono text-lg font-medium tracking-tight whitespace-nowrap tabular-nums text-ink sm:text-2xl">
+            <p className="mt-1 font-mono text-lg font-medium tracking-tight whitespace-nowrap tabular-nums text-ink sm:text-xl">
               {v}
             </p>
           </div>
         ))}
       </div>
-      <div className="space-y-2.5 px-5 py-5 sm:px-6">
-        {FUNNEL.map((f, i) => (
-          <div key={f.label} className="grid grid-cols-[5.5rem_1fr_3rem] items-center gap-3">
-            <span className="text-[13px] text-ink/60">{f.label}</span>
-            <div className="h-2 rounded-sm bg-surface">
-              <div
-                className={`h-2 rounded-sm ${i === FUNNEL.length - 1 ? "bg-brand" : "bg-ink/70"}`}
-                style={{ width: `${(f.value / max) * 100}%` }}
-              />
-            </div>
-            <span className="text-right font-mono text-[12px] tabular-nums text-ink/60">
-              {f.value.toLocaleString("en-US")}
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="border-t border-hairline bg-paper px-5 py-5 sm:px-6">
+
+      <div className="px-5 py-5 sm:px-6">
         <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">
-            Summary of 214 open answers
-          </p>
-          <Tag tone="brand">Claude</Tag>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-ink">Summary of 214 open answers</p>
+            <ClaudeTag />
+          </div>
+          <button
+            type="button"
+            onClick={rerun}
+            disabled={reading}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-white px-2.5 text-xs font-medium text-ink transition-colors hover:border-ink/35 disabled:opacity-60"
+          >
+            <RotateCcw className="size-3" /> {reading ? "Reading…" : "Re-run"}
+          </button>
         </div>
-        <p className="mt-2.5 text-[15px] leading-relaxed text-ink">
-          Most people stall at the pricing question. Teams want a monthly plan before committing to
-          annual.
-        </p>
-        <blockquote className="mt-3 border-l-2 border-ink/15 pl-3 font-display text-lg italic leading-snug text-ink/70">
-          “Would happily pay monthly — annual feels like a big jump for a tool we’re still trying.”
-        </blockquote>
+
+        {reading ? (
+          <DraftingRows rows={3} />
+        ) : (
+          <div className="motion-safe:animate-[demo-step-in_0.35s_ease-out_both]">
+            <div className="mt-3 flex items-start gap-2.5">
+              <span className="mt-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-sm border border-hairline px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-amber-800">
+                <span className="size-1.5 rounded-full bg-amber-500" />
+                Mixed
+              </span>
+              <p className="text-[15px] leading-relaxed text-ink">
+                People like the product but stall at pricing. Most want a monthly plan before
+                committing to annual.
+              </p>
+            </div>
+            <ol className="mt-4 space-y-3">
+              {SUMMARY_THEMES.map((t) => (
+                <li key={t.name}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-sm font-medium text-ink">{t.name}</p>
+                    <span className="font-mono text-xs tabular-nums text-ink/55">{t.share}%</span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 rounded-sm bg-surface">
+                    <div className="h-1.5 rounded-sm bg-brand" style={{ width: `${t.share}%` }} />
+                  </div>
+                  <p className="mt-1 text-[13px] text-ink/55">{t.detail}</p>
+                </li>
+              ))}
+            </ol>
+            <blockquote className="mt-4 border-l-2 border-ink/15 pl-3 font-display text-lg italic leading-snug text-ink/70">
+              “Would happily pay monthly. Annual feels like a big jump for a tool we’re still
+              trying.”
+            </blockquote>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-hairline bg-paper px-5 py-3 font-mono text-[11px] text-ink/55 sm:px-6">
+        <span>Funnel</span>
+        <span className="text-ink/30">·</span>
+        <span>Opened 1,240</span>
+        <ArrowRight className="size-3 text-ink/30" />
+        <span>Started 912</span>
+        <ArrowRight className="size-3 text-ink/30" />
+        <span className="text-brand">Completed 688</span>
       </div>
     </Sheet>
   );
@@ -575,6 +780,7 @@ function InsightVignette() {
 
 const FEATURES: Array<{
   hue: Hue;
+  ai?: boolean;
   icon: LucideIcon;
   label: string;
   title: React.ReactNode;
@@ -584,6 +790,7 @@ const FEATURES: Array<{
 }> = [
   {
     hue: "sun",
+    ai: true,
     icon: PenLine,
     label: "Build",
     title: (
@@ -591,10 +798,10 @@ const FEATURES: Array<{
         Start from a goal, <em>not</em> a blank page.
       </>
     ),
-    body: "Say what you want to learn and Claude drafts well-worded, correctly typed questions. Keep the ones you like, rewrite the rest, and reorder by drag and drop.",
+    body: "Tell Claude what you want to learn. It drafts five to eight questions, each with the right type and answer options. Keep the ones you like, edit the rest, reorder by drag and drop.",
     points: [
-      "Seven question types, from short text to NPS",
-      "Templates, or start from scratch",
+      "Claude picks the question type and writes the options",
+      "Redraft as often as you like, or start from a template",
       "Live preview of exactly what respondents see",
     ],
     visual: <BuilderVignette />,
@@ -618,6 +825,7 @@ const FEATURES: Array<{
   },
   {
     hue: "mint",
+    ai: true,
     icon: BarChart3,
     label: "Learn",
     title: (
@@ -625,10 +833,10 @@ const FEATURES: Array<{
         See where people stop, <em>and why.</em>
       </>
     ),
-    body: "A real funnel from opened to completed, drop-off per question, and a Claude summary that turns hundreds of open answers into a few themes, with quotes to back them up.",
+    body: "Claude reads every open answer for you and comes back with the main themes, how often each came up, the overall sentiment and quotes that prove it. Alongside: a real funnel and drop-off per question.",
     points: [
-      "Completion rate and time to fill",
-      "7, 30 and 90-day response trends",
+      "Themes, sentiment and quotes from open answers",
+      "Completion rate, time to fill and 7, 30 and 90-day trends",
       "CSV export whenever you need the raw data",
     ],
     visual: <InsightVignette />,
@@ -643,7 +851,19 @@ const FEATURE_TONES = [
   "text-[oklch(0.86_0.12_88)]",
 ];
 
-const CAPABILITIES: Array<{ icon: LucideIcon; title: string; body: string }> = [
+const CAPABILITIES: Array<{ icon: LucideIcon; title: string; body: string; ai?: boolean }> = [
+  {
+    icon: Lightbulb,
+    title: "Questions drafted for you",
+    body: "Describe your goal and Claude writes five to eight questions, each with the right type and answer options.",
+    ai: true,
+  },
+  {
+    icon: Quote,
+    title: "Answers read for you",
+    body: "Hundreds of open answers become a few themes, an overall sentiment and quotes to back them up.",
+    ai: true,
+  },
   {
     icon: ListChecks,
     title: "Seven question types",
@@ -817,11 +1037,18 @@ function Index() {
               key={f.label}
               className={`px-4 py-20 sm:px-6 md:px-8 md:py-28 ${i > 0 ? "border-t border-hairline" : ""}`}
             >
-              <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
+              <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20 [&>*]:min-w-0">
                 <div className={i % 2 === 1 ? "lg:order-2" : ""}>
-                  <FeatureTag hue={f.hue} icon={f.icon}>
-                    {f.label}
-                  </FeatureTag>
+                  <div className="flex items-center gap-2">
+                    <FeatureTag hue={f.hue} icon={f.icon}>
+                      {f.label}
+                    </FeatureTag>
+                    {f.ai && (
+                      <span className="text-sm text-ink/55">
+                        with <span className="font-medium text-brand">Claude</span>
+                      </span>
+                    )}
+                  </div>
                   <h2 className="mt-5 font-display text-[2.6rem] leading-[1.02] text-balance text-ink md:text-[3.4rem]">
                     {f.title}
                   </h2>
@@ -852,8 +1079,8 @@ function Index() {
                   Everything a form needs. <em>Nothing it doesn’t.</em>
                 </h2>
                 <p className="mt-6 max-w-sm text-[17px] leading-relaxed text-paper/60">
-                  From the first question to the last export, Flowform covers the whole job without
-                  a maze of settings.
+                  Claude writes the first draft and reads the answers. Everything in between, from
+                  sharing to closing a form, takes a click.
                 </p>
                 <div className="mt-8">
                   <Link
@@ -866,7 +1093,7 @@ function Index() {
                 </div>
               </div>
               <ul className="grid border-t border-paper/15 sm:grid-cols-2">
-                {CAPABILITIES.map(({ icon: Icon, title, body }, i) => (
+                {CAPABILITIES.map(({ icon: Icon, title, body, ai }, i) => (
                   <li
                     key={title}
                     className={`border-b border-paper/15 py-6 sm:py-7 ${i % 2 === 0 ? "sm:pr-8" : "sm:border-l sm:pl-8"}`}
@@ -877,6 +1104,11 @@ function Index() {
                         strokeWidth={2}
                       />
                       {title}
+                      {ai && (
+                        <span className="rounded-sm border border-[oklch(0.78_0.12_255)]/40 px-1.5 py-px font-mono text-[10px] font-medium uppercase tracking-wide text-[oklch(0.78_0.12_255)]">
+                          Claude
+                        </span>
+                      )}
                     </h3>
                     <p className="mt-2 text-[15px] leading-relaxed text-paper/65">{body}</p>
                   </li>
