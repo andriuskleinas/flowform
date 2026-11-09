@@ -688,7 +688,7 @@ const FAQS: Array<{ q: string; a: string }> = [
 ];
 
 const NAV_LINKS = [
-  { href: "#product", label: "Product" },
+  { href: "#how-it-works", label: "How it works" },
   { href: "#built", label: "Features" },
   { href: "#faq", label: "FAQ" },
 ];
@@ -799,7 +799,7 @@ function Index() {
         </section>
 
         {/* Features */}
-        <section id="product" className="border-t border-hairline">
+        <section id="how-it-works" className="border-t border-hairline">
           {FEATURES.map((f, i) => (
             <div
               key={f.label}
