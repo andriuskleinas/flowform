@@ -831,7 +831,7 @@ function Index() {
           ))}
         </section>
 
-        {/* Features: what runs behind the form */}
+        {/* Features: the stack behind the form */}
         <section id="built" className="bg-ink px-4 py-20 text-paper sm:px-6 md:px-8 md:py-28">
           <div className="mx-auto max-w-6xl">
             <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
@@ -840,8 +840,7 @@ function Index() {
                   Built like a product, <em>not a prototype.</em>
                 </h2>
                 <p className="mt-6 max-w-sm text-[17px] leading-relaxed text-paper/60">
-                  Flowform is a portfolio project, designed, built and deployed end to end. This is
-                  what runs behind the form.
+                  Flowform is a portfolio project, designed, built and deployed end to end.
                 </p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <a
