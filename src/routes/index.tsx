@@ -2,15 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
   ArrowRight,
-  BarChart3,
   Check,
   CornerDownLeft,
   Download,
-  GitBranch,
   History,
   Lightbulb,
   ListChecks,
-  PenLine,
   Power,
   QrCode,
   Quote,
@@ -75,23 +72,77 @@ const HUE: Record<Hue, { tag: string; stage: string; dot: string }> = {
   sun: { tag: "bg-sun-tint text-sun", stage: "bg-sun-tint", dot: "bg-sun" },
 };
 
-/** Feature category pill: a coloured tint, an icon, a plain word. */
-function FeatureTag({
+type Glyph = "build" | "branch" | "learn";
+
+/** Accent bar colour per hue, bright enough to read on the ink tile. */
+const GLYPH_ACCENT: Record<Hue, string> = {
+  sky: "oklch(0.72 0.15 258)",
+  coral: "oklch(0.74 0.15 38)",
+  mint: "oklch(0.78 0.12 165)",
+  sun: "oklch(0.84 0.14 82)",
+};
+
+/**
+ * Section icons drawn from the Flowform mark: the same ink tile and "answer
+ * bars", rearranged per step. One bar takes the section's colour.
+ */
+function SectionGlyph({ kind, hue }: { kind: Glyph; hue: Hue }) {
+  const paper = "var(--paper)";
+  const accent = GLYPH_ACCENT[hue];
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden className="size-8 shrink-0">
+      <rect width="32" height="32" rx="7" fill="var(--ink)" />
+      {kind === "build" && (
+        <>
+          <rect x="7" y="9" width="18" height="4" rx="1.5" fill={paper} />
+          <rect x="7" y="17" width="10" height="4" rx="1.5" fill={accent} />
+          <rect x="19.5" y="18.25" width="5.5" height="1.5" rx="0.75" fill={paper} />
+          <rect x="21.5" y="16.25" width="1.5" height="5.5" rx="0.75" fill={paper} />
+        </>
+      )}
+      {kind === "branch" && (
+        <>
+          <rect x="7" y="8" width="18" height="4" rx="1.5" fill={paper} />
+          <rect x="7" y="16" width="1.5" height="4" rx="0.75" fill={paper} opacity="0.35" />
+          <rect x="23.5" y="16" width="1.5" height="4" rx="0.75" fill={accent} />
+          <rect x="7" y="20" width="7.5" height="4" rx="1.5" fill={paper} opacity="0.35" />
+          <rect x="17.5" y="20" width="7.5" height="4" rx="1.5" fill={accent} />
+        </>
+      )}
+      {kind === "learn" && (
+        <>
+          <rect x="7" y="17" width="4.5" height="7" rx="1.5" fill={paper} />
+          <rect x="13.75" y="13" width="4.5" height="11" rx="1.5" fill={paper} />
+          <rect x="20.5" y="8" width="4.5" height="16" rx="1.5" fill={accent} />
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** Section marker: glyph tile, plain label, optional note (e.g. the AI part). */
+function SectionMark({
+  kind,
   hue,
-  icon: Icon,
-  children,
+  label,
+  note,
 }: {
+  kind: Glyph;
   hue: Hue;
-  icon: LucideIcon;
-  children: string;
+  label: string;
+  note?: string;
 }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${HUE[hue].tag}`}
-    >
-      <Icon className="size-3.5" strokeWidth={2.25} />
-      {children}
-    </span>
+    <div className="flex items-center gap-3">
+      <SectionGlyph kind={kind} hue={hue} />
+      <span className="text-[15px] font-medium text-ink">{label}</span>
+      {note && (
+        <>
+          <span className="h-4 w-px bg-ink/15" aria-hidden />
+          <span className="text-sm text-ink/55">{note}</span>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -780,8 +831,8 @@ function InsightVignette() {
 
 const FEATURES: Array<{
   hue: Hue;
-  ai?: boolean;
-  icon: LucideIcon;
+  glyph: Glyph;
+  note?: string;
   label: string;
   title: React.ReactNode;
   body: string;
@@ -790,8 +841,8 @@ const FEATURES: Array<{
 }> = [
   {
     hue: "sun",
-    ai: true,
-    icon: PenLine,
+    glyph: "build",
+    note: "AI drafting by Claude",
     label: "Build",
     title: (
       <>
@@ -808,7 +859,7 @@ const FEATURES: Array<{
   },
   {
     hue: "coral",
-    icon: GitBranch,
+    glyph: "branch",
     label: "Branch",
     title: (
       <>
@@ -825,8 +876,8 @@ const FEATURES: Array<{
   },
   {
     hue: "mint",
-    ai: true,
-    icon: BarChart3,
+    glyph: "learn",
+    note: "AI summaries by Claude",
     label: "Learn",
     title: (
       <>
@@ -1017,14 +1068,31 @@ function Index() {
                   Try the live demo
                 </Link>
               </div>
-              <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink/55">
-                {["No card needed", "No respondent accounts", "Open source"].map((t) => (
-                  <li key={t} className="inline-flex items-center gap-1.5">
-                    <Check className="size-3.5 text-mint" strokeWidth={2.5} />
-                    {t}
-                  </li>
-                ))}
-              </ul>
+              <dl className="mt-10 grid max-w-lg grid-cols-3 divide-x divide-hairline border-t border-hairline pt-5">
+                <div className="pr-4">
+                  <dt className="text-sm font-medium text-ink">Free</dt>
+                  <dd className="mt-0.5 text-[13px] leading-snug text-ink/55">
+                    while in early access
+                  </dd>
+                </div>
+                <div className="px-4">
+                  <dt className="text-sm font-medium text-ink">No sign-up</dt>
+                  <dd className="mt-0.5 text-[13px] leading-snug text-ink/55">for respondents</dd>
+                </div>
+                <div className="pl-4">
+                  <dt className="text-sm font-medium text-ink">Open source</dt>
+                  <dd className="mt-0.5 text-[13px] leading-snug">
+                    <a
+                      href={REPO_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-ink/55 underline decoration-ink/20 underline-offset-4 transition-colors hover:text-ink hover:decoration-ink/50"
+                    >
+                      MIT, on GitHub
+                    </a>
+                  </dd>
+                </div>
+              </dl>
             </div>
             <HeroForm />
           </div>
@@ -1039,16 +1107,7 @@ function Index() {
             >
               <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20 [&>*]:min-w-0">
                 <div className={i % 2 === 1 ? "lg:order-2" : ""}>
-                  <div className="flex items-center gap-2">
-                    <FeatureTag hue={f.hue} icon={f.icon}>
-                      {f.label}
-                    </FeatureTag>
-                    {f.ai && (
-                      <span className="text-sm text-ink/55">
-                        with <span className="font-medium text-brand">Claude</span>
-                      </span>
-                    )}
-                  </div>
+                  <SectionMark kind={f.glyph} hue={f.hue} label={f.label} note={f.note} />
                   <h2 className="mt-5 font-display text-[2.6rem] leading-[1.02] text-balance text-ink md:text-[3.4rem]">
                     {f.title}
                   </h2>
