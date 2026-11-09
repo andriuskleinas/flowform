@@ -3,8 +3,10 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Code2,
   CornerDownLeft,
   Download,
+  Gift,
   History,
   Lightbulb,
   ListChecks,
@@ -13,6 +15,7 @@ import {
   Quote,
   RotateCcw,
   Rows3,
+  UserRoundX,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -829,6 +832,12 @@ function InsightVignette() {
 /* Content                                                                  */
 /* ------------------------------------------------------------------------ */
 
+const HERO_FACTS: Array<{ icon: LucideIcon; title: string; sub: string; href?: string }> = [
+  { icon: Gift, title: "Free to use", sub: "Every feature, while in early access" },
+  { icon: UserRoundX, title: "No sign-up", sub: "Respondents just open a link" },
+  { icon: Code2, title: "Open source", sub: "MIT licensed on GitHub", href: REPO_URL },
+];
+
 const FEATURES: Array<{
   hue: Hue;
   glyph: Glyph;
@@ -1068,31 +1077,30 @@ function Index() {
                   Try the live demo
                 </Link>
               </div>
-              <dl className="mt-10 grid max-w-lg grid-cols-3 divide-x divide-hairline border-t border-hairline pt-5">
-                <div className="pr-4">
-                  <dt className="text-sm font-medium text-ink">Free</dt>
-                  <dd className="mt-0.5 text-[13px] leading-snug text-ink/55">
-                    while in early access
-                  </dd>
-                </div>
-                <div className="px-4">
-                  <dt className="text-sm font-medium text-ink">No sign-up</dt>
-                  <dd className="mt-0.5 text-[13px] leading-snug text-ink/55">for respondents</dd>
-                </div>
-                <div className="pl-4">
-                  <dt className="text-sm font-medium text-ink">Open source</dt>
-                  <dd className="mt-0.5 text-[13px] leading-snug">
-                    <a
-                      href={REPO_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-ink/55 underline decoration-ink/20 underline-offset-4 transition-colors hover:text-ink hover:decoration-ink/50"
-                    >
-                      MIT, on GitHub
-                    </a>
-                  </dd>
-                </div>
-              </dl>
+              <ul className="mt-10 grid max-w-xl gap-5 sm:grid-cols-3 sm:gap-6">
+                {HERO_FACTS.map(({ icon: Icon, title, sub, href }) => (
+                  <li key={title} className="flex items-start gap-3">
+                    <Icon className="mt-0.5 size-5 shrink-0 text-brand" strokeWidth={2} />
+                    <div>
+                      <p className="text-[15px] font-semibold leading-snug text-ink">{title}</p>
+                      <p className="mt-0.5 text-sm leading-snug text-ink/55">
+                        {href ? (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline decoration-ink/20 underline-offset-4 transition-colors hover:text-ink hover:decoration-ink/50"
+                          >
+                            {sub}
+                          </a>
+                        ) : (
+                          sub
+                        )}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
             <HeroForm />
           </div>
