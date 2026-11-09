@@ -5,10 +5,15 @@ import {
   BarChart3,
   Check,
   CornerDownLeft,
+  Download,
   GitBranch,
-  Github,
+  History,
+  ListChecks,
   PenLine,
+  Power,
+  QrCode,
   RotateCcw,
+  Rows3,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -630,37 +635,44 @@ const FEATURES: Array<{
   },
 ];
 
-const BUILT_DOTS = [
-  "bg-[oklch(0.72_0.14_255)]",
-  "bg-[oklch(0.75_0.14_40)]",
-  "bg-[oklch(0.75_0.11_165)]",
-  "bg-[oklch(0.85_0.13_88)]",
+/** Icon tints for the dark Features grid (light enough to read on ink). */
+const FEATURE_TONES = [
+  "text-[oklch(0.78_0.12_255)]",
+  "text-[oklch(0.78_0.13_40)]",
+  "text-[oklch(0.8_0.1_165)]",
+  "text-[oklch(0.86_0.12_88)]",
 ];
 
-const BUILT: Array<{ k: string; v: string }> = [
+const CAPABILITIES: Array<{ icon: LucideIcon; title: string; body: string }> = [
   {
-    k: "Rendering",
-    v: "TanStack Start with server-side rendering, deployed on Vercel.",
+    icon: ListChecks,
+    title: "Seven question types",
+    body: "Short and long answers, multiple choice, dropdowns, yes or no, NPS and star ratings.",
   },
   {
-    k: "Data & security",
-    v: "Postgres on Supabase. Every table is guarded by row-level security policies.",
+    icon: Rows3,
+    title: "Two ways to ask",
+    body: "One question at a time, like a conversation, or every question on a single page.",
   },
   {
-    k: "AI",
-    v: "Claude drafts questions and summarises open answers, called server-side only.",
+    icon: QrCode,
+    title: "Share it anywhere",
+    body: "Send a link, print a QR code, embed the form on your site or use your phone’s share sheet.",
   },
   {
-    k: "Analytics",
-    v: "An event stream of opens, starts and submits powers the funnel and drop-off views.",
+    icon: History,
+    title: "Finish later",
+    body: "Answers are saved as people go, so anyone interrupted can come back and pick up where they left off.",
   },
   {
-    k: "Respondent UX",
-    v: "Keyboard-first (letters to pick, numbers to score, Enter to confirm), drafts saved locally.",
+    icon: Power,
+    title: "Open and close on your terms",
+    body: "Close a form to stop new responses, reopen it any time. Nothing you’ve collected is lost.",
   },
   {
-    k: "Accounts",
-    v: "Email sign-up with confirmation, password reset and idle sign-out.",
+    icon: Download,
+    title: "Take your data with you",
+    body: "Export every response to CSV whenever you need it in a spreadsheet.",
   },
 ];
 
@@ -689,7 +701,7 @@ const FAQS: Array<{ q: string; a: string }> = [
 
 const NAV_LINKS = [
   { href: "#how-it-works", label: "How it works" },
-  { href: "#built", label: "Features" },
+  { href: "#features", label: "Features" },
   { href: "#faq", label: "FAQ" },
 ];
 
@@ -831,45 +843,45 @@ function Index() {
           ))}
         </section>
 
-        {/* Features: the stack behind the form */}
-        <section id="built" className="bg-ink px-4 py-20 text-paper sm:px-6 md:px-8 md:py-28">
+        {/* Features: what people can do with Flowform */}
+        <section id="features" className="bg-ink px-4 py-20 text-paper sm:px-6 md:px-8 md:py-28">
           <div className="mx-auto max-w-6xl">
             <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
               <div>
                 <h2 className="font-display text-[2.6rem] leading-[1.02] text-balance md:text-[3.4rem]">
-                  Built like a product, <em>not a prototype.</em>
+                  Everything a form needs. <em>Nothing it doesn’t.</em>
                 </h2>
                 <p className="mt-6 max-w-sm text-[17px] leading-relaxed text-paper/60">
-                  Flowform is a portfolio project, designed, built and deployed end to end.
+                  From the first question to the last export, Flowform covers the whole job without
+                  a maze of settings.
                 </p>
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <a
-                    href={REPO_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                <div className="mt-8">
+                  <Link
+                    to="/demo"
                     className="inline-flex h-11 items-center gap-2 rounded-md bg-paper px-4 text-sm font-medium text-ink transition-colors hover:bg-white"
                   >
-                    <Github className="size-4" />
-                    Read the source
-                  </a>
+                    Try the live demo
+                    <ArrowRight className="size-4" />
+                  </Link>
                 </div>
               </div>
-              <dl className="grid border-t border-paper/15 sm:grid-cols-2">
-                {BUILT.map((b, i) => (
-                  <div
-                    key={b.k}
+              <ul className="grid border-t border-paper/15 sm:grid-cols-2">
+                {CAPABILITIES.map(({ icon: Icon, title, body }, i) => (
+                  <li
+                    key={title}
                     className={`border-b border-paper/15 py-6 sm:py-7 ${i % 2 === 0 ? "sm:pr-8" : "sm:border-l sm:pl-8"}`}
                   >
-                    <dt className="flex items-center gap-2 text-sm font-medium text-paper">
-                      <span
-                        className={`size-1.5 rounded-full ${BUILT_DOTS[i % BUILT_DOTS.length]}`}
+                    <h3 className="flex items-center gap-2.5 text-[15px] font-medium tracking-normal text-paper">
+                      <Icon
+                        className={`size-4 shrink-0 ${FEATURE_TONES[i % FEATURE_TONES.length]}`}
+                        strokeWidth={2}
                       />
-                      {b.k}
-                    </dt>
-                    <dd className="mt-2 text-[15px] leading-relaxed text-paper/65">{b.v}</dd>
-                  </div>
+                      {title}
+                    </h3>
+                    <p className="mt-2 text-[15px] leading-relaxed text-paper/65">{body}</p>
+                  </li>
                 ))}
-              </dl>
+              </ul>
             </div>
           </div>
         </section>
