@@ -357,7 +357,7 @@ function DashboardAuthed({
 
       <main className="mx-auto max-w-4xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
         <div className="max-w-2xl">
-          <h1 className="font-display text-5xl md:text-6xl">Your forms</h1>
+          <h1 className="font-display text-4xl md:text-5xl">Your forms</h1>
           <p className="mt-3 text-base text-ink/60">
             Welcome back, <span className="text-ink">{greetingName}</span>.
           </p>
@@ -407,7 +407,7 @@ function DashboardAuthed({
             {!isLoading && isError && (
               <li className="flex flex-col items-center rounded-lg border border-dashed border-destructive/30 bg-white px-6 py-14 text-center">
                 <FileText className="size-6 text-destructive" strokeWidth={1.5} />
-                <h3 className="mt-4 font-display text-3xl">Couldn't load your forms</h3>
+                <h3 className="mt-4 font-display text-2xl">Couldn't load your forms</h3>
                 <p className="mt-2 max-w-sm text-sm text-ink/60">
                   Something went wrong fetching your forms. Your forms are safe — this is just a
                   loading issue.
@@ -424,7 +424,7 @@ function DashboardAuthed({
 
             {!isLoading && !isError && forms.length === 0 && (
               <li className="flex flex-col items-center rounded-lg border border-dashed border-ink/20 bg-white/60 px-6 py-16 text-center">
-                <h3 className="font-display text-4xl">No forms yet</h3>
+                <h3 className="font-display text-3xl">No forms yet</h3>
                 <p className="mt-2 max-w-sm text-sm text-ink/60">
                   Start from a template, a blank page, or a one-line goal for Claude.
                 </p>

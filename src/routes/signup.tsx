@@ -101,7 +101,7 @@ function SignupPage() {
       {confirmationSentTo ? (
         <div className="rounded-2xl border border-hairline bg-white p-8 text-center">
           <MailCheck className="mx-auto size-12 text-brand" />
-          <h1 className="font-display mt-4 text-3xl">Check your inbox</h1>
+          <h1 className="font-display mt-4 text-2xl">Check your inbox</h1>
           <p className="mt-3 text-ink/60">
             We sent a confirmation link to{" "}
             <span className="font-semibold text-ink">{confirmationSentTo}</span>. Click it to
@@ -121,7 +121,7 @@ function SignupPage() {
         </div>
       ) : (
         <>
-          <h1 className="font-display text-4xl md:text-5xl">Create your account</h1>
+          <h1 className="font-display text-3xl md:text-4xl">Create your account</h1>
           <p className="mt-2 text-ink/60">Start building forms in seconds.</p>
           <form
             onSubmit={onSubmit}

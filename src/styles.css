@@ -80,8 +80,8 @@
   --color-sun: var(--sun);
   --color-sun-tint: var(--sun-tint);
   --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
-  --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: "Roboto", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /*
@@ -241,16 +241,14 @@
 }
 
 @layer components {
-  /* Display serif reads best with optical tightening and no faux bold. */
+  /* Headlines: Roboto, semibold and tightly tracked. */
   .font-display {
-    font-weight: 400;
-    letter-spacing: -0.015em;
-    font-synthesis: none;
+    font-weight: 600;
+    letter-spacing: -0.03em;
   }
 
-  /* Fragment Mono ships one weight; never fake a bold. */
+  /* Labels, counters and numbers: Roboto Mono at natural spacing. */
   .font-mono {
-    font-synthesis: none;
     letter-spacing: 0;
   }
 
@@ -261,7 +259,6 @@
     line-height: 1rem;
     letter-spacing: 0;
     text-transform: uppercase;
-    font-synthesis: none;
     color: color-mix(in oklch, var(--ink) 55%, transparent);
   }
 }

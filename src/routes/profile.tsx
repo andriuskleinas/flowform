@@ -172,7 +172,7 @@ function ProfileAuthed({
       </header>
 
       <main className="mx-auto max-w-2xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
-        <h1 className="font-display text-5xl md:text-6xl">Profile</h1>
+        <h1 className="font-display text-4xl md:text-5xl">Profile</h1>
         <p className="mt-3 text-base text-ink/60 md:text-lg">Manage your account details.</p>
 
         <p className="mt-2 text-sm text-ink/50">

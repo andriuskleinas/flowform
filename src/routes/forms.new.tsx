@@ -226,7 +226,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
       <main className="mx-auto max-w-4xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
         <div className="max-w-2xl">
-          <h1 className="font-display text-5xl md:text-6xl">Create a new form</h1>
+          <h1 className="font-display text-4xl md:text-5xl">Create a new form</h1>
           <p className="mt-3 text-base text-ink/60 md:text-lg">
             Start blank or from a template. You'll add questions, logic, and AI suggestions in the
             editor.

@@ -226,7 +226,7 @@ export function ConversationalForm({
           <CheckCircle2 className="mx-auto size-10 text-brand" strokeWidth={1.5} />
           {preview && previewSubmitted ? (
             <>
-              <h2 className="font-display mt-4 text-4xl">Preview complete</h2>
+              <h2 className="font-display mt-4 text-3xl">Preview complete</h2>
               <p className="mt-2 text-sm text-ink/60">
                 In the live form this submits the response and shows your thank-you message. Nothing
                 is recorded in preview.
@@ -234,7 +234,7 @@ export function ConversationalForm({
             </>
           ) : (
             <>
-              <h2 className="font-display mt-4 text-4xl">You're all set</h2>
+              <h2 className="font-display mt-4 text-3xl">You're all set</h2>
               <p className="mt-2 text-sm text-ink/60">
                 {answeredCount} of {total} questions answered.
               </p>

@@ -241,7 +241,7 @@ function PublicFormPage() {
   if (!formQ.data) {
     return (
       <Shell width="sm">
-        <h1 className="font-display text-4xl">Form not found</h1>
+        <h1 className="font-display text-3xl">Form not found</h1>
         <p className="mt-3 text-ink/60">
           This form may have been deleted or the link is incorrect.
         </p>
@@ -298,7 +298,7 @@ function PublicFormPage() {
           <span className="flex size-14 items-center justify-center rounded-full bg-amber-100 text-amber-600">
             <CircleSlash className="size-7" />
           </span>
-          <h1 className="font-display mt-4 text-4xl">This survey is closed</h1>
+          <h1 className="font-display mt-4 text-3xl">This survey is closed</h1>
           <p className="mt-3 max-w-sm text-ink/60">
             <span className="font-semibold text-ink">{formQ.data.title}</span> is no longer
             accepting responses. Thanks to everyone who took part.
@@ -311,7 +311,7 @@ function PublicFormPage() {
   if (status === "draft" && !isOwner) {
     return (
       <Shell width="sm">
-        <h1 className="font-display text-4xl">This form isn't published yet</h1>
+        <h1 className="font-display text-3xl">This form isn't published yet</h1>
         <p className="mt-3 text-ink/60">The owner hasn't published this form. Check back later.</p>
         <Link to="/" className="mt-6 inline-block text-brand underline">
           Go home
@@ -326,7 +326,7 @@ function PublicFormPage() {
         {ownerNav}
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
-          <h1 className="font-display mt-4 text-4xl">{isOwner ? "Test submission" : "Thanks!"}</h1>
+          <h1 className="font-display mt-4 text-3xl">{isOwner ? "Test submission" : "Thanks!"}</h1>
           <p className="mt-2 max-w-md whitespace-pre-line text-ink/60">
             {isOwner
               ? "This was a preview of your own form — nothing was recorded, and it isn't counted in analytics."
@@ -343,7 +343,7 @@ function PublicFormPage() {
         {ownerNav}
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
-          <h1 className="font-display mt-4 text-4xl">You've already responded</h1>
+          <h1 className="font-display mt-4 text-3xl">You've already responded</h1>
           <p className="mt-2 max-w-sm text-ink/60">
             Looks like this form was already submitted from this device.
           </p>
@@ -419,7 +419,7 @@ function PublicFormPage() {
     <Shell width="sm">
       {ownerNav}
       <header>
-        <h1 className="font-display text-4xl md:text-5xl">{formQ.data.title}</h1>
+        <h1 className="font-display text-3xl md:text-4xl">{formQ.data.title}</h1>
         {formQ.data.description && (
           <p className="mt-3 text-base text-ink/60 md:text-lg">{formQ.data.description}</p>
         )}

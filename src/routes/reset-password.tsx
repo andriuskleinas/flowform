@@ -97,7 +97,7 @@ function ResetPasswordPage() {
     return (
       <AuthShell>
         <div className="rounded-2xl border border-hairline bg-white p-8 text-center">
-          <h1 className="font-display text-3xl">This link has expired</h1>
+          <h1 className="font-display text-2xl">This link has expired</h1>
           <p className="mt-3 text-ink/60">
             Password reset links work once and expire after an hour. Request a fresh one and we'll
             email it right over.
@@ -116,7 +116,7 @@ function ResetPasswordPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-display text-4xl md:text-5xl">Choose a new password</h1>
+      <h1 className="font-display text-3xl md:text-4xl">Choose a new password</h1>
       <p className="mt-2 text-ink/60">
         Setting a new password for{" "}
         <span className="font-semibold text-ink">{session.user.email}</span>.

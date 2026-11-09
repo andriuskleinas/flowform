@@ -666,7 +666,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 value={draftForm.title}
                 onChange={(v) => setDraftForm((f) => ({ ...f, title: v }))}
                 placeholder="Start your best survey!"
-                className="font-display text-3xl md:text-4xl"
+                className="font-display text-2xl md:text-3xl"
               />
             </div>
             <div className="space-y-1.5">
@@ -996,7 +996,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-display text-3xl">
+            <DialogTitle className="font-display text-2xl">
               {draftForm.title || DEFAULT_FORM_TITLE}
             </DialogTitle>
             {draftForm.description ? (

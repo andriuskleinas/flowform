@@ -88,7 +88,7 @@ function LoginPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-display text-4xl md:text-5xl">Welcome back</h1>
+      <h1 className="font-display text-3xl md:text-4xl">Welcome back</h1>
       <p className="mt-2 text-ink/60">
         New here?{" "}
         <Link to="/signup" className="font-semibold text-brand hover:underline">

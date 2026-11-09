@@ -26,7 +26,7 @@ export function Logo({ tone = "dark" }: { tone?: "dark" | "light" }) {
         <LogoMark />
       )}
       <span
-        className={`font-display text-[1.6rem] leading-none ${
+        className={`font-display text-[1.35rem] leading-none tracking-[-0.04em] ${
           tone === "light" ? "text-paper" : "text-ink"
         }`}
       >

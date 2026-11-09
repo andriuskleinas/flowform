@@ -253,7 +253,7 @@ function DemoPage() {
             <span className="inline-flex items-center gap-2 rounded-full bg-sky-tint px-3 py-1 text-sm font-medium text-sky">
               Interactive demo · 4 questions · about 30 seconds
             </span>
-            <h1 className="mt-6 font-display text-6xl leading-[0.98] text-balance md:text-7xl">
+            <h1 className="mt-6 font-display text-5xl leading-[1.02] text-balance md:text-6xl">
               This is a <em className="text-brand">Flowform.</em>
             </h1>
             <p className="mt-6 max-w-md text-lg text-ink/65">
@@ -292,7 +292,7 @@ function DemoPage() {
 
             {idx === 0 && (
               <>
-                <h2 className="font-display text-4xl leading-[1.08] text-balance md:text-5xl">
+                <h2 className="font-display text-3xl leading-[1.08] text-balance md:text-4xl">
                   First things first — what should we call you?
                 </h2>
                 <input
@@ -307,7 +307,7 @@ function DemoPage() {
                   }}
                   placeholder="Type your name…"
                   maxLength={60}
-                  className="mt-8 w-full border-b border-ink/20 bg-transparent pb-3 font-display text-3xl text-ink outline-none transition-colors placeholder:text-ink/25 focus:border-brand"
+                  className="mt-8 w-full border-b border-ink/20 bg-transparent pb-3 font-display text-2xl text-ink outline-none transition-colors placeholder:text-ink/25 focus:border-brand"
                 />
                 <div className="mt-8 flex items-center gap-4">
                   <button
@@ -326,7 +326,7 @@ function DemoPage() {
 
             {idx === 1 && (
               <>
-                <h2 className="font-display text-4xl leading-[1.08] text-balance md:text-5xl">
+                <h2 className="font-display text-3xl leading-[1.08] text-balance md:text-4xl">
                   Nice to meet you{name.trim() ? `, ${name.trim().split(/\s+/)[0]}` : ""}. What
                   would you use Flowform for?
                 </h2>
@@ -345,7 +345,7 @@ function DemoPage() {
                   <GitBranch className="size-3.5" />
                   Logic jump: this question adapted to your answer
                 </span>
-                <h2 className="mt-5 font-display text-4xl leading-[1.08] text-balance md:text-5xl">
+                <h2 className="mt-5 font-display text-3xl leading-[1.08] text-balance md:text-4xl">
                   {followUpQ.label}
                 </h2>
                 <ChoiceGrid
@@ -363,7 +363,7 @@ function DemoPage() {
 
             {idx === 3 && (
               <>
-                <h2 className="font-display text-4xl leading-[1.08] text-balance md:text-5xl">
+                <h2 className="font-display text-3xl leading-[1.08] text-balance md:text-4xl">
                   Last one — how does answering one question at a time feel?
                 </h2>
                 <div className="mt-8 grid grid-cols-5 gap-2 sm:grid-cols-10">
@@ -405,7 +405,7 @@ function DemoPage() {
               <p className="inline-flex items-center gap-1.5 rounded-full bg-mint-tint px-3 py-1 text-sm font-medium text-mint">
                 <CheckCircle2 className="size-3.5" /> Demo complete
               </p>
-              <h1 className="mt-6 font-display text-5xl leading-[1.02] text-balance md:text-6xl">
+              <h1 className="mt-6 font-display text-4xl leading-[1.02] text-balance md:text-5xl">
                 That was a Flowform{name.trim() ? `, ${name.trim().split(/\s+/)[0]}` : ""}.
               </h1>
               <p className="mt-4 max-w-md text-lg text-ink/65">

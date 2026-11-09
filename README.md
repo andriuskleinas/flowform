@@ -81,7 +81,7 @@ work.
 
 | | Choice |
 |---|---|
-| **Type** | [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif) for headlines and questions, [Roboto](https://fonts.google.com/specimen/Roboto) for interface text, [Fragment Mono](https://fonts.google.com/specimen/Fragment+Mono) for labels, counters and numbers |
+| **Type** | [Roboto](https://fonts.google.com/specimen/Roboto) throughout: semibold and tightly tracked for headlines and questions, regular for interface text, with [Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono) for labels, counters and numbers |
 | **Colour** | Ink `#14161A` on paper `#FBFAF7`, with one Klein-style blue (`#1244D0`) reserved for actions, selection, focus and live data |
 | **Shape** | Tight 6–8 px radii, 1 px hairline borders, one soft shadow for floating "product sheets" only |
 | **Motion** | A single step transition between questions; respects `prefers-reduced-motion` |

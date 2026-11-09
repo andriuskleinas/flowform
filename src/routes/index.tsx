@@ -350,7 +350,7 @@ function HeroForm() {
                 </button>
               )}
             </div>
-            <h3 className="mt-2 font-display text-[2rem] leading-[1.08] text-ink sm:text-[2.4rem]">
+            <h3 className="mt-2 font-display text-[1.6rem] leading-[1.08] text-ink sm:text-[2rem]">
               {current.title}
             </h3>
             <ul className="mt-6 grid gap-2" role="radiogroup" aria-label={current.title}>
@@ -402,7 +402,7 @@ function HeroForm() {
             <p className="inline-flex items-center gap-1.5 text-sm font-medium text-mint">
               <Check className="size-4" strokeWidth={2.5} /> Response recorded (not really)
             </p>
-            <h3 className="mt-3 font-display text-[2.4rem] leading-[1.05] text-ink">
+            <h3 className="mt-3 font-display text-[2rem] leading-[1.05] text-ink">
               That was a Flowform.
             </h3>
             <ol className="mt-5 divide-y divide-hairline border-y border-hairline text-[15px]">
@@ -655,7 +655,7 @@ function LogicVignette() {
   return (
     <Sheet bar={<span>Q2 · Jump rules</span>}>
       <div className="p-5 sm:p-6">
-        <p className="font-display text-2xl leading-tight text-ink">How did you find us?</p>
+        <p className="font-display text-xl leading-tight text-ink">How did you find us?</p>
         <div className="mt-5 overflow-hidden rounded-md border border-hairline">
           <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-hairline bg-surface px-4 py-2 font-mono text-[10px] uppercase tracking-wide text-ink/45">
             <span>If they answer</span>
@@ -786,7 +786,7 @@ function InsightVignette() {
                 </li>
               ))}
             </ol>
-            <blockquote className="mt-4 border-l-2 border-ink/15 pl-3 font-display text-lg italic leading-snug text-ink/70">
+            <blockquote className="mt-4 border-l-2 border-ink/15 pl-3 font-display text-base italic leading-snug text-ink/70">
               “Would happily pay monthly. Annual feels like a big jump for a tool we’re still
               trying.”
             </blockquote>
@@ -1040,7 +1040,7 @@ function Index() {
                 </span>
                 AI features now run on Claude Sonnet 5.5
               </span>
-              <h1 className="mt-6 font-display text-[3.4rem] leading-[0.95] tracking-[-0.02em] text-ink sm:text-7xl lg:text-[5.6rem]">
+              <h1 className="mt-6 font-display text-[2.8rem] leading-[1.02] text-ink sm:text-6xl lg:text-[4.4rem]">
                 Forms people actually <em className="text-brand">finish.</em>
               </h1>
               <p className="mt-7 max-w-lg text-lg leading-relaxed text-ink/65">
@@ -1090,7 +1090,7 @@ function Index() {
               <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20 [&>*]:min-w-0">
                 <div className={i % 2 === 1 ? "lg:order-2" : ""}>
                   <SectionMark kind={f.glyph} hue={f.hue} label={f.label} note={f.note} />
-                  <h2 className="mt-5 font-display text-[2.6rem] leading-[1.02] text-balance text-ink md:text-[3.4rem]">
+                  <h2 className="mt-5 font-display text-[2.2rem] leading-[1.02] text-balance text-ink md:text-[2.8rem]">
                     {f.title}
                   </h2>
                   <p className="mt-6 max-w-md text-[17px] leading-relaxed text-ink/65">{f.body}</p>
@@ -1116,7 +1116,7 @@ function Index() {
           <div className="mx-auto max-w-6xl">
             <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
               <div>
-                <h2 className="font-display text-[2.6rem] leading-[1.02] text-balance md:text-[3.4rem]">
+                <h2 className="font-display text-[2.2rem] leading-[1.02] text-balance md:text-[2.8rem]">
                   Everything a form needs. <em>Nothing it doesn’t.</em>
                 </h2>
                 <p className="mt-6 max-w-sm text-[17px] leading-relaxed text-paper/60">
@@ -1163,7 +1163,7 @@ function Index() {
         <section id="faq" className="px-4 py-20 sm:px-6 md:px-8 md:py-28">
           <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
             <div>
-              <h2 className="font-display text-[2.6rem] leading-[1.02] text-balance md:text-[3.4rem]">
+              <h2 className="font-display text-[2.2rem] leading-[1.02] text-balance md:text-[2.8rem]">
                 Before your <em>first form.</em>
               </h2>
             </div>
@@ -1195,7 +1195,7 @@ function Index() {
             </div>
             <div className="relative flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-end">
               <div>
-                <h2 className="font-display text-[3rem] leading-[0.98] text-balance md:text-[4.6rem]">
+                <h2 className="font-display text-[2.5rem] leading-[1.02] text-balance md:text-[3.8rem]">
                   Ask one good question
                   <br />
                   <em>at a time.</em>

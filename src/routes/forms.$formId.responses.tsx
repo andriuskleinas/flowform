@@ -165,7 +165,7 @@ function ResponsesPage() {
   if (!formQ.data || (user && formQ.data.user_id !== user.id)) {
     return (
       <Shell width="md">
-        <h1 className="font-display text-4xl">Form not found</h1>
+        <h1 className="font-display text-3xl">Form not found</h1>
         <Link to="/dashboard" className="mt-6 inline-block text-brand underline">
           Back to dashboard
         </Link>
@@ -189,7 +189,7 @@ function ResponsesPage() {
 
       <header className="mt-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-4xl md:text-5xl">{formQ.data.title}</h1>
+          <h1 className="font-display text-3xl md:text-4xl">{formQ.data.title}</h1>
           <p className="mt-1 text-ink/60">
             {(() => {
               const total = analyticsQ.data?.totals.responses ?? responses.length;
@@ -493,7 +493,7 @@ function Overview({
                   {summary.quotes.map((q, i) => (
                     <blockquote
                       key={i}
-                      className="border-l-2 border-ink/15 pl-3 font-display text-lg italic leading-snug text-ink/70"
+                      className="border-l-2 border-ink/15 pl-3 font-display text-base italic leading-snug text-ink/70"
                     >
                       “{q}”
                     </blockquote>

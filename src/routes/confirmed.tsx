@@ -55,7 +55,7 @@ function ConfirmedPage() {
     return (
       <AuthShell>
         <div className="rounded-2xl border border-hairline bg-white p-8 text-center">
-          <h1 className="font-display text-3xl">This link has expired</h1>
+          <h1 className="font-display text-2xl">This link has expired</h1>
           <p className="mt-3 text-ink/60">
             Confirmation links work once. Log in and we'll send you a fresh one if your email still
             needs confirming.

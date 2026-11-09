@@ -56,7 +56,7 @@ export function QuestionRender({
         <Label
           htmlFor={id}
           id={`${id}-label`}
-          className="block font-display text-[2rem] leading-[1.1] font-normal text-balance text-ink md:text-[2.6rem]"
+          className="block font-display text-[1.6rem] leading-[1.1] text-balance text-ink md:text-[2.1rem]"
         >
           {label}
         </Label>

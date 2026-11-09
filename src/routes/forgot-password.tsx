@@ -55,7 +55,7 @@ function ForgotPasswordPage() {
       <AuthShell>
         <div className="rounded-2xl border border-hairline bg-white p-8 text-center">
           <MailCheck className="mx-auto size-12 text-brand" />
-          <h1 className="font-display mt-4 text-3xl">Check your inbox</h1>
+          <h1 className="font-display mt-4 text-2xl">Check your inbox</h1>
           <p className="mt-3 text-ink/60">
             If <span className="font-semibold text-ink">{sentTo}</span> has a Flowform account, we
             just sent it a link to choose a new password. The link expires in an hour.
@@ -75,7 +75,7 @@ function ForgotPasswordPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-display text-4xl md:text-5xl">Reset your password</h1>
+      <h1 className="font-display text-3xl md:text-4xl">Reset your password</h1>
       <p className="mt-2 text-ink/60">
         Enter your email and we'll send you a link to choose a new one.
       </p>
