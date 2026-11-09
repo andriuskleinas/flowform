@@ -79,7 +79,7 @@
   --color-mint-tint: var(--mint-tint);
   --color-sun: var(--sun);
   --color-sun-tint: var(--sun-tint);
-  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Instrument Serif", ui-serif, Georgia, serif;
   --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -171,8 +171,8 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    /* Instrument Sans is set slightly tight, Bending Spoons-style. */
-    letter-spacing: -0.015em;
+    /* Roboto is already compact; only a hair of tightening for display sizes. */
+    letter-spacing: -0.005em;
   }
 
   ::selection {

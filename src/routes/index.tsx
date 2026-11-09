@@ -264,7 +264,6 @@ function HeroForm() {
 
   const current = step === "done" ? null : HERO_STEPS[step];
   const picked = step === "done" ? undefined : answers[step];
-  const skippedQ2 = history.length > 0 && !history.includes("integration") && step !== "blocker";
   const progress = step === "done" ? 1 : (current!.n - 1) / HERO_TOTAL;
 
   const pick = (opt: string) => {
@@ -303,17 +302,6 @@ function HeroForm() {
       pick(current.options[i]);
     }
   };
-
-  // A plain-language hint under the form: how it adapts, in respondent terms.
-  let note: React.ReactNode = null;
-  if (step === "blocker") {
-    note =
-      picked === "Missing integrations"
-        ? "You’ll get one follow-up question about integrations."
-        : "Tip: pick “Missing integrations” and the form adds a follow-up question.";
-  } else if (step === "plan" && skippedQ2) {
-    note = "One question was skipped because it didn’t apply to you.";
-  }
 
   return (
     <figure
@@ -450,15 +438,6 @@ function HeroForm() {
           </div>
         )}
       </Sheet>
-
-      {/* Slot reserved so steps without a hint don't make the layout jump. */}
-      <figcaption
-        aria-live="polite"
-        className="mt-4 min-h-[1.5rem] px-1 text-sm leading-relaxed text-ink/60 transition-opacity duration-300"
-        style={{ opacity: note ? 1 : 0 }}
-      >
-        {note}
-      </figcaption>
     </figure>
   );
 }
