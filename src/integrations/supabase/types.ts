@@ -58,6 +58,7 @@ export type Database = {
       }
       forms: {
         Row: {
+          category: string | null
           created_at: string
           description: string | null
           display_mode: string
@@ -68,6 +69,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           description?: string | null
           display_mode?: string
@@ -78,6 +80,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           description?: string | null
           display_mode?: string
@@ -230,14 +233,20 @@ export type Database = {
       get_dashboard_forms: {
         Args: never
         Returns: {
+          category: string | null
           created_at: string
           description: string
           id: string
+          last_response_at: string | null
           question_count: number
           response_count: number
           status: string
           title: string
         }[]
+      }
+      get_dashboard_summary: {
+        Args: { p_days?: number }
+        Returns: Json
       }
       get_form_analytics: {
         Args: { p_days?: number; p_form_id: string }

@@ -1,19 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  BarChart3,
-  CircleSlash,
-  CirclePlay,
-  CopyPlus,
   FileText,
+  LayoutGrid,
+  List,
   LogOut,
-  MoreHorizontal,
-  Pencil,
   Plus,
-  Share2,
-  Trash2,
+  Rows3,
+  Search,
+  Table2,
   User,
+  X,
 } from "lucide-react";
 
 import {
@@ -31,8 +29,15 @@ import { DeleteFormDialog } from "@/components/delete-form-dialog";
 import { ShareFormDialog } from "@/components/share-form-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusPill } from "@/components/status-pill";
-import { getInitialsFromProfile, timeAgo } from "@/lib/utils";
+import { getInitialsFromProfile } from "@/lib/utils";
+import { DashboardSummaryPanel } from "@/components/dashboard/summary";
+import { CategoryDialog } from "@/components/dashboard/category-dialog";
+import {
+  FormCollection,
+  type DashboardForm,
+  type FormActionHandlers,
+  type ViewMode,
+} from "@/components/dashboard/form-collection";
 import type { FormStatus } from "@/lib/form-utils";
 import { Logo } from "@/components/logo";
 
@@ -48,19 +53,70 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
-type FormRow = {
-  id: string;
-  title: string;
-  description: string | null;
-  created_at: string;
-  status: FormStatus;
-};
+type FormRow = Pick<DashboardForm, "id" | "title" | "description" | "created_at" | "status">;
 
-/** Row shape returned by the `get_dashboard_forms` Postgres RPC. */
-type DashboardFormRow = FormRow & {
-  response_count: number;
-  question_count: number;
-};
+const UNCATEGORIZED = "__uncategorized__";
+const PREFS_KEY = "flowform:dashboard-prefs";
+type DashboardPrefs = { view: ViewMode; grouped: boolean };
+
+function readPrefs(): DashboardPrefs {
+  const fallback: DashboardPrefs = { view: "list", grouped: false };
+  try {
+    if (typeof window === "undefined") return fallback;
+    const raw = window.localStorage.getItem(PREFS_KEY);
+    if (!raw) return fallback;
+    const p = JSON.parse(raw) as Partial<DashboardPrefs>;
+    return {
+      view: p.view === "grid" || p.view === "table" ? p.view : "list",
+      grouped: p.grouped === true,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function writePrefs(p: DashboardPrefs) {
+  try {
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify(p));
+  } catch {
+    // Storage blocked (private mode etc.) — prefs just won't persist.
+  }
+}
+
+function CategoryChip({
+  active,
+  onClick,
+  label,
+  count,
+  muted = false,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  muted?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={
+        "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs transition-colors " +
+        (active
+          ? "border-ink bg-ink text-paper"
+          : "border-hairline bg-white hover:border-ink/25 " +
+            (muted ? "text-ink/50 hover:text-ink" : "text-ink/75 hover:text-ink"))
+      }
+    >
+      <span className="max-w-[10rem] truncate">{label}</span>
+      <span className={"font-mono text-[10px] " + (active ? "text-paper/60" : "text-ink/40")}>
+        {count}
+      </span>
+    </button>
+  );
+}
 
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -123,22 +179,81 @@ function DashboardAuthed({
       if (error) throw error;
       // `bigint` columns may come back as strings from PostgREST for very
       // large counts; coerce to numbers so the render path stays simple.
-      return (data ?? []).map((r) => ({
-        ...r,
-        status: r.status as FormStatus,
-        response_count: Number(r.response_count),
-        question_count: Number(r.question_count),
-      }));
+      return (data ?? []).map(
+        (r): DashboardForm => ({
+          ...r,
+          status: r.status as FormStatus,
+          category: r.category ?? null,
+          last_response_at: r.last_response_at ?? null,
+          response_count: Number(r.response_count),
+          question_count: Number(r.question_count),
+        }),
+      );
     },
   });
 
-  const forms: FormRow[] = dashboardForms;
-  const responseCounts: Record<string, number> = Object.fromEntries(
-    dashboardForms.map((f) => [f.id, f.response_count]),
-  );
-  const questionCounts: Record<string, number> = Object.fromEntries(
-    dashboardForms.map((f) => [f.id, f.question_count]),
-  );
+  const forms = dashboardForms;
+
+  // ---- View preferences (persisted per browser) -------------------------
+  const [prefs, setPrefs] = useState<DashboardPrefs>(readPrefs);
+  const updatePrefs = (patch: Partial<DashboardPrefs>) =>
+    setPrefs((p) => {
+      const next = { ...p, ...patch };
+      writePrefs(next);
+      return next;
+    });
+
+  // ---- Category + search filtering --------------------------------------
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+
+  const categoryCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const f of forms) if (f.category) m.set(f.category, (m.get(f.category) ?? 0) + 1);
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [forms]);
+  const categories = useMemo(() => categoryCounts.map(([c]) => c), [categoryCounts]);
+  const uncategorizedCount = forms.filter((f) => !f.category).length;
+
+  // A filter pointing at a category that no longer exists falls back to All.
+  useEffect(() => {
+    if (categoryFilter === null) return;
+    const stale =
+      categoryFilter === UNCATEGORIZED
+        ? uncategorizedCount === 0 || categories.length === 0
+        : !categories.includes(categoryFilter);
+    if (stale) setCategoryFilter(null);
+  }, [categoryFilter, categories, uncategorizedCount]);
+
+  const visibleForms = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return forms.filter((f) => {
+      if (categoryFilter === UNCATEGORIZED && f.category) return false;
+      if (categoryFilter && categoryFilter !== UNCATEGORIZED && f.category !== categoryFilter)
+        return false;
+      if (!q) return true;
+      return (
+        f.title.toLowerCase().includes(q) ||
+        (f.description ?? "").toLowerCase().includes(q) ||
+        (f.category ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [forms, categoryFilter, query]);
+
+  const groups = useMemo(() => {
+    if (!prefs.grouped || categoryFilter !== null || categories.length === 0) return null;
+    const out = categories.map((c) => ({
+      key: c,
+      label: c,
+      forms: visibleForms.filter((f) => f.category === c),
+    }));
+    out.push({
+      key: UNCATEGORIZED,
+      label: "Uncategorized",
+      forms: visibleForms.filter((f) => !f.category),
+    });
+    return out.filter((g) => g.forms.length > 0);
+  }, [prefs.grouped, categoryFilter, categories, visibleForms]);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", userId],
@@ -160,14 +275,33 @@ function DashboardAuthed({
   const greetingName = fullName || profile?.display_name?.trim() || email;
 
   const [pendingPublish, setPendingPublish] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<DashboardFormRow | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<DashboardForm | null>(null);
   const [shareTarget, setShareTarget] = useState<FormRow | null>(null);
+  const [categoryTarget, setCategoryTarget] = useState<DashboardForm | null>(null);
+
+  const setCategory = useMutation({
+    mutationFn: async ({ formId, category }: { formId: string; category: string | null }) => {
+      const { error } = await supabase
+        .from("forms")
+        .update({ category })
+        .eq("id", formId)
+        .eq("user_id", userId);
+      if (error) throw error;
+      return category;
+    },
+    onSuccess: async (category) => {
+      setCategoryTarget(null);
+      toast.success(category ? `Moved to “${category}”` : "Category removed");
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not update category"),
+  });
 
   const duplicateForm = useMutation({
     mutationFn: async (formId: string) => {
       const { data: src, error: srcErr } = await supabase
         .from("forms")
-        .select("title, description, display_mode")
+        .select("title, description, display_mode, category")
         .eq("id", formId)
         .single();
       if (srcErr) throw srcErr;
@@ -184,6 +318,7 @@ function DashboardAuthed({
           title: `${src.title.slice(0, 290)} (copy)`,
           description: src.description,
           display_mode: src.display_mode,
+          category: src.category,
           user_id: userId,
         })
         .select("id")
@@ -255,6 +390,7 @@ function DashboardAuthed({
       setPendingDelete(null);
       toast.success("Form deleted");
       await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-summary", userId] });
     },
     onError: (e: Error) => toast.error(e.message || "Could not delete form"),
   });
@@ -303,6 +439,7 @@ function DashboardAuthed({
         .eq("user_id", userId);
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-summary", userId] });
       toast.success("Form published");
       const row = dashboardForms.find((f) => f.id === formId);
       if (row) setShareTarget({ ...row, status: "published" });
@@ -310,6 +447,17 @@ function DashboardAuthed({
       toast.error(error instanceof Error ? error.message : "Could not publish form");
     }
   };
+
+  const formActions: FormActionHandlers = {
+    onShare: (f) => (f.status === "draft" ? setPendingPublish(f.id) : setShareTarget(f)),
+    onDuplicate: (f) => duplicateForm.mutate(f.id),
+    onSetStatus: (f, status) => setFormStatus.mutate({ formId: f.id, status }),
+    onCategory: (f) => setCategoryTarget(f),
+    onDelete: (f) => setPendingDelete(f),
+    duplicatePending: duplicateForm.isPending,
+  };
+
+  const filtering = categoryFilter !== null || query.trim() !== "";
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -355,13 +503,17 @@ function DashboardAuthed({
         </nav>
       </header>
 
-      <main className="mx-auto max-w-4xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
+      <main className="mx-auto max-w-5xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
         <div className="max-w-2xl">
           <h1 className="font-display text-4xl md:text-5xl">Your forms</h1>
           <p className="mt-3 text-base text-ink/60">
             Welcome back, <span className="text-ink">{greetingName}</span>.
           </p>
         </div>
+
+        {!isError && (forms.length > 0 || isLoading) && (
+          <DashboardSummaryPanel userId={userId} forms={forms} formsLoading={isLoading} />
+        )}
 
         <section aria-labelledby="forms-list-heading" className="mt-12">
           <div className="flex items-center justify-between gap-4">
@@ -371,7 +523,8 @@ function DashboardAuthed({
               </h2>
               {!isLoading && !isError && (
                 <span className="font-mono text-xs text-ink/45">
-                  {forms.length} {forms.length === 1 ? "form" : "forms"}
+                  {filtering ? `${visibleForms.length} of ${forms.length}` : forms.length}{" "}
+                  {forms.length === 1 ? "form" : "forms"}
                 </span>
               )}
             </div>
@@ -384,28 +537,131 @@ function DashboardAuthed({
             </Link>
           </div>
 
-          <ul
-            className={
-              "mt-4 " +
-              (isError || (!isLoading && forms.length === 0)
-                ? ""
-                : "divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-white")
-            }
-          >
-            {isLoading &&
-              Array.from({ length: 3 }).map((_, i) => (
-                <li key={i} className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <Skeleton className="h-5 w-1/2" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                  <Skeleton className="mt-3 h-3 w-full" />
-                  <Skeleton className="mt-2 h-3 w-2/3" />
-                </li>
-              ))}
+          {!isLoading && !isError && forms.length > 0 && (
+            <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div
+                role="tablist"
+                aria-label="Filter by category"
+                className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 pb-1 md:pb-0"
+              >
+                <CategoryChip
+                  active={categoryFilter === null}
+                  onClick={() => setCategoryFilter(null)}
+                  label="All"
+                  count={forms.length}
+                />
+                {categoryCounts.map(([c, n]) => (
+                  <CategoryChip
+                    key={c}
+                    active={categoryFilter === c}
+                    onClick={() => setCategoryFilter(c)}
+                    label={c}
+                    count={n}
+                  />
+                ))}
+                {categories.length > 0 && uncategorizedCount > 0 && (
+                  <CategoryChip
+                    active={categoryFilter === UNCATEGORIZED}
+                    onClick={() => setCategoryFilter(UNCATEGORIZED)}
+                    label="Uncategorized"
+                    count={uncategorizedCount}
+                    muted
+                  />
+                )}
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink/40" />
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search forms"
+                    aria-label="Search forms"
+                    className="h-8 w-full rounded-md border border-hairline bg-white pl-8 pr-7 text-sm outline-none placeholder:text-ink/40 focus:border-brand/40 focus:ring-2 focus:ring-brand/15 md:w-44 [&::-webkit-search-cancel-button]:hidden"
+                  />
+                  {query && (
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      onClick={() => setQuery("")}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-ink/40 hover:text-ink"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+                {categories.length > 0 && (
+                  <button
+                    type="button"
+                    aria-pressed={prefs.grouped}
+                    onClick={() => updatePrefs({ grouped: !prefs.grouped })}
+                    title="Group by category"
+                    className={
+                      "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs transition-colors " +
+                      (prefs.grouped
+                        ? "border-brand/30 bg-brand/[0.07] text-brand"
+                        : "border-hairline bg-white text-ink/60 hover:text-ink")
+                    }
+                  >
+                    <Rows3 className="size-3.5" />
+                    Group
+                  </button>
+                )}
+                <div
+                  role="radiogroup"
+                  aria-label="Layout"
+                  className="inline-flex rounded-md border border-hairline bg-white p-0.5"
+                >
+                  {(
+                    [
+                      { mode: "list", label: "List view", Icon: List },
+                      { mode: "grid", label: "Grid view", Icon: LayoutGrid },
+                      { mode: "table", label: "Table view", Icon: Table2 },
+                    ] as const
+                  ).map(({ mode, label, Icon }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="radio"
+                      aria-checked={prefs.view === mode}
+                      aria-label={label}
+                      title={label}
+                      onClick={() => updatePrefs({ view: mode })}
+                      className={
+                        "rounded p-1.5 transition-colors " +
+                        (prefs.view === mode
+                          ? "bg-ink text-paper"
+                          : "text-ink/50 hover:bg-ink/5 hover:text-ink")
+                      }
+                    >
+                      <Icon className="size-3.5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4">
+            {isLoading && (
+              <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-white">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <li key={i} className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <Skeleton className="h-5 w-1/2" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="mt-3 h-3 w-full" />
+                    <Skeleton className="mt-2 h-3 w-2/3" />
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {!isLoading && isError && (
-              <li className="flex flex-col items-center rounded-lg border border-dashed border-destructive/30 bg-white px-6 py-14 text-center">
+              <div className="flex flex-col items-center rounded-lg border border-dashed border-destructive/30 bg-white px-6 py-14 text-center">
                 <FileText className="size-6 text-destructive" strokeWidth={1.5} />
                 <h3 className="mt-4 font-display text-2xl">Couldn't load your forms</h3>
                 <p className="mt-2 max-w-sm text-sm text-ink/60">
@@ -419,11 +675,11 @@ function DashboardAuthed({
                 >
                   Try again
                 </button>
-              </li>
+              </div>
             )}
 
             {!isLoading && !isError && forms.length === 0 && (
-              <li className="flex flex-col items-center rounded-lg border border-dashed border-ink/20 bg-white/60 px-6 py-16 text-center">
+              <div className="flex flex-col items-center rounded-lg border border-dashed border-ink/20 bg-white/60 px-6 py-16 text-center">
                 <h3 className="font-display text-3xl">No forms yet</h3>
                 <p className="mt-2 max-w-sm text-sm text-ink/60">
                   Start from a template, a blank page, or a one-line goal for Claude.
@@ -435,133 +691,56 @@ function DashboardAuthed({
                   <Plus className="size-4" />
                   Create your first form
                 </Link>
-              </li>
+              </div>
             )}
 
-            {!isLoading &&
-              !isError &&
-              forms.map((f) => {
-                const rCount = responseCounts[f.id] ?? 0;
-                const qCount = questionCounts[f.id] ?? 0;
-                const isDraft = f.status === "draft";
-                const openShare = () => {
-                  if (isDraft) {
-                    setPendingPublish(f.id);
-                    return;
-                  }
-                  setShareTarget(f);
-                };
-                return (
-                  <li key={f.id} className="group p-4 transition-colors hover:bg-paper">
-                    <div className="flex items-start justify-between gap-4">
-                      <Link
-                        to="/forms/$formId/edit"
-                        params={{ formId: f.id }}
-                        className="flex min-w-0 flex-1 items-start gap-3"
+            {!isLoading && !isError && forms.length > 0 && visibleForms.length === 0 && (
+              <div className="flex flex-col items-center rounded-lg border border-dashed border-ink/20 bg-white/60 px-6 py-12 text-center">
+                <p className="text-sm text-ink/60">No forms match these filters.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    setCategoryFilter(null);
+                  }}
+                  className="mt-3 text-sm font-medium text-brand hover:underline"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+
+            {!isLoading && !isError && visibleForms.length > 0 && groups && (
+              <div className="space-y-8">
+                {groups.map((g) => (
+                  <div key={g.key}>
+                    <div className="mb-2.5 flex items-baseline gap-2">
+                      <h3
+                        className={
+                          "text-sm font-medium " + (g.key === UNCATEGORIZED ? "text-ink/50" : "")
+                        }
                       >
-                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border border-hairline bg-surface text-ink/50">
-                          <FileText className="size-4" />
-                        </span>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate text-[15px] font-medium tracking-normal">
-                              {f.title}
-                            </h3>
-                            <StatusPill status={f.status} />
-                          </div>
-                          {f.description && (
-                            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">
-                              {f.description}
-                            </p>
-                          )}
-                          <p className="mt-1.5 font-mono text-[11px] text-ink/45">
-                            {qCount} {qCount === 1 ? "question" : "questions"} · {rCount}{" "}
-                            {rCount === 1 ? "response" : "responses"} · {timeAgo(f.created_at)}
-                          </p>
-                        </div>
-                      </Link>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Link
-                          to="/forms/$formId/edit"
-                          params={{ formId: f.id }}
-                          aria-label="Edit form"
-                          title="Edit"
-                          className="rounded-md p-2 text-ink/50 hover:bg-ink/5 hover:text-ink"
-                        >
-                          <Pencil className="size-4" />
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={openShare}
-                          aria-label={isDraft ? "Publish and share" : "Share form"}
-                          title={isDraft ? "Publish and share" : "Share"}
-                          className="rounded-md p-2 text-ink/50 hover:bg-ink/5 hover:text-ink"
-                        >
-                          <Share2 className="size-4" />
-                        </button>
-                        <Link
-                          to="/forms/$formId/responses"
-                          params={{ formId: f.id }}
-                          aria-label="View responses"
-                          title="View responses"
-                          className="rounded-md p-2 text-ink/50 hover:bg-ink/5 hover:text-ink"
-                        >
-                          <BarChart3 className="size-4" />
-                        </Link>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            aria-label="More actions"
-                            title="More actions"
-                            className="rounded-md p-2 text-ink/50 outline-none hover:bg-ink/5 hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40"
-                          >
-                            <MoreHorizontal className="size-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-52">
-                            <DropdownMenuItem
-                              disabled={duplicateForm.isPending}
-                              onClick={() => duplicateForm.mutate(f.id)}
-                            >
-                              <CopyPlus className="size-4" />
-                              Duplicate form
-                            </DropdownMenuItem>
-                            {f.status === "published" && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  setFormStatus.mutate({ formId: f.id, status: "closed" })
-                                }
-                              >
-                                <CircleSlash className="size-4" />
-                                Close form
-                              </DropdownMenuItem>
-                            )}
-                            {f.status === "closed" && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  setFormStatus.mutate({ formId: f.id, status: "published" })
-                                }
-                              >
-                                <CirclePlay className="size-4" />
-                                Reopen form
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setPendingDelete(dashboardForms.find((d) => d.id === f.id) ?? null)
-                              }
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="size-4" />
-                              Delete form
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                        {g.label}
+                      </h3>
+                      <span className="font-mono text-[11px] text-ink/40">{g.forms.length}</span>
                     </div>
-                  </li>
-                );
-              })}
-          </ul>
+                    <FormCollection forms={g.forms} view={prefs.view} actions={formActions} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!isLoading && !isError && visibleForms.length > 0 && !groups && (
+              <FormCollection forms={visibleForms} view={prefs.view} actions={formActions} />
+            )}
+
+            {!isLoading && !isError && forms.length > 0 && categories.length === 0 && (
+              <p className="mt-4 text-center text-xs text-ink/45">
+                Tip: use <span className="font-medium text-ink/60">⋯ → Set category</span> to group
+                related forms.
+              </p>
+            )}
+          </div>
         </section>
       </main>
 
@@ -581,6 +760,18 @@ function DashboardAuthed({
         confirmLabel="Publish and share"
         onConfirm={() => pendingPublish && doPublishAndShare(pendingPublish)}
         onCancel={() => setPendingPublish(null)}
+      />
+
+      <CategoryDialog
+        open={categoryTarget !== null}
+        formTitle={categoryTarget?.title ?? ""}
+        current={categoryTarget?.category ?? null}
+        categories={categories}
+        pending={setCategory.isPending}
+        onSave={(category) =>
+          categoryTarget && setCategory.mutate({ formId: categoryTarget.id, category })
+        }
+        onCancel={() => setCategoryTarget(null)}
       />
 
       <ShareFormDialog
