@@ -677,7 +677,8 @@ function LogicVignette() {
           ))}
         </div>
         <p className="mt-4 font-mono text-[11px] text-ink/45">
-          Forward-only, and required questions on skipped paths never block a submit
+          Jumps only skip ahead. Questions that get skipped, even required ones, never stop
+          someone from submitting.
         </p>
       </div>
     </Sheet>
