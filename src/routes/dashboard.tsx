@@ -340,7 +340,22 @@ function DashboardAuthed({
     onSuccess: async (categoryId) => {
       setCategoryTarget(null);
       const name = categories.find((c) => c.id === categoryId)?.name;
-      toast.success(categoryId ? `Moved to “${name ?? "category"}”` : "Category removed");
+      // If the current category filter no longer matches, the card vanishes
+      // from view — offer a jump to where it went so the change is visible.
+      const nowHidden =
+        categoryFilter !== null &&
+        (categoryFilter === UNCATEGORIZED ? categoryId !== null : categoryFilter !== categoryId);
+      toast.success(
+        categoryId ? `Moved to “${name ?? "category"}”` : "Category removed",
+        nowHidden
+          ? {
+              action: {
+                label: categoryId ? `Show ${name ?? "category"}` : "Show uncategorized",
+                onClick: () => setSearch({ cat: categoryId ?? UNCATEGORIZED }),
+              },
+            }
+          : undefined,
+      );
       await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
     },
     onError: (e: Error) => toast.error(e.message || "Could not update category"),

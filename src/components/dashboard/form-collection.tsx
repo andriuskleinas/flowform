@@ -9,6 +9,7 @@ import {
   FileText,
   MoreHorizontal,
   Pencil,
+  Plus,
   Share2,
   Tag,
   Trash2,
@@ -92,23 +93,57 @@ export function FormCollection({
   );
 }
 
+/**
+ * The form's category, always shown: a coloured tag (click to change), or a
+ * faint "+ Category" button when it has none. Sits above the card's stretched
+ * link (relative z-10) so it stays clickable without nesting in the anchor.
+ */
+function CategoryBadge({ form: f, actions }: { form: DashboardForm; actions: FormActionHandlers }) {
+  if (f.category) {
+    return (
+      <button
+        type="button"
+        onClick={() => actions.onCategory(f)}
+        title="Change category"
+        aria-label={`Category: ${f.category}. Change category`}
+        className="relative z-10 rounded-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+      >
+        <CategoryTag name={f.category} color={f.category_color} />
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => actions.onCategory(f)}
+      className="relative z-10 inline-flex items-center gap-1 rounded-sm border border-dashed border-ink/20 px-1.5 py-[1px] text-[11px] text-ink/40 transition-colors hover:border-ink/40 hover:text-ink/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+    >
+      <Plus className="size-3" />
+      Category
+    </button>
+  );
+}
+
+/** Makes the whole card clickable via the title link (no nested interactives). */
+const stretchedLink = "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none";
+
 function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActionHandlers }) {
   return (
-    <li className="group p-4 transition-colors hover:bg-paper">
+    <li className="group relative p-4 transition-colors focus-within:bg-paper hover:bg-paper">
       <div className="flex items-start justify-between gap-4">
-        <Link
-          to="/forms/$formId/edit"
-          params={{ formId: f.id }}
-          className="flex min-w-0 flex-1 items-start gap-3"
-        >
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border border-hairline bg-surface text-ink/50">
             <FileText className="size-4" />
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate text-[15px] font-medium tracking-normal">{f.title}</h3>
+              <h3 className="truncate text-[15px] font-medium tracking-normal">
+                <Link to="/forms/$formId/edit" params={{ formId: f.id }} className={stretchedLink}>
+                  {f.title}
+                </Link>
+              </h3>
               <StatusPill status={f.status} />
-              <CategoryTag name={f.category} color={f.category_color} />
+              <CategoryBadge form={f} actions={actions} />
             </div>
             {f.description && (
               <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">
@@ -125,8 +160,10 @@ function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActio
               {timeAgo(f.created_at)}
             </p>
           </div>
-        </Link>
-        <FormActions form={f} actions={actions} />
+        </div>
+        <div className="relative z-10">
+          <FormActions form={f} actions={actions} />
+        </div>
       </div>
     </li>
   );
@@ -134,18 +171,16 @@ function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActio
 
 function GridCard({ form: f, actions }: { form: DashboardForm; actions: FormActionHandlers }) {
   return (
-    <li className="group relative flex flex-col rounded-lg border border-hairline bg-white transition-colors hover:border-ink/20">
-      <Link
-        to="/forms/$formId/edit"
-        params={{ formId: f.id }}
-        className="flex flex-1 flex-col p-4 pb-3"
-      >
-        <div className="flex items-center gap-2 pr-8">
+    <li className="group relative flex flex-col rounded-lg border border-hairline bg-white transition-colors focus-within:border-ink/30 hover:border-ink/20">
+      <div className="flex flex-1 flex-col p-4 pb-3">
+        <div className="flex flex-wrap items-center gap-2">
           <StatusPill status={f.status} />
-          <CategoryTag name={f.category} color={f.category_color} />
+          <CategoryBadge form={f} actions={actions} />
         </div>
         <h3 className="mt-3 line-clamp-2 text-[15px] font-medium leading-snug tracking-normal">
-          {f.title}
+          <Link to="/forms/$formId/edit" params={{ formId: f.id }} className={stretchedLink}>
+            {f.title}
+          </Link>
         </h3>
         <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm leading-relaxed text-ink/55">
           {f.description || <span className="text-ink/30">No description</span>}
@@ -169,14 +204,16 @@ function GridCard({ form: f, actions }: { form: DashboardForm; actions: FormActi
             <dd className="text-lg font-medium tabular-nums">{formatRate(completionRate(f))}</dd>
           </div>
         </dl>
-      </Link>
+      </div>
       <div className="flex items-center justify-between border-t border-hairline py-1 pl-4 pr-1">
         <span className="font-mono text-[11px] text-ink/45">
           {f.last_response_at
             ? `last reply ${timeAgo(f.last_response_at)}`
             : `created ${timeAgo(f.created_at)}`}
         </span>
-        <FormActions form={f} actions={actions} compact />
+        <div className="relative z-10">
+          <FormActions form={f} actions={actions} compact />
+        </div>
       </div>
     </li>
   );
@@ -312,11 +349,7 @@ function FormTable({
                 <StatusPill status={f.status} />
               </td>
               <td className="px-3 py-2.5">
-                {f.category ? (
-                  <CategoryTag name={f.category} color={f.category_color} />
-                ) : (
-                  <span className="text-ink/30">—</span>
-                )}
+                <CategoryBadge form={f} actions={actions} />
               </td>
               <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">
                 {f.response_count}
