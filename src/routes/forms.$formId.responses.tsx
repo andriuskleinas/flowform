@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -30,7 +30,6 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { Shell } from "@/components/shell";
 import { ClientOnly } from "@/components/client-only";
-import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StarRating, type Question } from "@/components/question-render";
@@ -67,11 +66,9 @@ function ResponsesPage() {
   const { formId } = Route.useParams();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const qc = useQueryClient();
   const [responseLimit, setResponseLimit] = useState(100);
   const [exporting, setExporting] = useState(false);
   const [days, setDays] = useState<RangeDays>(30);
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -135,23 +132,6 @@ function ResponsesPage() {
       if (error) throw error;
       return data as unknown as FormAnalytics;
     },
-  });
-
-  const deleteResponse = useMutation({
-    mutationFn: async (responseId: string) => {
-      const { error } = await supabase.from("responses").delete().eq("id", responseId);
-      if (error) throw error;
-    },
-    onSuccess: async () => {
-      setPendingDelete(null);
-      toast.success("Response deleted");
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["responses", formId] }),
-        qc.invalidateQueries({ queryKey: ["form-analytics", formId] }),
-        qc.invalidateQueries({ queryKey: ["dashboard-forms"] }),
-      ]);
-    },
-    onError: (e: Error) => toast.error(e.message || "Could not delete response"),
   });
 
   if (loading || formQ.isLoading) {
@@ -246,20 +226,9 @@ function ResponsesPage() {
             responses={responses}
             hasMore={hasMore}
             onLoadMore={() => setResponseLimit((l) => l + 100)}
-            onDelete={(id) => setPendingDelete(id)}
           />
         </TabsContent>
       </Tabs>
-
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title="Delete this response?"
-        description="The response will be permanently removed from your results. This cannot be undone."
-        confirmLabel="Delete response"
-        destructive
-        onConfirm={() => pendingDelete && deleteResponse.mutate(pendingDelete)}
-        onCancel={() => setPendingDelete(null)}
-      />
     </Shell>
   );
 }
@@ -844,13 +813,11 @@ function IndividualList({
   responses,
   hasMore,
   onLoadMore,
-  onDelete,
 }: {
   questions: Question[];
   responses: ResponseRow[];
   hasMore: boolean;
   onLoadMore: () => void;
-  onDelete: (responseId: string) => void;
 }) {
   if (responses.length === 0) {
     return (
@@ -878,15 +845,6 @@ function IndividualList({
                     </span>
                   )}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => onDelete(r.id)}
-                  aria-label="Delete response"
-                  title="Delete response"
-                  className="rounded p-1.5 text-ink/40 hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <Trash2 className="size-4" />
-                </button>
               </div>
               <dl className="mt-4 space-y-4">
                 {questions.map((q) => (
