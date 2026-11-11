@@ -159,7 +159,7 @@ function SignupPage() {
                 setEmail(e.target.value);
                 if (errors.email) setErrors((x) => ({ ...x, email: null }));
               }}
-              autoComplete="email"
+              autoComplete="off"
               placeholder="you@example.com"
               error={errors.email}
               autoFocus

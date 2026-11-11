@@ -94,7 +94,7 @@ function ForgotPasswordPage() {
             setEmail(e.target.value);
             if (emailError) setEmailError(null);
           }}
-          autoComplete="email"
+          autoComplete="off"
           placeholder="you@example.com"
           error={emailError}
           autoFocus
