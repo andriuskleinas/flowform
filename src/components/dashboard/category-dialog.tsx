@@ -203,6 +203,7 @@ export function CategoryDialog({
               <Tag className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink/40" />
               <Input
                 id="new-category"
+                autoComplete="off"
                 autoFocus={categories.length === 0}
                 value={newName}
                 maxLength={CATEGORY_NAME_MAX}
@@ -374,6 +375,7 @@ export function ManageCategoriesDialog({
           <div className="mt-1.5 flex gap-2">
             <Input
               id="manage-new-category"
+              autoComplete="off"
               value={newName}
               maxLength={CATEGORY_NAME_MAX}
               placeholder="e.g. Events"
@@ -488,6 +490,7 @@ function CategoryRow({
 
       <Input
         aria-label="Category name"
+        autoComplete="off"
         value={name}
         maxLength={CATEGORY_NAME_MAX}
         onChange={(e) => setName(e.target.value)}
