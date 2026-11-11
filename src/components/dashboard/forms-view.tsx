@@ -245,64 +245,118 @@ function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActio
 }
 
 function GridCard({ form: f, actions }: { form: DashboardForm; actions: FormActionHandlers }) {
-  const rate = completionRate(f);
+  const hasResponses = f.response_count > 0;
   return (
-    <li className="group relative flex min-w-0 flex-col rounded-xl border border-hairline bg-card transition-colors focus-within:border-ink/30 hover:border-ink/25">
-      <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-center gap-2 text-xs">
-          <StatusLabel status={f.status} />
-          <CategoryButton form={f} actions={actions} />
+    <li className="group relative flex min-w-0 flex-col rounded-xl border border-hairline bg-card transition-[border-color,box-shadow] focus-within:border-ink/30 hover:border-ink/20 hover:shadow-[0_1px_2px_rgb(0_0_0/0.04),0_4px_16px_-4px_rgb(0_0_0/0.08)]">
+      <div className="flex flex-1 flex-col px-5 pb-4 pt-4">
+        <div className="flex h-7 items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5 text-xs">
+            <StatusLabel status={f.status} />
+            <CategoryButton form={f} actions={actions} />
+          </div>
+          <div className="relative z-10 -mr-1.5 shrink-0">
+            <FormMenu form={f} actions={actions} />
+          </div>
         </div>
-        <h3 className="mt-2.5 line-clamp-2 text-[15px] font-medium leading-snug">
+
+        <h3 className="mt-2 line-clamp-2 text-base font-medium leading-snug tracking-[-0.005em]">
           <Link to={titleHref(actions)} params={{ formId: f.id }} className={stretchedLink}>
             {f.title}
           </Link>
         </h3>
         {f.description && (
-          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/55">{f.description}</p>
+          <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-ink/55">
+            {f.description}
+          </p>
         )}
-        <dl className="mt-auto grid grid-cols-3 gap-3 pt-5">
-          <div>
-            <dt className="text-[11px] text-ink/45">Responses</dt>
-            <dd className="mt-0.5 text-lg font-medium">
-              <ResponsesLink form={f} />
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-ink/45">This week</dt>
-            <dd
-              className={
-                "mt-0.5 text-lg font-medium tabular-nums " +
-                (f.responses_7d > 0 ? "text-mint" : "text-ink/30")
-              }
-            >
-              {f.responses_7d > 0 ? `+${f.responses_7d}` : "0"}
-            </dd>
-          </div>
-          <div title="Responses ÷ views, last 90 days">
-            <dt className="text-[11px] text-ink/45">Conversion</dt>
-            <dd
-              className={
-                "mt-0.5 text-lg font-medium tabular-nums " + (rate === null ? "text-ink/30" : "")
-              }
-            >
-              {formatRate(rate)}
-            </dd>
-          </div>
-        </dl>
+
+        {/* Body sits at the bottom so metrics line up across a row. */}
+        <div className="mt-auto pt-5">
+          {hasResponses ? <CardMetrics form={f} /> : <CardWaiting form={f} />}
+        </div>
       </div>
-      <div className="flex items-center justify-between gap-2 border-t border-hairline py-2 pl-4 pr-2">
+
+      <div className="flex h-12 items-center justify-between gap-3 border-t border-hairline pl-5 pr-3">
         <span className="truncate text-xs text-ink/45">
           {f.last_response_at
             ? `Last response ${timeAgo(f.last_response_at)}`
-            : `${plural(f.question_count, "question")} · created ${timeAgo(f.created_at)}`}
+            : `Created ${timeAgo(f.created_at)}`}
         </span>
-        <div className="relative z-10 flex shrink-0 items-center gap-1">
+        <div className="relative z-10 shrink-0">
           <PrimaryAction form={f} actions={actions} />
-          <FormMenu form={f} actions={actions} />
         </div>
       </div>
     </li>
+  );
+}
+
+/** Forms with responses: the count, this week's movement, and conversion. */
+function CardMetrics({ form: f }: { form: DashboardForm }) {
+  const rate = completionRate(f);
+  return (
+    <div>
+      <div className="flex items-end justify-between gap-3">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[26px] font-medium leading-none tracking-tight">
+            <ResponsesLink form={f} />
+          </span>
+          <span className="text-xs text-ink/50">
+            {f.response_count === 1 ? "response" : "responses"}
+          </span>
+        </div>
+        {f.responses_7d > 0 ? (
+          <span className="rounded-full bg-mint-tint px-2 py-0.5 font-mono text-[11px] font-medium text-mint">
+            +{f.responses_7d} this week
+          </span>
+        ) : (
+          <span className="font-mono text-[11px] text-ink/35">none this week</span>
+        )}
+      </div>
+      <div className="mt-4" title="Responses ÷ views, last 90 days">
+        <div className="flex items-baseline justify-between text-[11px]">
+          <span className="text-ink/50">Conversion</span>
+          <span className={"font-mono tabular-nums " + (rate === null ? "text-ink/35" : "")}>
+            {rate === null ? "not enough views" : formatRate(rate)}
+          </span>
+        </div>
+        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-ink/[0.07]">
+          {rate !== null && (
+            <div
+              className="h-full rounded-full bg-brand"
+              style={{ width: `${Math.max(2, rate * 100)}%` }}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Forms without responses: one specific, calm line instead of a row of zeros. */
+function CardWaiting({ form: f }: { form: DashboardForm }) {
+  const q = plural(f.question_count, "question");
+  const { text, sub } =
+    f.status === "draft"
+      ? f.question_count === 0
+        ? { text: "No questions yet", sub: "Empty draft" }
+        : { text: "Ready to publish", sub: q }
+      : f.status === "published"
+        ? { text: "Waiting for the first response", sub: q }
+        : { text: "Closed without responses", sub: q };
+  return (
+    <div className="flex items-center gap-3 rounded-lg bg-surface px-3.5 py-3">
+      <span
+        aria-hidden
+        className={
+          "size-1.5 shrink-0 rounded-full " +
+          (f.status === "published" ? "animate-pulse bg-mint" : "bg-ink/25")
+        }
+      />
+      <div className="min-w-0">
+        <p className="truncate text-[13px] text-ink/70">{text}</p>
+        <p className="font-mono text-[11px] text-ink/40">{sub}</p>
+      </div>
+    </div>
   );
 }
 
