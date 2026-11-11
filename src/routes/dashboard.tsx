@@ -1,33 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowDownUp,
-  ChevronDown,
-  FileText,
-  Activity,
-  LayoutGrid,
-  List,
-  LogOut,
-  Plus,
-  Rows3,
-  Search,
-  Settings2,
-  Table2,
-  User,
-  Users,
-  Check,
-  Eye,
-  X,
-} from "lucide-react";
+import { ChevronDown, FileText, LogOut, Plus, User, Users, Check, Eye } from "lucide-react";
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -40,7 +20,9 @@ import { ShareFormDialog } from "@/components/share-form-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getInitialsFromProfile } from "@/lib/utils";
-import { DashboardSummaryPanel } from "@/components/dashboard/summary";
+import { DashboardAnalytics } from "@/components/dashboard/analytics";
+import { DashboardInsights } from "@/components/dashboard/insights";
+import { FormsToolbar } from "@/components/dashboard/forms-toolbar";
 import {
   CategoryDialog,
   CategoryDot,
@@ -48,9 +30,6 @@ import {
 } from "@/components/dashboard/category-dialog";
 import { useCategories } from "@/lib/categories";
 import {
-  ACTIVITY_OPTIONS,
-  SORT_OPTIONS,
-  STATUS_OPTIONS,
   UNCATEGORIZED,
   filterForms,
   parseDashboardSearch,
@@ -61,11 +40,11 @@ import {
   type StatusFilter,
 } from "@/lib/dashboard-filters";
 import {
-  FormCollection,
+  FormsView,
   type DashboardForm,
   type FormActionHandlers,
   type ViewMode,
-} from "@/components/dashboard/form-collection";
+} from "@/components/dashboard/forms-view";
 import type { FormStatus } from "@/lib/form-utils";
 import { Logo } from "@/components/logo";
 import { ThemeSubmenu } from "@/components/theme-menu";
@@ -98,7 +77,7 @@ function readPrefs(): DashboardPrefs {
     if (!raw) return fallback;
     const p = JSON.parse(raw) as Partial<DashboardPrefs>;
     return {
-      view: p.view === "grid" || p.view === "table" ? p.view : "list",
+      view: p.view === "grid" ? "grid" : "list",
       grouped: p.grouped === true,
     };
   } catch {
@@ -112,44 +91,6 @@ function writePrefs(p: DashboardPrefs) {
   } catch {
     // Storage blocked (private mode etc.) — prefs just won't persist.
   }
-}
-
-function CategoryChip({
-  active,
-  onClick,
-  label,
-  count,
-  muted = false,
-  color,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  count: number;
-  muted?: boolean;
-  color?: string | null;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={
-        "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs transition-colors " +
-        (active
-          ? "border-ink bg-ink text-paper"
-          : "border-hairline bg-card hover:border-ink/25 " +
-            (muted ? "text-ink/50 hover:text-ink" : "text-ink/75 hover:text-ink"))
-      }
-    >
-      {color !== undefined && <CategoryDot color={color} />}
-      <span className="max-w-[10rem] truncate">{label}</span>
-      <span className={"font-mono text-[10px] " + (active ? "text-paper/60" : "text-ink/40")}>
-        {count}
-      </span>
-    </button>
-  );
 }
 
 function DashboardPage() {
@@ -346,7 +287,10 @@ function DashboardAuthed({
     .map((p) => p?.trim())
     .filter(Boolean)
     .join(" ");
-  const greetingName = fullName || profile?.display_name?.trim() || email;
+  const firstName =
+    profile?.first_name?.trim() || profile?.display_name?.trim() || fullName || email.split("@")[0];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   const [pendingPublish, setPendingPublish] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DashboardForm | null>(null);
@@ -551,8 +495,20 @@ function DashboardAuthed({
 
   const filtering =
     categoryFilter !== null || query.trim() !== "" || statusFilter !== "all" || activity !== "any";
-  const sortLabel = SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Newest";
-  const activityLabel = ACTIVITY_OPTIONS.find((o) => o.key === activity)?.label ?? "Any activity";
+  const onSort = (next: SortKey) => setSearch({ sort: next === "newest" ? undefined : next });
+
+  // One-line pulse under the title: the week at a glance.
+  const liveCount = forms.filter((f) => f.status === "published").length;
+  const weekResponses = forms.reduce((n, f) => n + f.responses_7d, 0);
+  const pulse = isLoading
+    ? ""
+    : forms.length === 0
+      ? "Create your first form to start collecting responses."
+      : weekResponses > 0
+        ? `${weekResponses} new ${weekResponses === 1 ? "response" : "responses"} this week across ${liveCount} live ${liveCount === 1 ? "form" : "forms"}.`
+        : liveCount > 0
+          ? `No new responses this week. ${liveCount} ${liveCount === 1 ? "form is" : "forms are"} live.`
+          : "Nothing is live yet. Publish a form to start collecting.";
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -603,375 +559,163 @@ function DashboardAuthed({
         </nav>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
+      <main className="mx-auto max-w-6xl px-6 pb-24 pt-8 md:px-8 md:pt-12">
         <PendingInvitations userId={userId} compact />
 
-        <div className="max-w-2xl [&:not(:first-child)]:mt-8">
-          {workspaces.length > 1 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger className="mb-4 inline-flex h-8 items-center gap-2 rounded-full border border-hairline bg-card pl-3 pr-2.5 text-xs text-ink/70 outline-none transition-colors hover:border-ink/25 hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40">
-                <Users className="size-3.5" />
-                {currentWs ? workspaceName(currentWs) : "My workspace"}
-                <ChevronDown className="size-3 opacity-60" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-72">
-                <DropdownMenuLabel className="text-xs font-normal text-ink/50">
-                  Switch workspace
-                </DropdownMenuLabel>
-                {workspaces.map((w) => (
-                  <DropdownMenuItem
-                    key={w.owner_id}
-                    onClick={() =>
-                      navigate({
-                        to: "/dashboard",
-                        search: w.owner_id === userId ? {} : { ws: w.owner_id },
-                      })
-                    }
-                    className="items-start gap-3"
-                  >
-                    <span className="mt-0.5 flex size-4 items-center justify-center">
-                      {w.owner_id === ownerId && <Check className="size-4" />}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm">{workspaceName(w)}</span>
-                      <span className="block text-xs text-ink/50">
-                        {w.form_count} {w.form_count === 1 ? "form" : "forms"}
+        {/* Page header: where am I, how is it going, what do I do next. */}
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 [&:not(:first-child)]:mt-8">
+          <div className="min-w-0">
+            {workspaces.length > 1 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="mb-3 inline-flex h-8 items-center gap-2 rounded-full border border-hairline bg-card pl-3 pr-2.5 text-xs text-ink/70 outline-none transition-colors hover:border-ink/25 hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40">
+                  <Users className="size-3.5" />
+                  {currentWs ? workspaceName(currentWs) : "My workspace"}
+                  <ChevronDown className="size-3 opacity-60" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-72">
+                  <DropdownMenuLabel className="text-xs font-normal text-ink/50">
+                    Switch workspace
+                  </DropdownMenuLabel>
+                  {workspaces.map((w) => (
+                    <DropdownMenuItem
+                      key={w.owner_id}
+                      onClick={() =>
+                        navigate({
+                          to: "/dashboard",
+                          search: w.owner_id === userId ? {} : { ws: w.owner_id },
+                        })
+                      }
+                      className="items-start gap-3"
+                    >
+                      <span className="mt-0.5 flex size-4 items-center justify-center">
+                        {w.owner_id === ownerId && <Check className="size-4" />}
                       </span>
-                    </span>
-                    <RoleBadge role={w.role} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm">{workspaceName(w)}</span>
+                        <span className="block text-xs text-ink/50">
+                          {w.form_count} {w.form_count === 1 ? "form" : "forms"}
+                        </span>
+                      </span>
+                      <RoleBadge role={w.role} />
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate({ to: "/profile", hash: "team" })}>
+                    <Users className="size-4" />
+                    Manage team
                   </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate({ to: "/profile", hash: "team" })}>
-                  <Users className="size-4" />
-                  Manage team
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">
+              {isOwnWorkspace ? "Forms" : currentWs ? workspaceName(currentWs) : "Forms"}
+            </h1>
+            <p className="mt-2 text-sm text-ink/60">
+              {isOwnWorkspace ? (
+                <>
+                  {greeting}, <span className="text-ink">{firstName}</span>. {pulse}
+                </>
+              ) : role ? (
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  You're here as <RoleBadge role={role} />
+                  {!can.canEdit && (
+                    <span className="inline-flex items-center gap-1 text-sm">
+                      <Eye className="size-3.5" /> View-only — responses and analytics are open to
+                      you.
+                    </span>
+                  )}
+                </span>
+              ) : null}
+            </p>
+          </div>
+          {can.canEdit && (
+            <Link
+              to="/forms/new"
+              search={isOwnWorkspace ? {} : { ws: ownerId }}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-ink px-3.5 text-sm font-medium text-paper outline-none transition-colors hover:bg-ink/85 focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+            >
+              <Plus className="size-4" />
+              New form
+            </Link>
           )}
-          <h1 className="font-display text-4xl md:text-5xl">
-            {isOwnWorkspace ? "Your forms" : currentWs ? workspaceName(currentWs) : "Forms"}
-          </h1>
-          <p className="mt-3 text-base text-ink/60">
-            {isOwnWorkspace ? (
-              <>
-                Welcome back, <span className="text-ink">{greetingName}</span>.
-              </>
-            ) : role ? (
-              <span className="inline-flex flex-wrap items-center gap-2">
-                You're here as <RoleBadge role={role} />
-                {!can.canEdit && (
-                  <span className="inline-flex items-center gap-1 text-sm">
-                    <Eye className="size-3.5" /> View-only — responses and analytics are open to
-                    you.
-                  </span>
-                )}
-              </span>
-            ) : null}
-          </p>
         </div>
 
         {!isError && (forms.length > 0 || isLoading) && (
-          <DashboardSummaryPanel userId={ownerId} forms={forms} formsLoading={isLoading} />
+          <div className="mt-8 space-y-3">
+            <DashboardAnalytics ownerId={ownerId} />
+            {!isLoading && (
+              <DashboardInsights
+                forms={forms}
+                canEdit={can.canEdit}
+                onFilter={(patch) => {
+                  setSearch({ ...patch, cat: undefined, q: undefined });
+                  document
+                    .getElementById("forms-list")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              />
+            )}
+          </div>
         )}
 
-        <section aria-labelledby="forms-list-heading" className="mt-12">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <h2 id="forms-list-heading" className="text-[15px] font-medium tracking-normal">
-                All forms
-              </h2>
-              {!isLoading && !isError && (
-                <span className="font-mono text-xs text-ink/45">
-                  {filtering ? `${visibleForms.length} of ${forms.length}` : forms.length}{" "}
-                  {forms.length === 1 ? "form" : "forms"}
-                </span>
-              )}
-            </div>
-            {can.canEdit && (
-              <Link
-                to="/forms/new"
-                search={isOwnWorkspace ? {} : { ws: ownerId }}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-ink px-3.5 text-sm font-medium text-paper transition-colors hover:bg-ink/85"
-              >
-                <Plus className="size-4" />
-                New form
-              </Link>
+        <section id="forms-list" aria-labelledby="forms-list-heading" className="mt-12 scroll-mt-6">
+          <div className="mb-3 flex items-baseline gap-3">
+            <h2 id="forms-list-heading" className="text-[15px] font-medium">
+              {isOwnWorkspace ? "Your forms" : "Forms"}
+            </h2>
+            {!isLoading && !isError && filtering && (
+              <span className="font-mono text-xs text-ink/45">
+                {visibleForms.length} of {forms.length} shown
+              </span>
             )}
           </div>
 
           {!isLoading && !isError && forms.length > 0 && (
-            <div className="mt-4 space-y-3">
-              {/* Row 1 — topics */}
-              <div className="flex items-center gap-2">
-                <div
-                  role="tablist"
-                  aria-label="Filter by category"
-                  className="-mx-1 flex min-w-0 flex-1 gap-1.5 overflow-x-auto px-1 pb-1 md:pb-0"
-                >
-                  <CategoryChip
-                    active={categoryFilter === null}
-                    onClick={() => setSearch({ cat: undefined })}
-                    label="All topics"
-                    count={forms.length}
-                  />
-                  {categories.map((c) => (
-                    <CategoryChip
-                      key={c.id}
-                      active={categoryFilter === c.id}
-                      onClick={() => setSearch({ cat: c.id })}
-                      label={c.name}
-                      color={c.color}
-                      count={categoryCounts.get(c.id) ?? 0}
-                    />
-                  ))}
-                  {categories.length > 0 && uncategorizedCount > 0 && (
-                    <CategoryChip
-                      active={categoryFilter === UNCATEGORIZED}
-                      onClick={() => setSearch({ cat: UNCATEGORIZED })}
-                      label="Uncategorized"
-                      count={uncategorizedCount}
-                      muted
-                    />
-                  )}
-                </div>
-                {can.canEdit && (
-                  <button
-                    type="button"
-                    onClick={() => setManageOpen(true)}
-                    className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-hairline bg-card px-2.5 text-xs text-ink/60 transition-colors hover:border-ink/25 hover:text-ink"
-                  >
-                    {categories.length === 0 ? (
-                      <>
-                        <Plus className="size-3.5" /> Add categories
-                      </>
-                    ) : (
-                      <>
-                        <Settings2 className="size-3.5" /> Manage
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-
-              {/* Row 2 — status, activity, sort, search, layout */}
-              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div
-                    role="radiogroup"
-                    aria-label="Filter by status"
-                    className="inline-flex rounded-md border border-hairline bg-card p-0.5"
-                  >
-                    {STATUS_OPTIONS.map((o) => (
-                      <button
-                        key={o.key}
-                        type="button"
-                        role="radio"
-                        aria-checked={statusFilter === o.key}
-                        onClick={() => setSearch({ status: o.key === "all" ? undefined : o.key })}
-                        className={
-                          "inline-flex h-7 items-center gap-1.5 rounded px-2.5 text-xs transition-colors " +
-                          (statusFilter === o.key
-                            ? "bg-ink text-paper"
-                            : "text-ink/60 hover:bg-ink/5 hover:text-ink")
-                        }
-                      >
-                        {o.label}
-                        <span
-                          className={
-                            "font-mono text-[10px] " +
-                            (statusFilter === o.key ? "text-paper/60" : "text-ink/35")
-                          }
-                        >
-                          {statusCounts[o.key]}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      className={
-                        "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 " +
-                        (activity !== "any"
-                          ? "border-brand/30 bg-brand/[0.07] text-brand"
-                          : "border-hairline bg-card text-ink/60 hover:text-ink")
-                      }
-                    >
-                      <Activity className="size-3.5" />
-                      {activityLabel}
-                      <ChevronDown className="size-3 opacity-60" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-64">
-                      <DropdownMenuLabel className="text-xs font-normal text-ink/50">
-                        Activity
-                      </DropdownMenuLabel>
-                      <DropdownMenuRadioGroup
-                        value={activity}
-                        onValueChange={(v) =>
-                          setSearch({
-                            activity: v === "any" ? undefined : (v as ActivityFilter),
-                          })
-                        }
-                      >
-                        {ACTIVITY_OPTIONS.map((o) => (
-                          <DropdownMenuRadioItem key={o.key} value={o.key} className="items-start">
-                            <div>
-                              <p className="text-sm">{o.label}</p>
-                              {o.hint && <p className="text-xs text-ink/50">{o.hint}</p>}
-                            </div>
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      className={
-                        "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 " +
-                        (sort !== "newest"
-                          ? "border-brand/30 bg-brand/[0.07] text-brand"
-                          : "border-hairline bg-card text-ink/60 hover:text-ink")
-                      }
-                    >
-                      <ArrowDownUp className="size-3.5" />
-                      {sortLabel}
-                      <ChevronDown className="size-3 opacity-60" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-56">
-                      <DropdownMenuLabel className="text-xs font-normal text-ink/50">
-                        Sort by
-                      </DropdownMenuLabel>
-                      <DropdownMenuRadioGroup
-                        value={sort}
-                        onValueChange={(v) =>
-                          setSearch({ sort: v === "newest" ? undefined : (v as SortKey) })
-                        }
-                      >
-                        {SORT_OPTIONS.map((o) => (
-                          <DropdownMenuRadioItem key={o.key} value={o.key}>
-                            {o.label}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {filtering && (
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="h-8 px-1 text-xs font-medium text-brand hover:underline"
-                    >
-                      Clear filters
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <div className="relative flex-1 lg:flex-none">
-                    <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink/40" />
-                    <input
-                      type="search"
-                      value={query}
-                      onChange={(e) => setSearch({ q: e.target.value })}
-                      placeholder="Search forms"
-                      aria-label="Search forms"
-                      className="h-8 w-full rounded-md border border-hairline bg-card pl-8 pr-7 text-sm outline-none placeholder:text-ink/40 focus:border-brand/40 focus:ring-2 focus:ring-brand/15 lg:w-44 [&::-webkit-search-cancel-button]:hidden"
-                    />
-                    {query && (
-                      <button
-                        type="button"
-                        aria-label="Clear search"
-                        onClick={() => setSearch({ q: undefined })}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-ink/40 hover:text-ink"
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    )}
-                  </div>
-                  {categories.length > 0 && (
-                    <button
-                      type="button"
-                      aria-pressed={prefs.grouped}
-                      onClick={() => updatePrefs({ grouped: !prefs.grouped })}
-                      title="Group by category"
-                      className={
-                        "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs transition-colors " +
-                        (prefs.grouped
-                          ? "border-brand/30 bg-brand/[0.07] text-brand"
-                          : "border-hairline bg-card text-ink/60 hover:text-ink")
-                      }
-                    >
-                      <Rows3 className="size-3.5" />
-                      Group
-                    </button>
-                  )}
-                  <div
-                    role="radiogroup"
-                    aria-label="Layout"
-                    className="inline-flex rounded-md border border-hairline bg-card p-0.5"
-                  >
-                    {(
-                      [
-                        { mode: "list", label: "List view", Icon: List },
-                        { mode: "grid", label: "Grid view", Icon: LayoutGrid },
-                        { mode: "table", label: "Table view", Icon: Table2 },
-                      ] as const
-                    ).map(({ mode, label, Icon }) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        role="radio"
-                        aria-checked={prefs.view === mode}
-                        aria-label={label}
-                        title={label}
-                        onClick={() => updatePrefs({ view: mode })}
-                        className={
-                          "rounded p-1.5 transition-colors " +
-                          (prefs.view === mode
-                            ? "bg-ink text-paper"
-                            : "text-ink/50 hover:bg-ink/5 hover:text-ink")
-                        }
-                      >
-                        <Icon className="size-3.5" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <FormsToolbar
+              search={search}
+              setSearch={setSearch}
+              statusCounts={statusCounts}
+              categories={categories}
+              categoryCounts={categoryCounts}
+              uncategorizedCount={uncategorizedCount}
+              grouped={prefs.grouped}
+              onGrouped={(grouped) => updatePrefs({ grouped })}
+              view={prefs.view}
+              onView={(view) => updatePrefs({ view })}
+              onManageCategories={() => setManageOpen(true)}
+              canManageCategories={can.canEdit}
+            />
           )}
 
           <div className="mt-4">
             {isLoading && (
-              <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-card">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <li key={i} className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <Skeleton className="h-5 w-1/2" />
-                      <Skeleton className="h-3 w-16" />
+              <div className="overflow-hidden rounded-xl border border-hairline bg-card">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-4 border-b border-hairline px-4 py-4 last:border-0"
+                  >
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="mt-2 h-3 w-1/4" />
                     </div>
-                    <Skeleton className="mt-3 h-3 w-full" />
-                    <Skeleton className="mt-2 h-3 w-2/3" />
-                  </li>
+                    <Skeleton className="h-7 w-20" />
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
 
             {!isLoading && isError && (
-              <div className="flex flex-col items-center rounded-lg border border-dashed border-destructive/30 bg-card px-6 py-14 text-center">
+              <div className="flex flex-col items-center rounded-xl border border-dashed border-destructive/30 bg-card px-6 py-14 text-center">
                 <FileText className="size-6 text-destructive" strokeWidth={1.5} />
-                <h3 className="mt-4 font-display text-2xl">Couldn't load your forms</h3>
+                <h3 className="mt-4 text-lg font-medium">Couldn't load your forms</h3>
                 <p className="mt-2 max-w-sm text-sm text-ink/60">
-                  Something went wrong fetching your forms. Your forms are safe — this is just a
-                  loading issue.
+                  Your forms are safe. This is only a loading problem.
                 </p>
                 <button
                   type="button"
                   onClick={() => refetchDashboardForms()}
-                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-md bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:bg-brand/90"
+                  className="mt-6 inline-flex h-9 items-center justify-center rounded-md bg-ink px-4 text-sm font-medium text-paper transition-colors hover:bg-ink/85"
                 >
                   Try again
                 </button>
@@ -979,33 +723,19 @@ function DashboardAuthed({
             )}
 
             {!isLoading && !isError && forms.length === 0 && (
-              <div className="flex flex-col items-center rounded-lg border border-dashed border-ink/20 bg-card/60 px-6 py-16 text-center">
-                <h3 className="font-display text-3xl">No forms yet</h3>
-                <p className="mt-2 max-w-sm text-sm text-ink/60">
-                  {can.canEdit
-                    ? "Start from a template, a blank page, or a one-line goal for Claude."
-                    : "Nothing has been created in this workspace yet."}
-                </p>
-                {can.canEdit && (
-                  <Link
-                    to="/forms/new"
-                    search={isOwnWorkspace ? {} : { ws: ownerId }}
-                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-md bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-all hover:bg-brand/90"
-                  >
-                    <Plus className="size-4" />
-                    Create your first form
-                  </Link>
-                )}
-              </div>
+              <EmptyWorkspace canCreate={can.canEdit} ownerId={isOwnWorkspace ? null : ownerId} />
             )}
 
             {!isLoading && !isError && forms.length > 0 && visibleForms.length === 0 && (
-              <div className="flex flex-col items-center rounded-lg border border-dashed border-ink/20 bg-card/60 px-6 py-12 text-center">
-                <p className="text-sm text-ink/60">No forms match these filters.</p>
+              <div className="flex flex-col items-center rounded-xl border border-dashed border-ink/20 px-6 py-12 text-center">
+                <p className="text-sm font-medium">No forms match</p>
+                <p className="mt-1 text-sm text-ink/55">
+                  Try a different search, or widen the filters.
+                </p>
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="mt-3 text-sm font-medium text-brand hover:underline"
+                  className="mt-4 text-sm font-medium text-brand hover:underline"
                 >
                   Clear filters
                 </button>
@@ -1027,12 +757,12 @@ function DashboardAuthed({
                       </h3>
                       <span className="font-mono text-[11px] text-ink/40">{g.forms.length}</span>
                     </div>
-                    <FormCollection
+                    <FormsView
                       forms={g.forms}
                       view={prefs.view}
                       actions={formActions}
                       sort={sort}
-                      onSort={(next) => setSearch({ sort: next === "newest" ? undefined : next })}
+                      onSort={onSort}
                     />
                   </div>
                 ))}
@@ -1040,12 +770,12 @@ function DashboardAuthed({
             )}
 
             {!isLoading && !isError && visibleForms.length > 0 && !groups && (
-              <FormCollection
+              <FormsView
                 forms={visibleForms}
                 view={prefs.view}
                 actions={formActions}
                 sort={sort}
-                onSort={(next) => setSearch({ sort: next === "newest" ? undefined : next })}
+                onSort={onSort}
               />
             )}
           </div>
@@ -1095,6 +825,56 @@ function DashboardAuthed({
         formId={shareTarget?.id ?? ""}
         formTitle={shareTarget?.title ?? ""}
       />
+    </div>
+  );
+}
+
+/** First-run state: what Flowform does in three steps, and one way in. */
+function EmptyWorkspace({ canCreate, ownerId }: { canCreate: boolean; ownerId: string | null }) {
+  const steps = [
+    {
+      n: "1",
+      title: "Build",
+      body: "Start from a template, a blank page, or a one-line goal for Claude.",
+    },
+    {
+      n: "2",
+      title: "Share",
+      body: "Publish and send the link. Respondents answer one question at a time.",
+    },
+    { n: "3", title: "Learn", body: "Watch responses, drop-off and AI summaries arrive here." },
+  ];
+  return (
+    <div className="rounded-xl border border-hairline bg-card px-6 py-12 text-center md:px-10">
+      <h3 className="text-xl font-medium">
+        {canCreate ? "Create your first form" : "No forms in this workspace yet"}
+      </h3>
+      <p className="mx-auto mt-2 max-w-md text-sm text-ink/60">
+        {canCreate
+          ? "Most people have their first form live in under five minutes."
+          : "When an editor creates a form, it will appear here with its results."}
+      </p>
+      {canCreate && (
+        <>
+          <ol className="mx-auto mt-8 grid max-w-3xl gap-3 text-left sm:grid-cols-3">
+            {steps.map((s) => (
+              <li key={s.n} className="rounded-lg border border-hairline bg-surface p-4">
+                <span className="font-mono text-[11px] text-ink/40">{s.n}</span>
+                <p className="mt-1 text-sm font-medium">{s.title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-ink/55">{s.body}</p>
+              </li>
+            ))}
+          </ol>
+          <Link
+            to="/forms/new"
+            search={ownerId ? { ws: ownerId } : {}}
+            className="mt-8 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-ink px-5 text-sm font-medium text-paper transition-colors hover:bg-ink/85"
+          >
+            <Plus className="size-4" />
+            New form
+          </Link>
+        </>
+      )}
     </div>
   );
 }
