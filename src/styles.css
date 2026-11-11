@@ -2,8 +2,8 @@
 @source "../src";
 @import "tw-animate-css";
 
-/* Keeps shadcn `dark:` utilities inert (no .dark class is ever applied) instead
-   of letting them follow the OS colour scheme. */
+/* `dark:` utilities follow the `.dark` class that the theme script puts on
+   <html> (user preference: light / dark / system), not the OS directly. */
 @custom-variant dark (&:is(.dark *));
 
 /*
@@ -13,7 +13,8 @@
  * classes (e.g. --color-primary -> bg-primary, text-primary).
  *
  * The :root block defines the actual color values using oklch.
- * The app is light-only by design; there is no dark theme to keep in sync.
+ * `.dark` (below :root) redefines the same tokens for dark mode — any new
+ * colour token needs a dark value there too.
  *
  * To add a new semantic color:
  * 1. Add the variable to :root
@@ -147,6 +148,44 @@
   --sidebar-accent-foreground: var(--ink);
   --sidebar-border: var(--hairline);
   --sidebar-ring: var(--brand);
+}
+
+/*
+ * Editorial Ink, dark — warm off-white ink on a near-black, faintly blue
+ * paper. Klein blue lifts in lightness so it still reads on dark surfaces.
+ */
+.dark {
+  color-scheme: dark;
+  --ink: oklch(0.93 0.005 85);
+  --paper: oklch(0.175 0.006 265);
+  --surface: oklch(0.155 0.006 265);
+  --hairline: oklch(0.29 0.008 265);
+  --brand: oklch(0.6 0.19 264);
+  --brand-foreground: oklch(0.99 0.002 85);
+  --sky: oklch(0.76 0.12 258);
+  --sky-tint: oklch(0.27 0.05 258);
+  --coral: oklch(0.76 0.12 40);
+  --coral-tint: oklch(0.28 0.045 40);
+  --mint: oklch(0.76 0.09 165);
+  --mint-tint: oklch(0.27 0.035 165);
+  --sun: oklch(0.82 0.1 85);
+  --sun-tint: oklch(0.29 0.04 85);
+  --gold: oklch(0.8 0.14 80);
+  --gold-foreground: oklch(0.25 0.05 75);
+
+  --card: oklch(0.2 0.007 265);
+  --popover: oklch(0.215 0.007 265);
+  --secondary: oklch(0.25 0.008 265);
+  --muted: oklch(0.24 0.008 265);
+  --muted-foreground: oklch(0.7 0.01 265);
+  --accent: oklch(0.28 0.05 264);
+  --accent-foreground: oklch(0.82 0.09 264);
+  --destructive: oklch(0.66 0.19 27);
+  --input: oklch(0.33 0.008 265);
+  --chart-2: oklch(0.82 0.01 265);
+  --chart-3: oklch(0.62 0.01 265);
+  --chart-4: oklch(0.5 0.1 264);
+  --chart-5: oklch(0.4 0.008 265);
 }
 
 @layer base {

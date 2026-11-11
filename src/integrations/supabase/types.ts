@@ -131,6 +131,7 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          theme: string
           updated_at: string
         }
         Insert: {
@@ -139,6 +140,7 @@ export type Database = {
           first_name?: string | null
           id: string
           last_name?: string | null
+          theme?: string
           updated_at?: string
         }
         Update: {
@@ -147,6 +149,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          theme?: string
           updated_at?: string
         }
         Relationships: []
@@ -256,14 +259,102 @@ export type Database = {
           },
         ]
       }
+      workspace_invites: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invited_by: string | null
+          owner_id: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invited_by?: string | null
+          owner_id: string
+          role: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string | null
+          owner_id?: string
+          role?: string
+        }
+        Relationships: []
+      }
+      workspace_members: {
+        Row: {
+          created_at: string
+          invited_by: string | null
+          member_id: string
+          owner_id: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          invited_by?: string | null
+          member_id: string
+          owner_id: string
+          role: string
+        }
+        Update: {
+          created_at?: string
+          invited_by?: string | null
+          member_id?: string
+          owner_id?: string
+          role?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       record_keepalive_ping: { Args: never; Returns: undefined }
-      get_dashboard_forms: {
+      accept_workspace_invite: {
+        Args: { p_invite_id: string }
+        Returns: string
+      }
+      delete_my_account: { Args: never; Returns: undefined }
+      get_my_invites: {
         Args: never
+        Returns: {
+          created_at: string
+          id: string
+          owner_email: string
+          owner_id: string
+          owner_name: string | null
+          role: string
+        }[]
+      }
+      get_my_workspaces: {
+        Args: never
+        Returns: {
+          form_count: number
+          member_count: number
+          owner_email: string
+          owner_id: string
+          owner_name: string | null
+          role: string
+        }[]
+      }
+      get_workspace_members: {
+        Args: { p_owner: string }
+        Returns: {
+          email: string
+          joined_at: string
+          name: string | null
+          role: string
+          user_id: string
+        }[]
+      }
+      get_dashboard_forms: {
+        Args: { p_owner?: string }
         Returns: {
           category: string | null
           category_color: string | null
@@ -282,7 +373,7 @@ export type Database = {
         }[]
       }
       get_dashboard_summary: {
-        Args: { p_days?: number }
+        Args: { p_days?: number; p_owner?: string }
         Returns: Json
       }
       get_form_analytics: {

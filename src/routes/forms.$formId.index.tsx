@@ -443,7 +443,7 @@ function PublicFormPage() {
         }}
       >
         {questions.length === 0 && (
-          <p className="rounded-lg border border-dashed border-ink/15 bg-white/50 p-8 text-center text-ink/60">
+          <p className="rounded-lg border border-dashed border-ink/15 bg-card/50 p-8 text-center text-ink/60">
             This form has no questions yet.
           </p>
         )}
@@ -455,7 +455,7 @@ function PublicFormPage() {
               key={q.id}
               id={`qcard-${q.id}`}
               className={
-                "rounded-lg border bg-white p-6 transition-colors " +
+                "rounded-lg border bg-card p-6 transition-colors " +
                 (missing ? "border-destructive/50 ring-1 ring-destructive/20" : "border-hairline")
               }
             >

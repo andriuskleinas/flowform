@@ -54,7 +54,10 @@ export function DashboardSummaryPanel({
     staleTime: 0,
     placeholderData: (prev) => prev,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_dashboard_summary", { p_days: days });
+      const { data, error } = await supabase.rpc("get_dashboard_summary", {
+        p_days: days,
+        p_owner: userId,
+      });
       if (error) throw error;
       const s = data as unknown as DashboardSummary;
       return {
@@ -95,7 +98,7 @@ export function DashboardSummaryPanel({
   return (
     <section
       aria-labelledby="overview-heading"
-      className="mt-10 rounded-lg border border-hairline bg-white"
+      className="mt-10 rounded-lg border border-hairline bg-card"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-5 py-3.5">
         <div className="flex items-baseline gap-3">
@@ -118,7 +121,7 @@ export function DashboardSummaryPanel({
               onClick={() => setDays(r.days)}
               className={
                 "rounded px-2.5 py-1 font-mono text-[11px] transition-colors " +
-                (days === r.days ? "bg-white text-ink shadow-sm" : "text-ink/55 hover:text-ink")
+                (days === r.days ? "bg-card text-ink shadow-sm" : "text-ink/55 hover:text-ink")
               }
             >
               {r.label}
@@ -199,7 +202,7 @@ function Stat({
   loading?: boolean;
 }) {
   return (
-    <div className="bg-white px-5 py-4">
+    <div className="bg-card px-5 py-4">
       <p className="text-xs font-medium text-ink/60">{label}</p>
       {loading ? (
         <Skeleton className="mt-2 h-7 w-16" />

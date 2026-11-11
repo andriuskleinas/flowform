@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
-import { LogOut, User } from "lucide-react";
+import { LayoutDashboard, LogOut, User } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { getInitialsFromProfile } from "@/lib/utils";
+import { ThemeSubmenu } from "@/components/theme-menu";
 
 // Re-exported for backwards compatibility with existing imports.
 // Prefer importing `getInitialsFromProfile` from "@/lib/utils" directly.
@@ -76,13 +77,14 @@ export function UserMenu({ userId, email }: { userId: string; email: string }) {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate({ to: "/dashboard" })}>
-          <User className="size-4" />
+          <LayoutDashboard className="size-4" />
           Dashboard
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
           <User className="size-4" />
           Profile
         </DropdownMenuItem>
+        <ThemeSubmenu userId={userId} />
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleSignOut}

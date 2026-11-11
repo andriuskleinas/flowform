@@ -69,7 +69,7 @@ function ForgotPasswordPage() {
           <Link
             to="/login"
             search={{ redirect: "/dashboard" }}
-            className="mt-6 inline-flex h-11 items-center justify-center rounded-md border border-ink/15 bg-white px-5 text-sm font-semibold text-ink transition-colors hover:border-ink/30"
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-md border border-ink/15 bg-card px-5 text-sm font-semibold text-ink transition-colors hover:border-ink/30"
           >
             Back to log in
           </Link>

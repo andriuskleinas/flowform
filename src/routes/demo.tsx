@@ -79,7 +79,7 @@ function ChoiceGrid({
               className={`flex w-full items-center gap-3 rounded-md border px-3.5 py-3 text-left text-base transition-colors ${
                 isSelected
                   ? "border-brand bg-accent text-ink"
-                  : "border-input bg-white text-ink/80 hover:border-ink/35"
+                  : "border-input bg-card text-ink/80 hover:border-ink/35"
               }`}
             >
               <span
@@ -377,7 +377,7 @@ function DemoPage() {
                         className={`grid h-12 place-items-center rounded-md border font-mono text-base transition-colors ${
                           isSelected
                             ? "border-brand bg-brand text-white"
-                            : "border-input bg-white text-ink/75 hover:border-ink/40"
+                            : "border-input bg-card text-ink/75 hover:border-ink/40"
                         }`}
                       >
                         {n}
@@ -414,7 +414,7 @@ function DemoPage() {
               </p>
             </div>
 
-            <dl className="mt-10 divide-y divide-hairline rounded-lg border border-hairline bg-white px-6 sm:px-7">
+            <dl className="mt-10 divide-y divide-hairline rounded-lg border border-hairline bg-card px-6 sm:px-7">
               {[
                 { q: "Name", a: name.trim() || "—" },
                 { q: "Use case", a: useCase ?? "—" },

@@ -122,7 +122,7 @@ export function QuestionRender({
               value={typeof value === "string" ? value : ""}
               onChange={(e) => onChange?.(e.target.value)}
               disabled={disabled}
-              className="flex h-10 w-full max-w-sm rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full max-w-sm rounded-md border border-input bg-card px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="" disabled>
                 Select an option…
@@ -274,7 +274,7 @@ export function NpsScale({
                   : "flex size-9 items-center justify-center rounded-md border font-mono text-sm transition-colors disabled:cursor-default ") +
                 (active
                   ? "border-brand bg-brand text-brand-foreground"
-                  : "border-input bg-white text-ink hover:border-ink/40")
+                  : "border-input bg-card text-ink hover:border-ink/40")
               }
             >
               {n}
@@ -357,7 +357,7 @@ function OptionButton({
       className={`flex w-full max-w-xl items-center gap-3 rounded-md border px-3.5 py-3 text-left text-base transition-colors disabled:cursor-default ${
         selected
           ? "border-brand bg-accent text-ink"
-          : "border-input bg-white text-ink/80 hover:border-ink/35"
+          : "border-input bg-card text-ink/80 hover:border-ink/35"
       }`}
     >
       <span
@@ -395,7 +395,7 @@ function BigAnswer({
           onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
           placeholder="Type your answer…"
-          className="h-12 max-w-xl bg-white px-4 text-lg md:text-lg"
+          className="h-12 max-w-xl bg-card px-4 text-lg md:text-lg"
         />
       );
     case "long_text":
@@ -407,7 +407,7 @@ function BigAnswer({
           disabled={disabled}
           rows={5}
           placeholder="Type your answer…"
-          className="max-w-xl bg-white px-4 py-3 text-lg md:text-lg"
+          className="max-w-xl bg-card px-4 py-3 text-lg md:text-lg"
         />
       );
     case "multiple_choice": {
@@ -454,7 +454,7 @@ function BigAnswer({
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
-          className="flex h-12 w-full max-w-xl rounded-md border border-input bg-white px-4 text-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-full max-w-xl rounded-md border border-input bg-card px-4 text-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         >
           <option value="" disabled>
             Select an option…

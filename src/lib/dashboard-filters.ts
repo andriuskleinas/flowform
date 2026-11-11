@@ -43,6 +43,8 @@ export type DashboardSearch = {
   activity?: ActivityFilter;
   cat?: string;
   q?: string;
+  /** Workspace (owner user id) being viewed; absent = your own. */
+  ws?: string;
 };
 
 const pick = <T extends string>(v: unknown, allowed: readonly { key: T }[], fallback: T) =>
@@ -54,12 +56,15 @@ export function parseDashboardSearch(s: Record<string, unknown>): DashboardSearc
   const activity = pick(s.activity, ACTIVITY_OPTIONS, "any");
   const cat = typeof s.cat === "string" && s.cat.length <= 64 ? s.cat : undefined;
   const q = typeof s.q === "string" && s.q.trim() ? s.q.slice(0, 100) : undefined;
+  const ws =
+    typeof s.ws === "string" && /^[0-9a-f-]{36}$/i.test(s.ws) ? s.ws.toLowerCase() : undefined;
   return {
     sort: sort === "newest" ? undefined : sort,
     status: status === "all" ? undefined : status,
     activity: activity === "any" ? undefined : activity,
     cat,
     q,
+    ws,
   };
 }
 

@@ -10,6 +10,7 @@ import { DEFAULT_FORM_TITLE, type QuestionType, type QuestionOptions } from "@/l
 import { Skeleton } from "@/components/ui/skeleton";
 import { CategoryField } from "@/components/dashboard/category-dialog";
 import { Logo } from "@/components/logo";
+import { permissions, useWorkspaceRole, useWorkspaces, workspaceName } from "@/lib/workspace";
 
 export const Route = createFileRoute("/forms/new")({
   head: () => ({
@@ -17,6 +18,10 @@ export const Route = createFileRoute("/forms/new")({
       { title: "Create a new form — Flowform" },
       { name: "description", content: "Start a new Flowform from scratch or a template." },
     ],
+  }),
+  // ?ws=<owner id>: create the form in a team workspace you can edit.
+  validateSearch: (s: Record<string, unknown>): { ws?: string } => ({
+    ws: typeof s.ws === "string" && /^[0-9a-f-]{36}$/i.test(s.ws) ? s.ws.toLowerCase() : undefined,
   }),
   component: NewFormPage,
 });
@@ -155,6 +160,12 @@ function NewFormPage() {
 function NewFormAuthed({ userId }: { userId: string }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { ws } = Route.useSearch();
+  const ownerId = ws ?? userId;
+  const isOwn = ownerId === userId;
+  const { role, isLoading: roleLoading } = useWorkspaceRole(userId, ownerId);
+  const { data: workspaces = [] } = useWorkspaces(userId);
+  const workspace = workspaces.find((w) => w.owner_id === ownerId);
   // Which card was clicked, so only that one shows a spinner.
   const [pendingId, setPendingId] = useState<string | null>(null);
   // Optional topic chosen up front; applied to whichever start option is clicked.
@@ -170,7 +181,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
           title: template?.title ?? DEFAULT_FORM_TITLE,
           description: template?.description ?? null,
           category_id: categoryId,
-          user_id: userId,
+          user_id: ownerId,
         })
         .select("id")
         .single();
@@ -193,8 +204,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
       return newId;
     },
     onSuccess: (newId) => {
-      qc.invalidateQueries({ queryKey: ["forms", userId] });
-      qc.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
+      qc.invalidateQueries({ queryKey: ["dashboard-forms", ownerId] });
       navigate({ to: "/forms/$formId/edit", params: { formId: newId } });
     },
     onError: (err: Error) => {
@@ -211,6 +221,31 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
   const busy = createForm.isPending;
 
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen bg-surface p-10">
+        <Skeleton className="h-10 w-64" />
+      </div>
+    );
+  }
+  if (!permissions(role).canEdit) {
+    return (
+      <div className="min-h-screen bg-surface text-ink">
+        <main className="mx-auto max-w-xl px-6 py-24 text-center">
+          <h1 className="font-display text-3xl">You can't create forms here</h1>
+          <p className="mt-3 text-ink/60">
+            {role === "viewer"
+              ? "You're a viewer in this workspace. Ask an admin for editor access."
+              : "You don't have access to this workspace."}
+          </p>
+          <Link to="/dashboard" className="mt-6 inline-block text-brand underline">
+            Back to dashboard
+          </Link>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-surface text-ink">
       <header className="border-b border-hairline">
@@ -220,6 +255,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
           </Link>
           <Link
             to="/dashboard"
+            search={isOwn ? {} : { ws: ownerId }}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 transition-colors hover:text-ink"
           >
             <ArrowLeft className="size-4" />
@@ -235,10 +271,15 @@ function NewFormAuthed({ userId }: { userId: string }) {
             Start blank or from a template. You'll add questions, logic, and AI suggestions in the
             editor.
           </p>
+          {!isOwn && workspace && (
+            <p className="mt-3 inline-flex rounded-full border border-hairline bg-card px-3 py-1 text-xs text-ink/70">
+              Creating in {workspaceName(workspace)}
+            </p>
+          )}
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <span className="text-sm text-ink/60">Category</span>
             <CategoryField
-              userId={userId}
+              userId={ownerId}
               value={categoryId}
               onChange={setCategoryId}
               pending={busy}
@@ -252,7 +293,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
           type="button"
           onClick={() => start("blank", null)}
           disabled={busy}
-          className="group mt-8 flex w-full items-center justify-between gap-4 rounded-2xl border border-hairline bg-white p-5 text-left transition-all hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="group mt-8 flex w-full items-center justify-between gap-4 rounded-2xl border border-hairline bg-card p-5 text-left transition-all hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <div className="flex items-center gap-4">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-md border border-hairline bg-surface text-ink/60">
@@ -281,7 +322,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
               type="button"
               onClick={() => start(t.id, t)}
               disabled={busy}
-              className="relative flex flex-col rounded-2xl border border-hairline bg-white p-5 text-left transition-all hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-60"
+              className="relative flex flex-col rounded-2xl border border-hairline bg-card p-5 text-left transition-all hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span className="font-mono text-[11px] text-brand">
                 {String(TEMPLATES.indexOf(t) + 1).padStart(2, "0")}
@@ -290,7 +331,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
               <p className="mt-0.5 text-xs text-ink/50">{t.blurb}</p>
               <p className="mt-3 text-xs font-medium text-ink/40">{t.questions.length} questions</p>
               {pendingId === t.id && (
-                <span className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/70">
+                <span className="absolute inset-0 flex items-center justify-center rounded-2xl bg-card/70">
                   <Loader2 className="size-5 animate-spin text-brand" />
                 </span>
               )}

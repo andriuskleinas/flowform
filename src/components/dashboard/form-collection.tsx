@@ -48,6 +48,9 @@ export type DashboardForm = {
 export type ViewMode = "list" | "grid" | "table";
 
 export type FormActionHandlers = {
+  /** Role gates (see lib/workspace): editors+ change forms, admins+ delete. */
+  canEdit: boolean;
+  canDelete: boolean;
   onShare: (f: DashboardForm) => void;
   onDuplicate: (f: DashboardForm) => void;
   onSetStatus: (f: DashboardForm, status: FormStatus) => void;
@@ -85,7 +88,7 @@ export function FormCollection({
     return <FormTable forms={forms} actions={actions} sort={sort} onSort={onSort} />;
   }
   return (
-    <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-white">
+    <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-card">
       {forms.map((f) => (
         <ListRow key={f.id} form={f} actions={actions} />
       ))}
@@ -99,6 +102,9 @@ export function FormCollection({
  * link (relative z-10) so it stays clickable without nesting in the anchor.
  */
 function CategoryBadge({ form: f, actions }: { form: DashboardForm; actions: FormActionHandlers }) {
+  if (!actions.canEdit) {
+    return f.category ? <CategoryTag name={f.category} color={f.category_color} /> : null;
+  }
   if (f.category) {
     return (
       <button
@@ -138,7 +144,11 @@ function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActio
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="truncate text-[15px] font-medium tracking-normal">
-                <Link to="/forms/$formId/edit" params={{ formId: f.id }} className={stretchedLink}>
+                <Link
+                  to={actions.canEdit ? "/forms/$formId/edit" : "/forms/$formId/responses"}
+                  params={{ formId: f.id }}
+                  className={stretchedLink}
+                >
                   {f.title}
                 </Link>
               </h3>
@@ -171,14 +181,18 @@ function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActio
 
 function GridCard({ form: f, actions }: { form: DashboardForm; actions: FormActionHandlers }) {
   return (
-    <li className="group relative flex flex-col rounded-lg border border-hairline bg-white transition-colors focus-within:border-ink/30 hover:border-ink/20">
+    <li className="group relative flex flex-col rounded-lg border border-hairline bg-card transition-colors focus-within:border-ink/30 hover:border-ink/20">
       <div className="flex flex-1 flex-col p-4 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill status={f.status} />
           <CategoryBadge form={f} actions={actions} />
         </div>
         <h3 className="mt-3 line-clamp-2 text-[15px] font-medium leading-snug tracking-normal">
-          <Link to="/forms/$formId/edit" params={{ formId: f.id }} className={stretchedLink}>
+          <Link
+            to={actions.canEdit ? "/forms/$formId/edit" : "/forms/$formId/responses"}
+            params={{ formId: f.id }}
+            className={stretchedLink}
+          >
             {f.title}
           </Link>
         </h3>
@@ -291,7 +305,7 @@ function FormTable({
   onSort?: (s: SortKey) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-hairline bg-white">
+    <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
       <table className="w-full min-w-[860px] table-fixed text-sm">
         {/* Fixed column widths keep grouped tables aligned with each other. */}
         <colgroup>
@@ -337,7 +351,7 @@ function FormTable({
             <tr key={f.id} className="transition-colors hover:bg-paper">
               <td className="px-4 py-2.5">
                 <Link
-                  to="/forms/$formId/edit"
+                  to={actions.canEdit ? "/forms/$formId/edit" : "/forms/$formId/responses"}
                   params={{ formId: f.id }}
                   className="block truncate font-medium hover:text-brand"
                   title={f.title}
@@ -405,9 +419,12 @@ function FormActions({
   menuOnly?: boolean;
 }) {
   const isDraft = f.status === "draft";
+  // Viewers can share a link that's already live, but not publish a draft.
+  const canShare = actions.canEdit || !isDraft;
+  const hasMenu = menuOnly || actions.canEdit || actions.canDelete;
   return (
     <div className="flex shrink-0 items-center gap-0.5">
-      {!menuOnly && !compact && (
+      {!menuOnly && !compact && actions.canEdit && (
         <Link
           to="/forms/$formId/edit"
           params={{ formId: f.id }}
@@ -420,15 +437,17 @@ function FormActions({
       )}
       {!menuOnly && (
         <>
-          <button
-            type="button"
-            onClick={() => actions.onShare(f)}
-            aria-label={isDraft ? "Publish and share" : "Share form"}
-            title={isDraft ? "Publish and share" : "Share"}
-            className={iconBtn}
-          >
-            <Share2 className="size-4" />
-          </button>
+          {canShare && (
+            <button
+              type="button"
+              onClick={() => actions.onShare(f)}
+              aria-label={isDraft ? "Publish and share" : "Share form"}
+              title={isDraft ? "Publish and share" : "Share"}
+              className={iconBtn}
+            >
+              <Share2 className="size-4" />
+            </button>
+          )}
           <Link
             to="/forms/$formId/responses"
             params={{ formId: f.id }}
@@ -440,69 +459,83 @@ function FormActions({
           </Link>
         </>
       )}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label="More actions"
-          title="More actions"
-          className={iconBtn + " outline-none focus-visible:ring-2 focus-visible:ring-brand/40"}
-        >
-          <MoreHorizontal className="size-4" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
-          {menuOnly && (
-            <>
-              <DropdownMenuItem asChild>
-                <Link to="/forms/$formId/edit" params={{ formId: f.id }}>
-                  <Pencil className="size-4" />
-                  Edit form
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => actions.onShare(f)}>
-                <Share2 className="size-4" />
-                {isDraft ? "Publish and share" : "Share"}
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/forms/$formId/responses" params={{ formId: f.id }}>
-                  <BarChart3 className="size-4" />
-                  View responses
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
-          )}
-          <DropdownMenuItem onClick={() => actions.onCategory(f)}>
-            <Tag className="size-4" />
-            {f.category_id ? "Change category" : "Set category"}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={actions.duplicatePending}
-            onClick={() => actions.onDuplicate(f)}
+      {hasMenu && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="More actions"
+            title="More actions"
+            className={iconBtn + " outline-none focus-visible:ring-2 focus-visible:ring-brand/40"}
           >
-            <CopyPlus className="size-4" />
-            Duplicate form
-          </DropdownMenuItem>
-          {f.status === "published" && (
-            <DropdownMenuItem onClick={() => actions.onSetStatus(f, "closed")}>
-              <CircleSlash className="size-4" />
-              Close form
-            </DropdownMenuItem>
-          )}
-          {f.status === "closed" && (
-            <DropdownMenuItem onClick={() => actions.onSetStatus(f, "published")}>
-              <CirclePlay className="size-4" />
-              Reopen form
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => actions.onDelete(f)}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash2 className="size-4" />
-            Delete form
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <MoreHorizontal className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            {menuOnly && (
+              <>
+                {actions.canEdit && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/forms/$formId/edit" params={{ formId: f.id }}>
+                      <Pencil className="size-4" />
+                      Edit form
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {canShare && (
+                  <DropdownMenuItem onClick={() => actions.onShare(f)}>
+                    <Share2 className="size-4" />
+                    {isDraft ? "Publish and share" : "Share"}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem asChild>
+                  <Link to="/forms/$formId/responses" params={{ formId: f.id }}>
+                    <BarChart3 className="size-4" />
+                    View responses
+                  </Link>
+                </DropdownMenuItem>
+                {(actions.canEdit || actions.canDelete) && <DropdownMenuSeparator />}
+              </>
+            )}
+            {actions.canEdit && (
+              <>
+                <DropdownMenuItem onClick={() => actions.onCategory(f)}>
+                  <Tag className="size-4" />
+                  {f.category_id ? "Change category" : "Set category"}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={actions.duplicatePending}
+                  onClick={() => actions.onDuplicate(f)}
+                >
+                  <CopyPlus className="size-4" />
+                  Duplicate form
+                </DropdownMenuItem>
+                {f.status === "published" && (
+                  <DropdownMenuItem onClick={() => actions.onSetStatus(f, "closed")}>
+                    <CircleSlash className="size-4" />
+                    Close form
+                  </DropdownMenuItem>
+                )}
+                {f.status === "closed" && (
+                  <DropdownMenuItem onClick={() => actions.onSetStatus(f, "published")}>
+                    <CirclePlay className="size-4" />
+                    Reopen form
+                  </DropdownMenuItem>
+                )}
+              </>
+            )}
+            {actions.canDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => actions.onDelete(f)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="size-4" />
+                  Delete form
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 }

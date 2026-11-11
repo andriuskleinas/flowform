@@ -148,7 +148,7 @@ export function ConversationalForm({
 
   if (total === 0) {
     return (
-      <p className="rounded-lg border border-dashed border-ink/15 bg-white/50 p-8 text-center text-ink/60">
+      <p className="rounded-lg border border-dashed border-ink/15 bg-card/50 p-8 text-center text-ink/60">
         This form has no questions yet.
       </p>
     );

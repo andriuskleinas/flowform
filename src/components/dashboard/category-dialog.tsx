@@ -183,7 +183,7 @@ export function CategoryDialog({
                         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors " +
                         (active
                           ? "border-ink bg-ink text-paper"
-                          : "border-hairline bg-white text-ink/75 hover:border-ink/25 hover:text-ink")
+                          : "border-hairline bg-card text-ink/75 hover:border-ink/25 hover:text-ink")
                       }
                     >
                       <CategoryDot color={c.color} />
@@ -238,7 +238,7 @@ export function CategoryDialog({
               <button
                 type="button"
                 onClick={onCancel}
-                className="h-9 rounded-md border border-hairline bg-white px-3.5 text-sm hover:bg-paper"
+                className="h-9 rounded-md border border-hairline bg-card px-3.5 text-sm hover:bg-paper"
               >
                 Cancel
               </button>
@@ -281,7 +281,7 @@ export function CategoryField({
         type="button"
         onClick={() => setOpen(true)}
         disabled={pending}
-        className="inline-flex h-8 items-center gap-2 rounded-md border border-hairline bg-white px-2.5 text-xs text-ink/70 transition-colors hover:border-ink/25 hover:text-ink disabled:opacity-50"
+        className="inline-flex h-8 items-center gap-2 rounded-md border border-hairline bg-card px-2.5 text-xs text-ink/70 transition-colors hover:border-ink/25 hover:text-ink disabled:opacity-50"
       >
         {current ? (
           <>
@@ -380,7 +380,7 @@ export function ManageCategoriesDialog({
               maxLength={CATEGORY_NAME_MAX}
               placeholder="e.g. Events"
               onChange={(e) => setNewName(e.target.value)}
-              className="bg-white"
+              className="bg-card"
             />
             <button
               type="submit"
@@ -502,7 +502,7 @@ function CategoryRow({
           }
           if (e.key === "Escape") setName(c.name);
         }}
-        className="h-8 min-w-0 flex-1 border-transparent bg-transparent px-2 shadow-none hover:border-hairline focus:border-input focus:bg-white"
+        className="h-8 min-w-0 flex-1 border-transparent bg-transparent px-2 shadow-none hover:border-hairline focus:border-input focus:bg-card"
       />
 
       <span className="w-16 shrink-0 text-right font-mono text-[11px] text-ink/45">

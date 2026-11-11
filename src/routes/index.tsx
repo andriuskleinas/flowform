@@ -53,7 +53,7 @@ function PrimaryCTA({
   const to = session ? "/dashboard" : "/signup";
   const sizing = size === "sm" ? "h-9 px-3.5 text-sm" : "h-12 px-6 text-[15px]";
   const toneClass =
-    tone === "ink" ? "bg-ink text-paper hover:bg-ink/85" : "bg-paper text-ink hover:bg-white";
+    tone === "ink" ? "bg-ink text-paper hover:bg-ink/85" : "bg-paper text-ink hover:bg-card";
   return (
     <Link
       to={to}
@@ -178,7 +178,7 @@ function Sheet({
 }) {
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-hairline bg-white shadow-[0_1px_0_rgb(0_0_0/0.03),0_30px_60px_-30px_rgb(20_22_30/0.22)] ${className}`}
+      className={`overflow-hidden rounded-xl border border-hairline bg-card shadow-[0_1px_0_rgb(0_0_0/0.03),0_30px_60px_-30px_rgb(20_22_30/0.22)] ${className}`}
     >
       {bar && (
         <div className="flex items-center justify-between gap-4 border-b border-hairline px-4 py-2.5 font-mono text-[11px] text-ink/45">
@@ -366,7 +366,7 @@ function HeroForm() {
                       className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left text-[15px] transition-colors ${
                         active
                           ? "border-brand bg-accent text-ink"
-                          : "border-hairline bg-white text-ink/75 hover:border-ink/25"
+                          : "border-hairline bg-card text-ink/75 hover:border-ink/25"
                       }`}
                     >
                       <span
@@ -424,7 +424,7 @@ function HeroForm() {
               <button
                 type="button"
                 onClick={restart}
-                className="inline-flex h-10 items-center gap-2 rounded-md border border-input bg-white px-4 text-sm font-medium text-ink transition-colors hover:border-ink/35"
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-input bg-card px-4 text-sm font-medium text-ink transition-colors hover:border-ink/35"
               >
                 <RotateCcw className="size-3.5" /> Try another path
               </button>
@@ -553,7 +553,7 @@ function BuilderVignette() {
               className={`rounded-full border px-3 py-1 text-[13px] transition-colors ${
                 i === goalIdx
                   ? "border-brand bg-accent text-ink"
-                  : "border-hairline bg-white text-ink/65 hover:border-ink/30"
+                  : "border-hairline bg-card text-ink/65 hover:border-ink/30"
               }`}
             >
               {g.goal}
@@ -624,7 +624,7 @@ function BuilderVignette() {
                     className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors ${
                       on
                         ? "border-transparent bg-ink text-paper"
-                        : "border-hairline bg-white text-ink hover:border-ink/30"
+                        : "border-hairline bg-card text-ink hover:border-ink/30"
                     }`}
                   >
                     {on ? (
@@ -677,8 +677,8 @@ function LogicVignette() {
           ))}
         </div>
         <p className="mt-4 font-mono text-[11px] text-ink/45">
-          Jumps only skip ahead. Questions that get skipped, even required ones, never stop
-          someone from submitting.
+          Jumps only skip ahead. Questions that get skipped, even required ones, never stop someone
+          from submitting.
         </p>
       </div>
     </Sheet>
@@ -753,7 +753,7 @@ function InsightVignette() {
             type="button"
             onClick={rerun}
             disabled={reading}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-white px-2.5 text-xs font-medium text-ink transition-colors hover:border-ink/35 disabled:opacity-60"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-card px-2.5 text-xs font-medium text-ink transition-colors hover:border-ink/35 disabled:opacity-60"
           >
             <RotateCcw className="size-3" /> {reading ? "Reading…" : "Re-run"}
           </button>
@@ -1035,7 +1035,7 @@ function Index() {
         <section className="px-4 pt-14 pb-20 sm:px-6 md:px-8 md:pt-20 lg:pb-28">
           <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
             <div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-white py-1 pr-3 pl-1.5 text-sm text-ink/70">
+              <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-card py-1 pr-3 pl-1.5 text-sm text-ink/70">
                 <span className="rounded-full bg-mint-tint px-2 py-0.5 text-xs font-medium text-mint">
                   Updated
                 </span>
@@ -1052,7 +1052,7 @@ function Index() {
                 <PrimaryCTA>{session ? "Open dashboard" : "Start building, free"}</PrimaryCTA>
                 <Link
                   to="/demo"
-                  className="inline-flex h-12 items-center gap-2 rounded-md border border-ink/15 bg-white px-5 text-[15px] font-medium text-ink transition-colors hover:border-ink/35"
+                  className="inline-flex h-12 items-center gap-2 rounded-md border border-ink/15 bg-card px-5 text-[15px] font-medium text-ink transition-colors hover:border-ink/35"
                 >
                   Try the live demo
                 </Link>
@@ -1127,7 +1127,7 @@ function Index() {
                 <div className="mt-8">
                   <Link
                     to="/demo"
-                    className="inline-flex h-11 items-center gap-2 rounded-md bg-paper px-4 text-sm font-medium text-ink transition-colors hover:bg-white"
+                    className="inline-flex h-11 items-center gap-2 rounded-md bg-paper px-4 text-sm font-medium text-ink transition-colors hover:bg-card"
                   >
                     Try the live demo
                     <ArrowRight className="size-4" />

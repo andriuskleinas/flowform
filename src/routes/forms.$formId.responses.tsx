@@ -28,6 +28,7 @@ import {
   type AnswerValue,
 } from "@/lib/form-utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useWorkspaceRole } from "@/lib/workspace";
 import { Shell } from "@/components/shell";
 import { ClientOnly } from "@/components/client-only";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -137,7 +138,9 @@ function ResponsesPage() {
     },
   });
 
-  if (loading || formQ.isLoading) {
+  const { role, isLoading: roleLoading } = useWorkspaceRole(user?.id ?? "", formQ.data?.user_id);
+
+  if (loading || formQ.isLoading || (formQ.data && roleLoading)) {
     return (
       <Shell width="md">
         <Skeleton className="h-10 w-64" />
@@ -145,7 +148,9 @@ function ResponsesPage() {
     );
   }
 
-  if (!formQ.data || (user && formQ.data.user_id !== user.id)) {
+  // Any workspace member (viewer and up) may read responses; a published
+  // form row alone is publicly readable, so the role is the real gate.
+  if (!formQ.data || !role) {
     return (
       <Shell width="md">
         <h1 className="font-display text-3xl">Form not found</h1>
@@ -165,6 +170,7 @@ function ResponsesPage() {
     <Shell width="md">
       <Link
         to="/dashboard"
+        search={formQ.data.user_id !== user?.id ? { ws: formQ.data.user_id } : {}}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 hover:text-ink"
       >
         <ArrowLeft className="size-4" /> Back to dashboard
@@ -194,7 +200,7 @@ function ResponsesPage() {
               setExporting(false);
             }
           }}
-          className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {exporting ? (
             <Loader2 className="size-4 animate-spin" />
@@ -307,7 +313,7 @@ function Overview({
 
   if (totals.responses === 0 && funnel.views === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-ink/15 bg-white/50 p-10 text-center">
+      <div className="rounded-lg border border-dashed border-ink/15 bg-card/50 p-10 text-center">
         <p className="text-ink/60">
           No responses yet. Share your form to start collecting answers.
         </p>
@@ -342,7 +348,7 @@ function Overview({
         <div
           role="group"
           aria-label="Date range"
-          className="inline-flex rounded-md border border-hairline bg-white p-0.5"
+          className="inline-flex rounded-md border border-hairline bg-card p-0.5"
         >
           {RANGE_CHOICES.map((d) => (
             <button
@@ -379,7 +385,7 @@ function Overview({
       </div>
 
       {hasTextQuestions && (
-        <div className="rounded-lg border border-hairline bg-white">
+        <div className="rounded-lg border border-hairline bg-card">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-5 py-4">
             <div>
               <h3 className="flex items-center gap-2 text-sm font-medium text-ink">
@@ -396,7 +402,7 @@ function Overview({
               type="button"
               onClick={() => summarize.mutate()}
               disabled={summarize.isPending || totals.responses === 0}
-              className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-white px-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/35 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-card px-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/35 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {summarize.isPending ? (
                 <>
@@ -824,7 +830,7 @@ function IndividualList({
 }) {
   if (responses.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-ink/15 bg-white/50 p-10 text-center">
+      <div className="rounded-lg border border-dashed border-ink/15 bg-card/50 p-10 text-center">
         <p className="text-ink/60">No responses yet.</p>
       </div>
     );
@@ -838,7 +844,7 @@ function IndividualList({
               ? (new Date(r.submitted_at).getTime() - new Date(r.started_at).getTime()) / 1000
               : null;
           return (
-            <li key={r.id} className="rounded-lg border border-hairline bg-white p-6">
+            <li key={r.id} className="rounded-lg border border-hairline bg-card p-6">
               <div className="flex items-start justify-between gap-3">
                 <p className="eyebrow">
                   {new Date(r.submitted_at).toLocaleString()}
@@ -869,7 +875,7 @@ function IndividualList({
           <button
             type="button"
             onClick={onLoadMore}
-            className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
+            className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
           >
             Load more responses
           </button>
@@ -904,7 +910,7 @@ function AnswerView({ question, value }: { question: Question; value: AnswerValu
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="bg-white px-5 py-4">
+    <div className="bg-card px-5 py-4">
       <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">{label}</p>
       <p className="mt-1.5 font-mono text-2xl font-medium tabular-nums tracking-tight text-ink">
         {value}
@@ -924,7 +930,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-hairline bg-white p-5">
+    <div className="rounded-lg border border-hairline bg-card p-5">
       <div className="mb-5">
         <h3 className="text-sm font-medium text-ink">{title}</h3>
         {subtitle && <p className="mt-0.5 text-xs text-ink/55">{subtitle}</p>}
@@ -937,7 +943,7 @@ function Card({
 function MiniTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-md border border-hairline bg-white px-2.5 py-1.5 text-xs">
+    <div className="rounded-md border border-hairline bg-card px-2.5 py-1.5 text-xs">
       <p className="font-medium text-ink">{label}</p>
       <p className="text-ink/60">
         {payload[0].value} {payload[0].value === 1 ? "response" : "responses"}

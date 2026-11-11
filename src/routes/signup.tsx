@@ -129,7 +129,7 @@ function SignupPage() {
             type="button"
             onClick={resendConfirmation}
             disabled={resending}
-            className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-md border border-ink/15 bg-white px-5 text-sm font-semibold text-ink transition-colors hover:border-ink/30 disabled:opacity-50"
+            className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-md border border-ink/15 bg-card px-5 text-sm font-semibold text-ink transition-colors hover:border-ink/30 disabled:opacity-50"
           >
             {resending && <Loader2 className="size-4 animate-spin" />}
             {resending ? "Resending…" : "Resend confirmation email"}

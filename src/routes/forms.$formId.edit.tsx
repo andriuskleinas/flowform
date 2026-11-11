@@ -77,6 +77,7 @@ import { Switch } from "@/components/ui/switch";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DeleteFormDialog } from "@/components/delete-form-dialog";
+import { permissions, useWorkspaceRole } from "@/lib/workspace";
 import { ShareFormDialog } from "@/components/share-form-dialog";
 import { Shell } from "@/components/shell";
 import { CategoryField } from "@/components/dashboard/category-dialog";
@@ -176,6 +177,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       return data;
     },
   });
+
+  // Team access: owner/admin/editor may edit; viewers get sent to responses.
+  const formOwner = formQ.data?.user_id;
+  const { role, isLoading: roleLoading } = useWorkspaceRole(userId, formOwner);
+  const can = permissions(role);
+  const dashboardSearch = formOwner && formOwner !== userId ? { ws: formOwner } : {};
 
   const questionsQ = useQuery({
     queryKey: ["questions", formId],
@@ -509,7 +516,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     // Edits are reverted; leave for the dashboard. Bypass the unsaved-changes
     // guard for this navigation (the draft now matches the saved snapshot).
     deletedRef.current = true;
-    navigate({ to: "/dashboard" });
+    navigate({ to: "/dashboard", search: dashboardSearch });
   };
 
   /* ---------------------------- Status & delete ---------------------------- */
@@ -578,7 +585,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       setDeleteOpen(false);
       toast.success("Form deleted");
       qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
-      await navigate({ to: "/dashboard" });
+      await navigate({ to: "/dashboard", search: dashboardSearch });
     },
     onError: (e: Error) => toast.error(e.message || "Could not delete form"),
   });
@@ -599,7 +606,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  if (!formQ.isError && (!ready || (formQ.data && !snapshot))) {
+  if (!formQ.isError && (!ready || (formQ.data && !snapshot) || (formQ.data && roleLoading))) {
     return (
       <Shell>
         <Skeleton className="h-10 w-64" />
@@ -608,7 +615,34 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   }
 
   const form = formQ.data;
-  if (!form || form.user_id !== userId) {
+  if (form && role === "viewer") {
+    return (
+      <Shell>
+        <h1 className="text-2xl font-semibold">View-only access</h1>
+        <p className="mt-2 max-w-md text-ink/60">
+          You're a viewer in this workspace, so “{form.title}” can't be edited here — but its
+          responses and analytics are open to you.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            to="/forms/$formId/responses"
+            params={{ formId: form.id }}
+            className="inline-flex h-9 items-center rounded-md bg-brand px-4 text-sm font-medium text-brand-foreground hover:bg-brand/90"
+          >
+            View responses
+          </Link>
+          <Link
+            to="/dashboard"
+            search={dashboardSearch}
+            className="inline-flex h-9 items-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-ink hover:border-ink/25"
+          >
+            Back to dashboard
+          </Link>
+        </div>
+      </Shell>
+    );
+  }
+  if (!form || !can.canEdit) {
     return (
       <Shell>
         <h1 className="text-2xl font-semibold">Form not found</h1>
@@ -651,6 +685,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Link
           to="/dashboard"
+          search={dashboardSearch}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 hover:text-ink"
         >
           <ArrowLeft className="size-4" /> Back to dashboard
@@ -660,7 +695,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             <button
               type="button"
               onClick={() => setShareOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
+              className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
             >
               <Share2 className="size-4" /> Share
             </button>
@@ -668,7 +703,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           <button
             type="button"
             onClick={() => setPreviewOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
+            className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
           >
             <Eye className="size-4" /> Preview
           </button>
@@ -677,7 +712,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               type="button"
               onClick={() => setDiscardOpen(true)}
               disabled={saveAll.isPending}
-              className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
             >
               Discard
             </button>
@@ -711,7 +746,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         </div>
       )}
 
-      <header className="mt-6 rounded-lg border border-hairline bg-white p-4">
+      <header className="mt-6 rounded-lg border border-hairline bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <fieldset disabled={isLocked} className="flex-1 min-w-0 space-y-3 disabled:opacity-70">
             <div className="space-y-1.5">
@@ -767,7 +802,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                       "rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors " +
                       (draftForm.display_mode === mode
                         ? "border-brand bg-accent text-brand"
-                        : "border-ink/15 bg-white text-ink/60 hover:bg-ink/5")
+                        : "border-ink/15 bg-card text-ink/60 hover:bg-ink/5")
                     }
                   >
                     {label}
@@ -784,7 +819,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           <div className="flex flex-col items-end gap-2">
             <StatusPill status={form.status as FormStatus} />
             <CategoryField
-              userId={userId}
+              userId={form.user_id}
               value={form.category_id ?? null}
               onChange={(id) => setCategory.mutate(id)}
               pending={setCategory.isPending}
@@ -821,7 +856,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 onClick={() => setStatus.mutate("closed")}
                 disabled={setStatus.isPending}
                 title="Stop accepting responses. The link keeps working and shows a closed notice."
-                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
               >
                 Close form
               </button>
@@ -830,7 +865,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 onClick={() => setStatus.mutate("draft")}
                 disabled={setStatus.isPending}
                 title="Take the form offline entirely — the link shows an unpublished notice."
-                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
               >
                 Unpublish
               </button>
@@ -940,7 +975,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               </div>
 
               {/* AI suggestions */}
-              <div className="mt-8 rounded-lg border border-hairline bg-white p-5">
+              <div className="mt-8 rounded-lg border border-hairline bg-card p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="flex items-center gap-2 text-sm font-medium text-ink">
@@ -958,7 +993,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                     onClick={handleSuggest}
                     disabled={isSuggesting || !draftForm.title.trim()}
                     title={!draftForm.title.trim() ? "Add a title first" : undefined}
-                    className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-white px-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/35 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-card px-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/35 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSuggesting ? (
                       <>
@@ -1000,7 +1035,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                               addSuggestion(s);
                             }}
                             disabled={added}
-                            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/35 disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ink/15 bg-card px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/35 disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
                           >
                             {added ? (
                               "Added"
@@ -1020,25 +1055,27 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           )}
         </section>
 
-        <section className="mt-12 rounded-lg border border-destructive/20 bg-destructive/[0.03] p-5">
-          <h2 className="text-sm font-semibold text-destructive">Danger zone</h2>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-ink/60">
-              Permanently delete this form
-              {(responseCountQ.data ?? 0) > 0
-                ? ` and its ${responseCountQ.data} ${responseCountQ.data === 1 ? "response" : "responses"}`
-                : ""}
-              .
-            </p>
-            <button
-              type="button"
-              onClick={() => setDeleteOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-white px-4 py-2 text-sm font-semibold text-destructive hover:bg-destructive/5"
-            >
-              <Trash2 className="size-4" /> Delete form
-            </button>
-          </div>
-        </section>
+        {can.canDelete && (
+          <section className="mt-12 rounded-lg border border-destructive/20 bg-destructive/[0.03] p-5">
+            <h2 className="text-sm font-semibold text-destructive">Danger zone</h2>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-ink/60">
+                Permanently delete this form
+                {(responseCountQ.data ?? 0) > 0
+                  ? ` and its ${responseCountQ.data} ${responseCountQ.data === 1 ? "response" : "responses"}`
+                  : ""}
+                .
+              </p>
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-card px-4 py-2 text-sm font-semibold text-destructive hover:bg-destructive/5"
+              >
+                <Trash2 className="size-4" /> Delete form
+              </button>
+            </div>
+          </section>
+        )}
       </div>
 
       <DeleteFormDialog
@@ -1096,7 +1133,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               />
             ) : (
               visibleDraftQuestions.map((q, i) => (
-                <div key={q.id} className="rounded-lg border border-hairline bg-white p-5">
+                <div key={q.id} className="rounded-lg border border-hairline bg-card p-5">
                   <p className="eyebrow mb-3">
                     Question {i + 1}
                     {!q.required && (
@@ -1200,7 +1237,7 @@ function SortableQuestionCard({
   };
 
   return (
-    <li ref={setNodeRef} style={style} className="rounded-lg border border-hairline bg-white p-5">
+    <li ref={setNodeRef} style={style} className="rounded-lg border border-hairline bg-card p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <button
@@ -1245,7 +1282,7 @@ function SortableQuestionCard({
           <select
             value={question.type}
             onChange={(e) => onChangeType(e.target.value as QuestionType)}
-            className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((t) => (
               <option key={t} value={t}>
@@ -1341,7 +1378,7 @@ function SortableQuestionCard({
                   <select
                     value={jumps[choice] ?? ""}
                     onChange={(e) => setJump(choice, e.target.value)}
-                    className="w-52 rounded-md border border-input bg-white px-2 py-1.5 text-xs shadow-sm"
+                    className="w-52 rounded-md border border-input bg-card px-2 py-1.5 text-xs shadow-sm"
                   >
                     <option value="">→ Next question</option>
                     {jumpTargets.map((t) => (
