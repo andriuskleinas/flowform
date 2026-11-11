@@ -248,6 +248,9 @@ function DashboardAuthed({
       to: "/dashboard",
       search: (prev) => parseDashboardSearch({ ...prev, ...patch }),
       replace: true,
+      // Same page, new filters: keep the user where they are instead of the
+      // router's default jump to the top on navigation.
+      resetScroll: false,
     });
   const clearFilters = () =>
     setSearch({ status: undefined, activity: undefined, cat: undefined, q: undefined });
