@@ -91,20 +91,11 @@ export function AppearanceSection({ userId }: { userId: string }) {
               <div className="flex h-20 border-b border-hairline">
                 {value === "system" ? (
                   <>
-                    {/* The half your device is using right now gets a "Now" tag. */}
-                    {(["light", "dark"] as const).map((scheme) => {
-                      const current = (scheme === "dark") === systemDark;
-                      return (
-                        <div key={scheme} className="relative w-1/2 overflow-hidden">
-                          <Preview scheme={scheme} />
-                          {current && (
-                            <span className="absolute right-1.5 top-1.5 rounded-sm bg-brand px-1 py-px font-mono text-[9px] font-medium uppercase leading-tight text-brand-foreground">
-                              Now
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {(["light", "dark"] as const).map((scheme) => (
+                      <div key={scheme} className="w-1/2 overflow-hidden">
+                        <Preview scheme={scheme} />
+                      </div>
+                    ))}
                   </>
                 ) : (
                   <Preview scheme={value} />
