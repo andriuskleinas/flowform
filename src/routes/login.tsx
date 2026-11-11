@@ -1,13 +1,12 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2, Lock, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { AuthShell } from "@/components/auth-shell";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AuthField, AuthShell } from "@/components/auth-shell";
+import { validateEmail } from "@/lib/auth-validation";
 
 export const Route = createFileRoute("/login")({
   // `confirmed` is optional in the return type on purpose: spelling it as
@@ -38,6 +37,7 @@ function LoginPage() {
   // The email of an account that tried to log in before confirming, if any.
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string | null; password?: string | null }>({});
 
   useEffect(() => {
     if (!loading && session) navigate({ to: redirect });
@@ -45,6 +45,12 @@ function LoginPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const next = {
+      email: validateEmail(email),
+      password: password ? null : "Enter your password.",
+    };
+    setErrors(next);
+    if (next.email || next.password) return;
     setSubmitting(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -87,14 +93,9 @@ function LoginPage() {
   };
 
   return (
-    <AuthShell>
-      <h1 className="font-display text-3xl md:text-4xl">Welcome back</h1>
-      <p className="mt-2 text-ink/60">
-        New here?{" "}
-        <Link to="/signup" className="font-semibold text-brand hover:underline">
-          Create an account
-        </Link>
-      </p>
+    <AuthShell panel="login">
+      <h1 className="font-display text-4xl">Welcome back</h1>
+      <p className="mt-2 text-ink/60">Log in to manage your forms and read new responses.</p>
       {confirmed && (
         <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
@@ -103,41 +104,43 @@ function LoginPage() {
           </p>
         </div>
       )}
-      <form
-        onSubmit={onSubmit}
-        className="mt-8 space-y-5 rounded-2xl border border-hairline bg-white p-6"
-      >
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-          />
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <Label htmlFor="password">Password</Label>
+      <form onSubmit={onSubmit} noValidate className="mt-8 space-y-5">
+        <AuthField
+          label="Email"
+          icon={Mail}
+          type="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (errors.email) setErrors((x) => ({ ...x, email: null }));
+          }}
+          autoComplete="email"
+          placeholder="you@example.com"
+          error={errors.email}
+          autoFocus
+        />
+        <AuthField
+          label="Password"
+          icon={Lock}
+          type="password"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            if (errors.password) setErrors((x) => ({ ...x, password: null }));
+          }}
+          autoComplete="current-password"
+          placeholder="Your password"
+          error={errors.password}
+          labelAction={
             <Link
               to="/forgot-password"
               search={{ email: email || undefined }}
-              className="text-sm font-medium text-brand hover:underline"
+              className="text-xs font-medium text-brand hover:underline"
             >
               Forgot password?
             </Link>
-          </div>
-          <Input
-            id="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
-        </div>
+          }
+        />
         {unconfirmedEmail && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             <p>
@@ -157,11 +160,18 @@ function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex w-full items-center justify-center rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all disabled:opacity-50 hover:bg-brand/90"
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-brand px-5 text-sm font-semibold text-brand-foreground transition-all hover:bg-brand/90 disabled:opacity-60"
         >
+          {submitting && <Loader2 className="size-4 animate-spin" />}
           {submitting ? "Logging in…" : "Log in"}
         </button>
       </form>
+      <p className="mt-8 border-t border-hairline pt-6 text-center text-sm text-ink/60">
+        New to Flowform?{" "}
+        <Link to="/signup" className="font-semibold text-brand hover:underline">
+          Create a free account
+        </Link>
+      </p>
     </AuthShell>
   );
 }

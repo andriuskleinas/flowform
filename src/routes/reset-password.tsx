@@ -1,13 +1,11 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { KeyRound } from "lucide-react";
+import { KeyRound, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { AuthShell } from "@/components/auth-shell";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AuthField, AuthShell } from "@/components/auth-shell";
 
 export const Route = createFileRoute("/reset-password")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -34,6 +32,7 @@ function ResetPasswordPage() {
   const { session, loading } = useAuth();
   const [verifying, setVerifying] = useState(Boolean(token_hash));
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ password?: string | null; confirm?: string | null }>({});
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -61,10 +60,12 @@ function ResetPasswordPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirm) {
-      toast.error("Those passwords don't match.");
-      return;
-    }
+    const next = {
+      password: password.length >= 6 ? null : "Use at least 6 characters.",
+      confirm: confirm === password ? null : "Those passwords don't match.",
+    };
+    setErrors(next);
+    if (next.password || next.confirm) return;
     setSubmitting(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
@@ -96,8 +97,8 @@ function ResetPasswordPage() {
   if (!session) {
     return (
       <AuthShell>
-        <div className="rounded-2xl border border-hairline bg-white p-8 text-center">
-          <h1 className="font-display text-2xl">This link has expired</h1>
+        <div className="text-center">
+          <h1 className="font-display text-3xl">This link has expired</h1>
           <p className="mt-3 text-ink/60">
             Password reset links work once and expire after an hour. Request a fresh one and we'll
             email it right over.
@@ -105,7 +106,7 @@ function ResetPasswordPage() {
           <Link
             to="/forgot-password"
             search={{ email: undefined }}
-            className="mt-6 inline-flex items-center justify-center rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all hover:bg-brand/90"
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-brand-foreground transition-all hover:bg-brand/90"
           >
             Send a new link
           </Link>
@@ -116,45 +117,49 @@ function ResetPasswordPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-display text-3xl md:text-4xl">Choose a new password</h1>
+      <h1 className="font-display text-4xl">Choose a new password</h1>
       <p className="mt-2 text-ink/60">
         Setting a new password for{" "}
         <span className="font-semibold text-ink">{session.user.email}</span>.
       </p>
-      <form
-        onSubmit={onSubmit}
-        className="mt-8 space-y-5 rounded-2xl border border-hairline bg-white p-6"
-      >
-        <div className="space-y-2">
-          <Label htmlFor="password">New password</Label>
-          <Input
-            id="password"
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirm">Confirm new password</Label>
-          <Input
-            id="confirm"
-            type="password"
-            required
-            minLength={6}
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            autoComplete="new-password"
-          />
-        </div>
+      <form onSubmit={onSubmit} noValidate className="mt-8 space-y-5">
+        <AuthField
+          label="New password"
+          icon={Lock}
+          type="password"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            if (errors.password) setErrors((x) => ({ ...x, password: null }));
+          }}
+          autoComplete="new-password"
+          placeholder="At least 6 characters"
+          error={errors.password}
+          autoFocus
+        />
+        <AuthField
+          label="Confirm new password"
+          icon={Lock}
+          type="password"
+          value={confirm}
+          onChange={(e) => {
+            setConfirm(e.target.value);
+            if (errors.confirm) setErrors((x) => ({ ...x, confirm: null }));
+          }}
+          autoComplete="new-password"
+          placeholder="Type it again"
+          error={errors.confirm}
+        />
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex w-full items-center justify-center rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all disabled:opacity-50 hover:bg-brand/90"
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-brand px-5 text-sm font-semibold text-brand-foreground transition-all hover:bg-brand/90 disabled:opacity-60"
         >
-          <KeyRound className="mr-2 size-4" />
+          {submitting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <KeyRound className="size-4" />
+          )}
           {submitting ? "Saving…" : "Save new password"}
         </button>
       </form>
