@@ -9,6 +9,7 @@ import {
   Eye,
   GripVertical,
   Loader2,
+  Lock,
   Plus,
   Share2,
   Trash2,
@@ -587,6 +588,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     );
   }
 
+  // Live (published) forms are read-only: editing questions under respondents
+  // mid-survey would corrupt results. Close or unpublish first. The
+  // save_form_editor RPC enforces the same rule server-side.
+  const isLocked = form.status === "published";
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -634,7 +640,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           >
             <Eye className="size-4" /> Preview
           </button>
-          {isDirty && (
+          {isDirty && !isLocked && (
             <button
               type="button"
               onClick={() => setDiscardOpen(true)}
@@ -644,20 +650,38 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               Discard
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => saveAll.mutate()}
-            disabled={!isDirty || saveAll.isPending}
-            className="inline-flex items-center gap-1.5 rounded-md bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand/90 transition-colors"
-          >
-            {saveAll.isPending ? "Saving…" : "Save"}
-          </button>
+          {!isLocked && (
+            <button
+              type="button"
+              onClick={() => saveAll.mutate()}
+              disabled={!isDirty || saveAll.isPending}
+              className="inline-flex items-center gap-1.5 rounded-md bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand/90 transition-colors"
+            >
+              {saveAll.isPending ? "Saving…" : "Save"}
+            </button>
+          )}
         </div>
       </div>
 
+      {isLocked && (
+        <div
+          role="status"
+          className="mt-6 flex items-start gap-3 rounded-lg border border-brand/25 bg-accent px-4 py-3 text-sm text-ink"
+        >
+          <Lock className="mt-0.5 size-4 shrink-0 text-brand" />
+          <p>
+            <span className="font-semibold">This form is live, so it can't be edited.</span>{" "}
+            <span className="text-ink/70">
+              Changing questions while people are responding would mix answers to different
+              versions. Close or unpublish the form below to make changes.
+            </span>
+          </p>
+        </div>
+      )}
+
       <header className="mt-6 rounded-lg border border-hairline bg-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex-1 min-w-0 space-y-3">
+          <fieldset disabled={isLocked} className="flex-1 min-w-0 space-y-3 disabled:opacity-70">
             <div className="space-y-1.5">
               <Label htmlFor="form-title-edit" className="text-xs">
                 Title
@@ -724,7 +748,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                   : "Respondents see every question on a single page."}
               </p>
             </div>
-          </div>
+          </fieldset>
           <div className="flex flex-col items-end gap-2">
             <StatusPill status={form.status as FormStatus} />
             {isDirty && (
@@ -795,159 +819,167 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       <div className="mt-8">
         <section>
           <h2 className="text-lg font-semibold">Questions</h2>
-          <p className="mt-1 text-xs text-ink/50">
-            Drag the handle to reorder. Click <span className="font-semibold">Save</span> to keep
-            your changes.
-          </p>
-
-          {(responseCountQ.data ?? 0) > 0 && (
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              This form already has{" "}
-              <span className="font-semibold">
-                {responseCountQ.data} {responseCountQ.data === 1 ? "response" : "responses"}
-              </span>
-              . Changing a question's type or deleting it can make those answers hard to interpret
-              in your results.
-            </div>
+          {!isLocked && (
+            <p className="mt-1 text-xs text-ink/50">
+              Drag the handle to reorder. Click <span className="font-semibold">Save</span> to keep
+              your changes.
+            </p>
           )}
 
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={visibleDraftQuestions.map((q) => q.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <ul className="mt-4 space-y-4">
-                {visibleDraftQuestions.map((q, i) => (
-                  <SortableQuestionCard
-                    key={q.id}
-                    question={q}
-                    index={i}
-                    total={visibleDraftQuestions.length}
-                    jumpTargets={visibleDraftQuestions
-                      .map((t, ti) => ({
-                        id: t.id,
-                        label: t.label,
-                        number: ti + 1,
-                        isNew: !!t.isNew,
-                      }))
-                      .slice(i + 1)
-                      .filter((t) => !t.isNew)}
-                    onChangeLabel={(label) => setDraftLabel(q.id, label)}
-                    onChangeOptions={(options) => setDraftOptions(q.id, options)}
-                    onChangeType={(type) => setDraftType(q.id, type)}
-                    onChangeRequired={(required) => setDraftRequired(q.id, required)}
-                    onChangeLogic={(logic) => setDraftLogic(q.id, logic)}
-                    onDuplicate={() => duplicateDraftQuestion(q.id)}
-                    onDelete={() => removeDraftQuestion(q.id)}
-                    onMoveUp={() => moveBy(q.id, -1)}
-                    onMoveDown={() => moveBy(q.id, 1)}
-                  />
-                ))}
-              </ul>
-            </SortableContext>
-          </DndContext>
-
-          <div className="mt-6">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground hover:bg-brand/90 transition-colors"
-                >
-                  <Plus className="size-4" /> Add question
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((t) => (
-                  <DropdownMenuItem key={t} onClick={() => addDraftQuestion(t)}>
-                    {QUESTION_TYPE_LABELS[t]}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* AI suggestions */}
-          <div className="mt-8 rounded-lg border border-hairline bg-white p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="flex items-center gap-2 text-sm font-medium text-ink">
-                  Suggest questions
-                  <span className="rounded-sm border border-brand/25 bg-accent px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-brand">
-                    Claude
-                  </span>
-                </h3>
-                <p className="mt-0.5 text-xs text-ink/55">
-                  Claude drafts questions from your form's title and description.
-                </p>
+          <fieldset disabled={isLocked} className="min-w-0 disabled:opacity-70">
+            {!isLocked && (responseCountQ.data ?? 0) > 0 && (
+              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                This form already has{" "}
+                <span className="font-semibold">
+                  {responseCountQ.data} {responseCountQ.data === 1 ? "response" : "responses"}
+                </span>
+                . Changing a question's type or deleting it can make those answers hard to interpret
+                in your results.
               </div>
-              <button
-                type="button"
-                onClick={handleSuggest}
-                disabled={isSuggesting || !draftForm.title.trim()}
-                title={!draftForm.title.trim() ? "Add a title first" : undefined}
-                className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-white px-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/35 disabled:cursor-not-allowed disabled:opacity-50"
+            )}
+
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={visibleDraftQuestions.map((q) => q.id)}
+                strategy={verticalListSortingStrategy}
               >
-                {isSuggesting ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" /> Drafting…
-                  </>
-                ) : (
-                  "Draft questions"
+                <ul className="mt-4 space-y-4">
+                  {visibleDraftQuestions.map((q, i) => (
+                    <SortableQuestionCard
+                      key={q.id}
+                      question={q}
+                      index={i}
+                      total={visibleDraftQuestions.length}
+                      jumpTargets={visibleDraftQuestions
+                        .map((t, ti) => ({
+                          id: t.id,
+                          label: t.label,
+                          number: ti + 1,
+                          isNew: !!t.isNew,
+                        }))
+                        .slice(i + 1)
+                        .filter((t) => !t.isNew)}
+                      onChangeLabel={(label) => setDraftLabel(q.id, label)}
+                      onChangeOptions={(options) => setDraftOptions(q.id, options)}
+                      onChangeType={(type) => setDraftType(q.id, type)}
+                      onChangeRequired={(required) => setDraftRequired(q.id, required)}
+                      onChangeLogic={(logic) => setDraftLogic(q.id, logic)}
+                      onDuplicate={() => duplicateDraftQuestion(q.id)}
+                      onDelete={() => removeDraftQuestion(q.id)}
+                      onMoveUp={() => moveBy(q.id, -1)}
+                      onMoveDown={() => moveBy(q.id, 1)}
+                    />
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          </fieldset>
+
+          {!isLocked && (
+            <>
+              <div className="mt-6">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground hover:bg-brand/90 transition-colors"
+                    >
+                      <Plus className="size-4" /> Add question
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((t) => (
+                      <DropdownMenuItem key={t} onClick={() => addDraftQuestion(t)}>
+                        {QUESTION_TYPE_LABELS[t]}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* AI suggestions */}
+              <div className="mt-8 rounded-lg border border-hairline bg-white p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="flex items-center gap-2 text-sm font-medium text-ink">
+                      Suggest questions
+                      <span className="rounded-sm border border-brand/25 bg-accent px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-brand">
+                        Claude
+                      </span>
+                    </h3>
+                    <p className="mt-0.5 text-xs text-ink/55">
+                      Claude drafts questions from your form's title and description.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSuggest}
+                    disabled={isSuggesting || !draftForm.title.trim()}
+                    title={!draftForm.title.trim() ? "Add a title first" : undefined}
+                    className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-white px-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/35 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSuggesting ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" /> Drafting…
+                      </>
+                    ) : (
+                      "Draft questions"
+                    )}
+                  </button>
+                </div>
+
+                {suggestError && (
+                  <p className="mt-3 rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                    {suggestError}
+                  </p>
                 )}
-              </button>
-            </div>
 
-            {suggestError && (
-              <p className="mt-3 rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {suggestError}
-              </p>
-            )}
-
-            {suggestions.length > 0 && (
-              <ul className="mt-4 divide-y divide-hairline border-y border-hairline">
-                {suggestions.map((s) => {
-                  const added = addedSuggestionIds.has(s.id);
-                  return (
-                    <li key={s.id} className="flex items-start justify-between gap-3 py-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium leading-snug text-ink">{s.label}</p>
-                        <p className="mt-1 font-mono text-[10px] uppercase tracking-wide text-ink/45">
-                          {s.type === "rating"
-                            ? `Rating scale (1–${getRatingMax(s.options)})`
-                            : QUESTION_TYPE_LABELS[s.type]}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          scrollAnchorRef.current = {
-                            el: e.currentTarget,
-                            top: e.currentTarget.getBoundingClientRect().top,
-                          };
-                          addSuggestion(s);
-                        }}
-                        disabled={added}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/35 disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
-                      >
-                        {added ? (
-                          "Added"
-                        ) : (
-                          <>
-                            <Plus className="size-3" /> Add
-                          </>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+                {suggestions.length > 0 && (
+                  <ul className="mt-4 divide-y divide-hairline border-y border-hairline">
+                    {suggestions.map((s) => {
+                      const added = addedSuggestionIds.has(s.id);
+                      return (
+                        <li key={s.id} className="flex items-start justify-between gap-3 py-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium leading-snug text-ink">{s.label}</p>
+                            <p className="mt-1 font-mono text-[10px] uppercase tracking-wide text-ink/45">
+                              {s.type === "rating"
+                                ? `Rating scale (1–${getRatingMax(s.options)})`
+                                : QUESTION_TYPE_LABELS[s.type]}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              scrollAnchorRef.current = {
+                                el: e.currentTarget,
+                                top: e.currentTarget.getBoundingClientRect().top,
+                              };
+                              addSuggestion(s);
+                            }}
+                            disabled={added}
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/35 disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
+                          >
+                            {added ? (
+                              "Added"
+                            ) : (
+                              <>
+                                <Plus className="size-3" /> Add
+                              </>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
         </section>
 
         <section className="mt-12 rounded-lg border border-destructive/20 bg-destructive/[0.03] p-5">
