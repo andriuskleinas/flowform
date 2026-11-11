@@ -79,6 +79,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DeleteFormDialog } from "@/components/delete-form-dialog";
 import { ShareFormDialog } from "@/components/share-form-dialog";
 import { Shell } from "@/components/shell";
+import { CategoryField } from "@/components/dashboard/category-dialog";
 
 export const Route = createFileRoute("/forms/$formId/edit")({
   component: EditFormPage,
@@ -163,7 +164,9 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, user_id, status, display_mode, thank_you_message")
+        .select(
+          "id, title, description, user_id, status, display_mode, thank_you_message, category_id",
+        )
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -522,6 +525,25 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Category is organisational metadata, not survey content: it saves
+  // immediately (outside the draft/Save flow) and stays editable on live forms.
+  const setCategory = useMutation({
+    mutationFn: async (categoryId: string | null) => {
+      const { error } = await supabase
+        .from("forms")
+        .update({ category_id: categoryId })
+        .eq("id", formId);
+      if (error) throw error;
+      return categoryId;
+    },
+    onSuccess: (categoryId) => {
+      toast.success(categoryId ? "Category updated" : "Category removed");
+      qc.invalidateQueries({ queryKey: ["form", formId] });
+      qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not update category"),
+  });
+
   // Response count powers the delete-dialog warning ("…and its 32 responses").
   const responseCountQ = useQuery({
     queryKey: ["response-count", formId],
@@ -751,6 +773,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           </fieldset>
           <div className="flex flex-col items-end gap-2">
             <StatusPill status={form.status as FormStatus} />
+            <CategoryField
+              userId={userId}
+              value={form.category_id ?? null}
+              onChange={(id) => setCategory.mutate(id)}
+              pending={setCategory.isPending}
+            />
             {isDirty && (
               <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
                 Unsaved changes

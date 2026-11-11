@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import {
+  ArrowDown,
+  ArrowUp,
   BarChart3,
   CircleSlash,
   CirclePlay,
@@ -20,8 +22,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { StatusPill } from "@/components/status-pill";
+import { CategoryTag } from "@/components/dashboard/category-dialog";
 import { timeAgo } from "@/lib/utils";
 import type { FormStatus } from "@/lib/form-utils";
+import { completionRate, formatRate, type SortKey } from "@/lib/dashboard-filters";
 
 export type DashboardForm = {
   id: string;
@@ -29,10 +33,15 @@ export type DashboardForm = {
   description: string | null;
   created_at: string;
   status: FormStatus;
+  category_id: string | null;
   category: string | null;
+  category_color: string | null;
   response_count: number;
   question_count: number;
   last_response_at: string | null;
+  responses_7d: number;
+  responses_90d: number;
+  views_90d: number;
 };
 
 export type ViewMode = "list" | "grid" | "table";
@@ -52,10 +61,15 @@ export function FormCollection({
   forms,
   view,
   actions,
+  sort,
+  onSort,
 }: {
   forms: DashboardForm[];
   view: ViewMode;
   actions: FormActionHandlers;
+  /** Table view: current sort + handler, for clickable column headers. */
+  sort?: SortKey;
+  onSort?: (sort: SortKey) => void;
 }) {
   if (view === "grid") {
     return (
@@ -67,7 +81,7 @@ export function FormCollection({
     );
   }
   if (view === "table") {
-    return <FormTable forms={forms} actions={actions} />;
+    return <FormTable forms={forms} actions={actions} sort={sort} onSort={onSort} />;
   }
   return (
     <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-white">
@@ -75,16 +89,6 @@ export function FormCollection({
         <ListRow key={f.id} form={f} actions={actions} />
       ))}
     </ul>
-  );
-}
-
-function CategoryTag({ category }: { category: string | null }) {
-  if (!category) return null;
-  return (
-    <span className="inline-flex max-w-[12rem] items-center gap-1 truncate rounded-sm bg-brand/[0.07] px-1.5 py-0.5 text-[11px] font-medium text-brand">
-      <Tag className="size-3 shrink-0" />
-      <span className="truncate">{category}</span>
-    </span>
   );
 }
 
@@ -104,7 +108,7 @@ function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActio
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="truncate text-[15px] font-medium tracking-normal">{f.title}</h3>
               <StatusPill status={f.status} />
-              <CategoryTag category={f.category} />
+              <CategoryTag name={f.category} color={f.category_color} />
             </div>
             {f.description && (
               <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/60">
@@ -113,7 +117,12 @@ function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActio
             )}
             <p className="mt-1.5 font-mono text-[11px] text-ink/45">
               {plural(f.question_count, "question", "questions")} ·{" "}
-              {plural(f.response_count, "response", "responses")} · {timeAgo(f.created_at)}
+              {plural(f.response_count, "response", "responses")}
+              {f.responses_7d > 0 && (
+                <span className="text-emerald-700"> · {f.responses_7d} this week</span>
+              )}
+              {completionRate(f) !== null && <> · {formatRate(completionRate(f))} completion</>} ·{" "}
+              {timeAgo(f.created_at)}
             </p>
           </div>
         </Link>
@@ -133,7 +142,7 @@ function GridCard({ form: f, actions }: { form: DashboardForm; actions: FormActi
       >
         <div className="flex items-center gap-2 pr-8">
           <StatusPill status={f.status} />
-          <CategoryTag category={f.category} />
+          <CategoryTag name={f.category} color={f.category_color} />
         </div>
         <h3 className="mt-3 line-clamp-2 text-[15px] font-medium leading-snug tracking-normal">
           {f.title}
@@ -144,11 +153,20 @@ function GridCard({ form: f, actions }: { form: DashboardForm; actions: FormActi
         <dl className="mt-4 grid grid-cols-2 gap-2">
           <div className="rounded-md bg-surface px-2.5 py-2">
             <dt className="text-[11px] text-ink/50">Responses</dt>
-            <dd className="text-lg font-medium tabular-nums">{f.response_count}</dd>
+            <dd className="text-lg font-medium tabular-nums">
+              {f.response_count}
+              {f.responses_7d > 0 && (
+                <span className="ml-1.5 text-xs font-normal text-emerald-700">
+                  +{f.responses_7d} wk
+                </span>
+              )}
+            </dd>
           </div>
           <div className="rounded-md bg-surface px-2.5 py-2">
-            <dt className="text-[11px] text-ink/50">Questions</dt>
-            <dd className="text-lg font-medium tabular-nums">{f.question_count}</dd>
+            <dt className="text-[11px] text-ink/50" title="Responses ÷ views, last 90 days">
+              Completion
+            </dt>
+            <dd className="text-lg font-medium tabular-nums">{formatRate(completionRate(f))}</dd>
           </div>
         </dl>
       </Link>
@@ -164,30 +182,114 @@ function GridCard({ form: f, actions }: { form: DashboardForm; actions: FormActi
   );
 }
 
-function FormTable({ forms, actions }: { forms: DashboardForm[]; actions: FormActionHandlers }) {
+/** Column → the sort it applies; clicking an active toggle column flips it. */
+const COLUMN_SORTS: Record<string, { sorts: SortKey[]; label: string }> = {
+  form: { sorts: ["title"], label: "Form" },
+  responses: { sorts: ["most", "fewest"], label: "Responses" },
+  week: { sorts: ["trending"], label: "7 days" },
+  completion: { sorts: ["completion"], label: "Completion" },
+  last: { sorts: ["recent"], label: "Last reply" },
+  created: { sorts: ["newest", "oldest"], label: "Created" },
+};
+
+function SortHeader({
+  column,
+  sort,
+  onSort,
+  align = "left",
+  className = "",
+}: {
+  column: keyof typeof COLUMN_SORTS;
+  sort?: SortKey;
+  onSort?: (s: SortKey) => void;
+  align?: "left" | "right";
+  className?: string;
+}) {
+  const { sorts, label } = COLUMN_SORTS[column];
+  const activeIdx = sort ? sorts.indexOf(sort) : -1;
+  const active = activeIdx >= 0;
+  const next = active ? sorts[(activeIdx + 1) % sorts.length] : sorts[0];
+  // Arrow shows direction: "down" for big→small / new→old / A→Z.
+  const descending =
+    active && ["most", "trending", "completion", "recent", "newest", "title"].includes(sort!);
+  const content = (
+    <>
+      {label}
+      {active && (descending ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
+    </>
+  );
+  return (
+    <th
+      className={`py-2.5 font-medium ${align === "right" ? "text-right" : ""} ${className}`}
+      aria-sort={active ? (descending ? "descending" : "ascending") : undefined}
+    >
+      {onSort ? (
+        <button
+          type="button"
+          onClick={() => onSort(next)}
+          className={
+            "inline-flex items-center gap-1 rounded hover:text-ink " +
+            (active ? "text-ink" : "") +
+            (align === "right" ? " flex-row-reverse" : "")
+          }
+        >
+          {content}
+        </button>
+      ) : (
+        content
+      )}
+    </th>
+  );
+}
+
+function FormTable({
+  forms,
+  actions,
+  sort,
+  onSort,
+}: {
+  forms: DashboardForm[];
+  actions: FormActionHandlers;
+  sort?: SortKey;
+  onSort?: (s: SortKey) => void;
+}) {
   return (
     <div className="overflow-x-auto rounded-lg border border-hairline bg-white">
-      <table className="w-full min-w-[720px] table-fixed text-sm">
+      <table className="w-full min-w-[860px] table-fixed text-sm">
         {/* Fixed column widths keep grouped tables aligned with each other. */}
         <colgroup>
           <col />
-          <col className="w-[104px]" />
-          <col className="w-[140px]" />
-          <col className="w-[52px]" />
           <col className="w-[96px]" />
+          <col className="w-[136px]" />
           <col className="w-[96px]" />
-          <col className="w-[88px]" />
+          <col className="w-[72px]" />
+          <col className="w-[96px]" />
+          <col className="w-[92px]" />
+          <col className="w-[84px]" />
           <col className="w-[48px]" />
         </colgroup>
         <thead>
           <tr className="border-b border-hairline text-left text-xs text-ink/50">
-            <th className="px-4 py-2.5 font-medium">Form</th>
+            <SortHeader column="form" sort={sort} onSort={onSort} className="px-4" />
             <th className="px-3 py-2.5 font-medium">Status</th>
             <th className="px-3 py-2.5 font-medium">Category</th>
-            <th className="px-3 py-2.5 text-right font-medium">Qs</th>
-            <th className="px-3 py-2.5 text-right font-medium">Responses</th>
-            <th className="px-3 py-2.5 font-medium">Last reply</th>
-            <th className="px-3 py-2.5 font-medium">Created</th>
+            <SortHeader
+              column="responses"
+              sort={sort}
+              onSort={onSort}
+              align="right"
+              className="px-3"
+            />
+            <SortHeader column="week" sort={sort} onSort={onSort} align="right" className="px-3" />
+            <SortHeader
+              column="completion"
+              sort={sort}
+              onSort={onSort}
+              align="right"
+              className="px-3"
+            />
+            <SortHeader column="last" sort={sort} onSort={onSort} className="px-3" />
+            <SortHeader column="created" sort={sort} onSort={onSort} className="px-3" />
             <th className="w-10 px-2 py-2.5">
               <span className="sr-only">Actions</span>
             </th>
@@ -211,16 +313,31 @@ function FormTable({ forms, actions }: { forms: DashboardForm[]; actions: FormAc
               </td>
               <td className="px-3 py-2.5">
                 {f.category ? (
-                  <CategoryTag category={f.category} />
+                  <CategoryTag name={f.category} color={f.category_color} />
                 ) : (
                   <span className="text-ink/30">—</span>
                 )}
               </td>
-              <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-ink/70">
-                {f.question_count}
-              </td>
               <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">
                 {f.response_count}
+              </td>
+              <td
+                className={
+                  "px-3 py-2.5 text-right font-mono text-xs tabular-nums " +
+                  (f.responses_7d > 0 ? "text-emerald-700" : "text-ink/40")
+                }
+              >
+                {f.responses_7d > 0 ? `+${f.responses_7d}` : "0"}
+              </td>
+              <td
+                className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-ink/70"
+                title={
+                  completionRate(f) === null
+                    ? "Not enough views yet (last 90 days)"
+                    : `${f.responses_90d} responses from ${f.views_90d} views, last 90 days`
+                }
+              >
+                {formatRate(completionRate(f))}
               </td>
               <td className="px-3 py-2.5 font-mono text-xs text-ink/50">
                 {f.last_response_at ? timeAgo(f.last_response_at) : "—"}
@@ -322,7 +439,7 @@ function FormActions({
           )}
           <DropdownMenuItem onClick={() => actions.onCategory(f)}>
             <Tag className="size-4" />
-            {f.category ? "Change category" : "Set category"}
+            {f.category_id ? "Change category" : "Set category"}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={actions.duplicatePending}

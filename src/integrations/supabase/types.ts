@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      form_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          user_id?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       form_events: {
         Row: {
           form_id: string
@@ -59,6 +83,7 @@ export type Database = {
       forms: {
         Row: {
           category: string | null
+          category_id: string | null
           created_at: string
           description: string | null
           display_mode: string
@@ -70,6 +95,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          category_id?: string | null
           created_at?: string
           description?: string | null
           display_mode?: string
@@ -81,6 +107,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          category_id?: string | null
           created_at?: string
           description?: string | null
           display_mode?: string
@@ -90,7 +117,15 @@ export type Database = {
           title?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "forms_category_fkey"
+            columns: ["category_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "form_categories"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -234,14 +269,19 @@ export type Database = {
         Args: never
         Returns: {
           category: string | null
+          category_color: string | null
+          category_id: string | null
           created_at: string
-          description: string
+          description: string | null
           id: string
           last_response_at: string | null
           question_count: number
           response_count: number
+          responses_7d: number
+          responses_90d: number
           status: string
           title: string
+          views_90d: number
         }[]
       }
       get_dashboard_summary: {

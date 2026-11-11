@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { DEFAULT_FORM_TITLE, type QuestionType, type QuestionOptions } from "@/lib/form-utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CategoryField } from "@/components/dashboard/category-dialog";
 import { Logo } from "@/components/logo";
 
 export const Route = createFileRoute("/forms/new")({
@@ -156,6 +157,8 @@ function NewFormAuthed({ userId }: { userId: string }) {
   const navigate = useNavigate();
   // Which card was clicked, so only that one shows a spinner.
   const [pendingId, setPendingId] = useState<string | null>(null);
+  // Optional topic chosen up front; applied to whichever start option is clicked.
+  const [categoryId, setCategoryId] = useState<string | null>(null);
 
   // Create the form (+ any template questions), then hand off to the editor —
   // the single canonical builder for title, questions, logic, and AI.
@@ -166,6 +169,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
         .insert({
           title: template?.title ?? DEFAULT_FORM_TITLE,
           description: template?.description ?? null,
+          category_id: categoryId,
           user_id: userId,
         })
         .select("id")
@@ -231,6 +235,16 @@ function NewFormAuthed({ userId }: { userId: string }) {
             Start blank or from a template. You'll add questions, logic, and AI suggestions in the
             editor.
           </p>
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-ink/60">Category</span>
+            <CategoryField
+              userId={userId}
+              value={categoryId}
+              onChange={setCategoryId}
+              pending={busy}
+            />
+            <span className="text-xs text-ink/40">optional</span>
+          </div>
         </div>
 
         {/* Blank */}

@@ -2,13 +2,17 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowDownUp,
+  ChevronDown,
   FileText,
+  Activity,
   LayoutGrid,
   List,
   LogOut,
   Plus,
   Rows3,
   Search,
+  Settings2,
   Table2,
   User,
   X,
@@ -18,6 +22,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -31,7 +38,25 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getInitialsFromProfile } from "@/lib/utils";
 import { DashboardSummaryPanel } from "@/components/dashboard/summary";
-import { CategoryDialog } from "@/components/dashboard/category-dialog";
+import {
+  CategoryDialog,
+  CategoryDot,
+  ManageCategoriesDialog,
+} from "@/components/dashboard/category-dialog";
+import { useCategories } from "@/lib/categories";
+import {
+  ACTIVITY_OPTIONS,
+  SORT_OPTIONS,
+  STATUS_OPTIONS,
+  UNCATEGORIZED,
+  filterForms,
+  parseDashboardSearch,
+  sortForms,
+  type ActivityFilter,
+  type DashboardSearch,
+  type SortKey,
+  type StatusFilter,
+} from "@/lib/dashboard-filters";
 import {
   FormCollection,
   type DashboardForm,
@@ -50,12 +75,12 @@ export const Route = createFileRoute("/dashboard")({
       { property: "og:description", content: "Create and manage your Flowform forms." },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): DashboardSearch => parseDashboardSearch(s),
   component: DashboardPage,
 });
 
 type FormRow = Pick<DashboardForm, "id" | "title" | "description" | "created_at" | "status">;
 
-const UNCATEGORIZED = "__uncategorized__";
 const PREFS_KEY = "flowform:dashboard-prefs";
 type DashboardPrefs = { view: ViewMode; grouped: boolean };
 
@@ -89,12 +114,14 @@ function CategoryChip({
   label,
   count,
   muted = false,
+  color,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
   count: number;
   muted?: boolean;
+  color?: string | null;
 }) {
   return (
     <button
@@ -110,6 +137,7 @@ function CategoryChip({
             (muted ? "text-ink/50 hover:text-ink" : "text-ink/75 hover:text-ink"))
       }
     >
+      {color !== undefined && <CategoryDot color={color} />}
       <span className="max-w-[10rem] truncate">{label}</span>
       <span className={"font-mono text-[10px] " + (active ? "text-paper/60" : "text-ink/40")}>
         {count}
@@ -183,10 +211,15 @@ function DashboardAuthed({
         (r): DashboardForm => ({
           ...r,
           status: r.status as FormStatus,
+          category_id: r.category_id ?? null,
           category: r.category ?? null,
+          category_color: r.category_color ?? null,
           last_response_at: r.last_response_at ?? null,
           response_count: Number(r.response_count),
           question_count: Number(r.question_count),
+          responses_7d: Number(r.responses_7d),
+          responses_90d: Number(r.responses_90d),
+          views_90d: Number(r.views_90d),
         }),
       );
     },
@@ -203,54 +236,69 @@ function DashboardAuthed({
       return next;
     });
 
-  // ---- Category + search filtering --------------------------------------
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  // ---- Sort + filters (URL search params) ------------------------------
+  const search = Route.useSearch();
+  const sort: SortKey = search.sort ?? "newest";
+  const statusFilter: StatusFilter = search.status ?? "all";
+  const activity: ActivityFilter = search.activity ?? "any";
+  const categoryFilter = search.cat ?? null;
+  const query = search.q ?? "";
+  const setSearch = (patch: Partial<DashboardSearch>) =>
+    navigate({
+      to: "/dashboard",
+      search: (prev) => parseDashboardSearch({ ...prev, ...patch }),
+      replace: true,
+    });
+  const clearFilters = () =>
+    setSearch({ status: undefined, activity: undefined, cat: undefined, q: undefined });
+
+  const { data: categories = [], isSuccess: categoriesLoaded } = useCategories(userId);
+  const [manageOpen, setManageOpen] = useState(false);
 
   const categoryCounts = useMemo(() => {
     const m = new Map<string, number>();
-    for (const f of forms) if (f.category) m.set(f.category, (m.get(f.category) ?? 0) + 1);
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    for (const f of forms) if (f.category_id) m.set(f.category_id, (m.get(f.category_id) ?? 0) + 1);
+    return m;
   }, [forms]);
-  const categories = useMemo(() => categoryCounts.map(([c]) => c), [categoryCounts]);
-  const uncategorizedCount = forms.filter((f) => !f.category).length;
+  const uncategorizedCount = forms.filter((f) => !f.category_id).length;
 
   // A filter pointing at a category that no longer exists falls back to All.
   useEffect(() => {
-    if (categoryFilter === null) return;
+    if (!categoryFilter || !categoriesLoaded) return;
     const stale =
       categoryFilter === UNCATEGORIZED
-        ? uncategorizedCount === 0 || categories.length === 0
-        : !categories.includes(categoryFilter);
-    if (stale) setCategoryFilter(null);
-  }, [categoryFilter, categories, uncategorizedCount]);
+        ? categories.length === 0
+        : !categories.some((c) => c.id === categoryFilter);
+    if (stale) setSearch({ cat: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter, categories, categoriesLoaded]);
 
-  const visibleForms = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return forms.filter((f) => {
-      if (categoryFilter === UNCATEGORIZED && f.category) return false;
-      if (categoryFilter && categoryFilter !== UNCATEGORIZED && f.category !== categoryFilter)
-        return false;
-      if (!q) return true;
-      return (
-        f.title.toLowerCase().includes(q) ||
-        (f.description ?? "").toLowerCase().includes(q) ||
-        (f.category ?? "").toLowerCase().includes(q)
-      );
-    });
-  }, [forms, categoryFilter, query]);
+  // Status counts are faceted: they reflect every other active filter.
+  const statusCounts = useMemo(() => {
+    const base = filterForms(forms, { ...search, status: undefined });
+    const m: Record<StatusFilter, number> = { all: base.length, published: 0, draft: 0, closed: 0 };
+    for (const f of base) m[f.status] += 1;
+    return m;
+  }, [forms, search]);
+
+  const visibleForms = useMemo(
+    () => sortForms(filterForms(forms, search), sort),
+    [forms, search, sort],
+  );
 
   const groups = useMemo(() => {
     if (!prefs.grouped || categoryFilter !== null || categories.length === 0) return null;
     const out = categories.map((c) => ({
-      key: c,
-      label: c,
-      forms: visibleForms.filter((f) => f.category === c),
+      key: c.id,
+      label: c.name,
+      color: c.color as string | null,
+      forms: visibleForms.filter((f) => f.category_id === c.id),
     }));
     out.push({
       key: UNCATEGORIZED,
       label: "Uncategorized",
-      forms: visibleForms.filter((f) => !f.category),
+      color: null,
+      forms: visibleForms.filter((f) => !f.category_id),
     });
     return out.filter((g) => g.forms.length > 0);
   }, [prefs.grouped, categoryFilter, categories, visibleForms]);
@@ -280,18 +328,19 @@ function DashboardAuthed({
   const [categoryTarget, setCategoryTarget] = useState<DashboardForm | null>(null);
 
   const setCategory = useMutation({
-    mutationFn: async ({ formId, category }: { formId: string; category: string | null }) => {
+    mutationFn: async ({ formId, categoryId }: { formId: string; categoryId: string | null }) => {
       const { error } = await supabase
         .from("forms")
-        .update({ category })
+        .update({ category_id: categoryId })
         .eq("id", formId)
         .eq("user_id", userId);
       if (error) throw error;
-      return category;
+      return categoryId;
     },
-    onSuccess: async (category) => {
+    onSuccess: async (categoryId) => {
       setCategoryTarget(null);
-      toast.success(category ? `Moved to “${category}”` : "Category removed");
+      const name = categories.find((c) => c.id === categoryId)?.name;
+      toast.success(categoryId ? `Moved to “${name ?? "category"}”` : "Category removed");
       await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", userId] });
     },
     onError: (e: Error) => toast.error(e.message || "Could not update category"),
@@ -301,7 +350,7 @@ function DashboardAuthed({
     mutationFn: async (formId: string) => {
       const { data: src, error: srcErr } = await supabase
         .from("forms")
-        .select("title, description, display_mode, category")
+        .select("title, description, display_mode, category_id")
         .eq("id", formId)
         .single();
       if (srcErr) throw srcErr;
@@ -318,7 +367,7 @@ function DashboardAuthed({
           title: `${src.title.slice(0, 290)} (copy)`,
           description: src.description,
           display_mode: src.display_mode,
-          category: src.category,
+          category_id: src.category_id,
           user_id: userId,
         })
         .select("id")
@@ -457,7 +506,10 @@ function DashboardAuthed({
     duplicatePending: duplicateForm.isPending,
   };
 
-  const filtering = categoryFilter !== null || query.trim() !== "";
+  const filtering =
+    categoryFilter !== null || query.trim() !== "" || statusFilter !== "all" || activity !== "any";
+  const sortLabel = SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Newest";
+  const activityLabel = ACTIVITY_OPTIONS.find((o) => o.key === activity)?.label ?? "Any activity";
 
   return (
     <div className="min-h-screen bg-surface text-ink">
@@ -538,107 +590,242 @@ function DashboardAuthed({
           </div>
 
           {!isLoading && !isError && forms.length > 0 && (
-            <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div
-                role="tablist"
-                aria-label="Filter by category"
-                className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 pb-1 md:pb-0"
-              >
-                <CategoryChip
-                  active={categoryFilter === null}
-                  onClick={() => setCategoryFilter(null)}
-                  label="All"
-                  count={forms.length}
-                />
-                {categoryCounts.map(([c, n]) => (
+            <div className="mt-4 space-y-3">
+              {/* Row 1 — topics */}
+              <div className="flex items-center gap-2">
+                <div
+                  role="tablist"
+                  aria-label="Filter by category"
+                  className="-mx-1 flex min-w-0 flex-1 gap-1.5 overflow-x-auto px-1 pb-1 md:pb-0"
+                >
                   <CategoryChip
-                    key={c}
-                    active={categoryFilter === c}
-                    onClick={() => setCategoryFilter(c)}
-                    label={c}
-                    count={n}
+                    active={categoryFilter === null}
+                    onClick={() => setSearch({ cat: undefined })}
+                    label="All topics"
+                    count={forms.length}
                   />
-                ))}
-                {categories.length > 0 && uncategorizedCount > 0 && (
-                  <CategoryChip
-                    active={categoryFilter === UNCATEGORIZED}
-                    onClick={() => setCategoryFilter(UNCATEGORIZED)}
-                    label="Uncategorized"
-                    count={uncategorizedCount}
-                    muted
-                  />
-                )}
+                  {categories.map((c) => (
+                    <CategoryChip
+                      key={c.id}
+                      active={categoryFilter === c.id}
+                      onClick={() => setSearch({ cat: c.id })}
+                      label={c.name}
+                      color={c.color}
+                      count={categoryCounts.get(c.id) ?? 0}
+                    />
+                  ))}
+                  {categories.length > 0 && uncategorizedCount > 0 && (
+                    <CategoryChip
+                      active={categoryFilter === UNCATEGORIZED}
+                      onClick={() => setSearch({ cat: UNCATEGORIZED })}
+                      label="Uncategorized"
+                      count={uncategorizedCount}
+                      muted
+                    />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setManageOpen(true)}
+                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-hairline bg-white px-2.5 text-xs text-ink/60 transition-colors hover:border-ink/25 hover:text-ink"
+                >
+                  {categories.length === 0 ? (
+                    <>
+                      <Plus className="size-3.5" /> Add categories
+                    </>
+                  ) : (
+                    <>
+                      <Settings2 className="size-3.5" /> Manage
+                    </>
+                  )}
+                </button>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink/40" />
-                  <input
-                    type="search"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search forms"
-                    aria-label="Search forms"
-                    className="h-8 w-full rounded-md border border-hairline bg-white pl-8 pr-7 text-sm outline-none placeholder:text-ink/40 focus:border-brand/40 focus:ring-2 focus:ring-brand/15 md:w-44 [&::-webkit-search-cancel-button]:hidden"
-                  />
-                  {query && (
+              {/* Row 2 — status, activity, sort, search, layout */}
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div
+                    role="radiogroup"
+                    aria-label="Filter by status"
+                    className="inline-flex rounded-md border border-hairline bg-white p-0.5"
+                  >
+                    {STATUS_OPTIONS.map((o) => (
+                      <button
+                        key={o.key}
+                        type="button"
+                        role="radio"
+                        aria-checked={statusFilter === o.key}
+                        onClick={() => setSearch({ status: o.key === "all" ? undefined : o.key })}
+                        className={
+                          "inline-flex h-7 items-center gap-1.5 rounded px-2.5 text-xs transition-colors " +
+                          (statusFilter === o.key
+                            ? "bg-ink text-paper"
+                            : "text-ink/60 hover:bg-ink/5 hover:text-ink")
+                        }
+                      >
+                        {o.label}
+                        <span
+                          className={
+                            "font-mono text-[10px] " +
+                            (statusFilter === o.key ? "text-paper/60" : "text-ink/35")
+                          }
+                        >
+                          {statusCounts[o.key]}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      className={
+                        "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 " +
+                        (activity !== "any"
+                          ? "border-brand/30 bg-brand/[0.07] text-brand"
+                          : "border-hairline bg-white text-ink/60 hover:text-ink")
+                      }
+                    >
+                      <Activity className="size-3.5" />
+                      {activityLabel}
+                      <ChevronDown className="size-3 opacity-60" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-64">
+                      <DropdownMenuLabel className="text-xs font-normal text-ink/50">
+                        Activity
+                      </DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={activity}
+                        onValueChange={(v) =>
+                          setSearch({
+                            activity: v === "any" ? undefined : (v as ActivityFilter),
+                          })
+                        }
+                      >
+                        {ACTIVITY_OPTIONS.map((o) => (
+                          <DropdownMenuRadioItem key={o.key} value={o.key} className="items-start">
+                            <div>
+                              <p className="text-sm">{o.label}</p>
+                              {o.hint && <p className="text-xs text-ink/50">{o.hint}</p>}
+                            </div>
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      className={
+                        "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 " +
+                        (sort !== "newest"
+                          ? "border-brand/30 bg-brand/[0.07] text-brand"
+                          : "border-hairline bg-white text-ink/60 hover:text-ink")
+                      }
+                    >
+                      <ArrowDownUp className="size-3.5" />
+                      {sortLabel}
+                      <ChevronDown className="size-3 opacity-60" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      <DropdownMenuLabel className="text-xs font-normal text-ink/50">
+                        Sort by
+                      </DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={sort}
+                        onValueChange={(v) =>
+                          setSearch({ sort: v === "newest" ? undefined : (v as SortKey) })
+                        }
+                      >
+                        {SORT_OPTIONS.map((o) => (
+                          <DropdownMenuRadioItem key={o.key} value={o.key}>
+                            {o.label}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {filtering && (
                     <button
                       type="button"
-                      aria-label="Clear search"
-                      onClick={() => setQuery("")}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-ink/40 hover:text-ink"
+                      onClick={clearFilters}
+                      className="h-8 px-1 text-xs font-medium text-brand hover:underline"
                     >
-                      <X className="size-3.5" />
+                      Clear filters
                     </button>
                   )}
                 </div>
-                {categories.length > 0 && (
-                  <button
-                    type="button"
-                    aria-pressed={prefs.grouped}
-                    onClick={() => updatePrefs({ grouped: !prefs.grouped })}
-                    title="Group by category"
-                    className={
-                      "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs transition-colors " +
-                      (prefs.grouped
-                        ? "border-brand/30 bg-brand/[0.07] text-brand"
-                        : "border-hairline bg-white text-ink/60 hover:text-ink")
-                    }
-                  >
-                    <Rows3 className="size-3.5" />
-                    Group
-                  </button>
-                )}
-                <div
-                  role="radiogroup"
-                  aria-label="Layout"
-                  className="inline-flex rounded-md border border-hairline bg-white p-0.5"
-                >
-                  {(
-                    [
-                      { mode: "list", label: "List view", Icon: List },
-                      { mode: "grid", label: "Grid view", Icon: LayoutGrid },
-                      { mode: "table", label: "Table view", Icon: Table2 },
-                    ] as const
-                  ).map(({ mode, label, Icon }) => (
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="relative flex-1 lg:flex-none">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink/40" />
+                    <input
+                      type="search"
+                      value={query}
+                      onChange={(e) => setSearch({ q: e.target.value })}
+                      placeholder="Search forms"
+                      aria-label="Search forms"
+                      className="h-8 w-full rounded-md border border-hairline bg-white pl-8 pr-7 text-sm outline-none placeholder:text-ink/40 focus:border-brand/40 focus:ring-2 focus:ring-brand/15 lg:w-44 [&::-webkit-search-cancel-button]:hidden"
+                    />
+                    {query && (
+                      <button
+                        type="button"
+                        aria-label="Clear search"
+                        onClick={() => setSearch({ q: undefined })}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-ink/40 hover:text-ink"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {categories.length > 0 && (
                     <button
-                      key={mode}
                       type="button"
-                      role="radio"
-                      aria-checked={prefs.view === mode}
-                      aria-label={label}
-                      title={label}
-                      onClick={() => updatePrefs({ view: mode })}
+                      aria-pressed={prefs.grouped}
+                      onClick={() => updatePrefs({ grouped: !prefs.grouped })}
+                      title="Group by category"
                       className={
-                        "rounded p-1.5 transition-colors " +
-                        (prefs.view === mode
-                          ? "bg-ink text-paper"
-                          : "text-ink/50 hover:bg-ink/5 hover:text-ink")
+                        "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs transition-colors " +
+                        (prefs.grouped
+                          ? "border-brand/30 bg-brand/[0.07] text-brand"
+                          : "border-hairline bg-white text-ink/60 hover:text-ink")
                       }
                     >
-                      <Icon className="size-3.5" />
+                      <Rows3 className="size-3.5" />
+                      Group
                     </button>
-                  ))}
+                  )}
+                  <div
+                    role="radiogroup"
+                    aria-label="Layout"
+                    className="inline-flex rounded-md border border-hairline bg-white p-0.5"
+                  >
+                    {(
+                      [
+                        { mode: "list", label: "List view", Icon: List },
+                        { mode: "grid", label: "Grid view", Icon: LayoutGrid },
+                        { mode: "table", label: "Table view", Icon: Table2 },
+                      ] as const
+                    ).map(({ mode, label, Icon }) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        role="radio"
+                        aria-checked={prefs.view === mode}
+                        aria-label={label}
+                        title={label}
+                        onClick={() => updatePrefs({ view: mode })}
+                        className={
+                          "rounded p-1.5 transition-colors " +
+                          (prefs.view === mode
+                            ? "bg-ink text-paper"
+                            : "text-ink/50 hover:bg-ink/5 hover:text-ink")
+                        }
+                      >
+                        <Icon className="size-3.5" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -699,10 +886,7 @@ function DashboardAuthed({
                 <p className="text-sm text-ink/60">No forms match these filters.</p>
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuery("");
-                    setCategoryFilter(null);
-                  }}
+                  onClick={clearFilters}
                   className="mt-3 text-sm font-medium text-brand hover:underline"
                 >
                   Clear filters
@@ -714,7 +898,8 @@ function DashboardAuthed({
               <div className="space-y-8">
                 {groups.map((g) => (
                   <div key={g.key}>
-                    <div className="mb-2.5 flex items-baseline gap-2">
+                    <div className="mb-2.5 flex items-center gap-2">
+                      {g.key !== UNCATEGORIZED && <CategoryDot color={g.color} />}
                       <h3
                         className={
                           "text-sm font-medium " + (g.key === UNCATEGORIZED ? "text-ink/50" : "")
@@ -724,14 +909,26 @@ function DashboardAuthed({
                       </h3>
                       <span className="font-mono text-[11px] text-ink/40">{g.forms.length}</span>
                     </div>
-                    <FormCollection forms={g.forms} view={prefs.view} actions={formActions} />
+                    <FormCollection
+                      forms={g.forms}
+                      view={prefs.view}
+                      actions={formActions}
+                      sort={sort}
+                      onSort={(next) => setSearch({ sort: next === "newest" ? undefined : next })}
+                    />
                   </div>
                 ))}
               </div>
             )}
 
             {!isLoading && !isError && visibleForms.length > 0 && !groups && (
-              <FormCollection forms={visibleForms} view={prefs.view} actions={formActions} />
+              <FormCollection
+                forms={visibleForms}
+                view={prefs.view}
+                actions={formActions}
+                sort={sort}
+                onSort={(next) => setSearch({ sort: next === "newest" ? undefined : next })}
+              />
             )}
           </div>
         </section>
@@ -757,14 +954,21 @@ function DashboardAuthed({
 
       <CategoryDialog
         open={categoryTarget !== null}
+        userId={userId}
         formTitle={categoryTarget?.title ?? ""}
-        current={categoryTarget?.category ?? null}
-        categories={categories}
+        currentId={categoryTarget?.category_id ?? null}
         pending={setCategory.isPending}
-        onSave={(category) =>
-          categoryTarget && setCategory.mutate({ formId: categoryTarget.id, category })
+        onSave={(categoryId) =>
+          categoryTarget && setCategory.mutate({ formId: categoryTarget.id, categoryId })
         }
         onCancel={() => setCategoryTarget(null)}
+      />
+
+      <ManageCategoriesDialog
+        open={manageOpen}
+        onOpenChange={setManageOpen}
+        userId={userId}
+        formCounts={categoryCounts}
       />
 
       <ShareFormDialog
