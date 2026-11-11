@@ -733,13 +733,6 @@ function DashboardAuthed({
             {!isLoading && !isError && visibleForms.length > 0 && !groups && (
               <FormCollection forms={visibleForms} view={prefs.view} actions={formActions} />
             )}
-
-            {!isLoading && !isError && forms.length > 0 && categories.length === 0 && (
-              <p className="mt-4 text-center text-xs text-ink/45">
-                Tip: use <span className="font-medium text-ink/60">⋯ → Set category</span> to group
-                related forms.
-              </p>
-            )}
           </div>
         </section>
       </main>
