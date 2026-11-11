@@ -215,7 +215,20 @@ function PublicFormPage() {
         // Best-effort only.
       }
     },
-    onError: (e: Error) => {
+    onError: (e: Error & { code?: string }) => {
+      // 23505 comes from the one-response-per-respondent trigger: this network
+      // already answered the form. Show the already-responded screen and
+      // remember it locally so a reload goes straight there.
+      if (e.code === "23505") {
+        try {
+          localStorage.setItem(submittedKey, new Date().toISOString());
+          localStorage.removeItem(draftKey);
+        } catch {
+          // Best-effort only.
+        }
+        setAlreadySubmitted(true);
+        return;
+      }
       // An RLS violation here means the form stopped accepting responses
       // (closed/unpublished) after the respondent loaded the page. Surface
       // that instead of the raw Postgres policy error.
@@ -345,25 +358,9 @@ function PublicFormPage() {
           <CheckCircle2 className="size-14 text-brand" />
           <h1 className="font-display mt-4 text-3xl">You've already responded</h1>
           <p className="mt-2 max-w-sm text-ink/60">
-            Looks like this form was already submitted from this device.
+            This form accepts one response per person, and we already have yours. Thanks for taking
+            part!
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              try {
-                localStorage.removeItem(submittedKey);
-              } catch {
-                // Best-effort only.
-              }
-              setAlreadySubmitted(false);
-              setAnswers({});
-              setShowErrors(false);
-              startedAtRef.current = null;
-            }}
-            className="mt-6 inline-flex items-center justify-center rounded-md border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
-          >
-            Submit another response
-          </button>
         </div>
       </Shell>
     );
