@@ -159,8 +159,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const qc = useQueryClient();
   const navigate = useNavigate();
 
+  // Always refetch on open: the editor's lock depends on the live status,
+  // which may have changed elsewhere (dashboard, another tab).
   const formQ = useQuery({
     queryKey: ["form", formId],
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
@@ -176,6 +179,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
   const questionsQ = useQuery({
     queryKey: ["questions", formId],
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
@@ -227,9 +231,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
   // Initialize / re-sync draft from server when (a) we don't have one yet,
   // or (b) the server snapshot changed AND the user has no unsaved changes.
+  // Build the draft only from data fetched since this editor opened, never
+  // from an older cache entry.
+  const ready = formQ.isFetchedAfterMount && questionsQ.isFetchedAfterMount;
   useEffect(() => {
     const sf = formQ.data;
-    if (!sf) return;
+    if (!sf || !ready) return;
     const sq = questionsQ.data ?? [];
     const newSnap = toSnapshot(sf, sq);
     if (!snapshot) {
@@ -249,7 +256,10 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       // Keep user's edits; just update snapshot reference for future diffs.
       setSnapshot(newSnap);
     }
-  }, [formQ.data, questionsQ.data]);
+    // `snapshot === null` re-runs this whenever the draft is missing while data
+    // is present, so the editor can never sit on its loading skeleton.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formQ.data, questionsQ.data, ready, snapshot === null]);
 
   const visibleDraftQuestions = draftQuestions.filter((q) => !q.isDeleted);
 
@@ -589,7 +599,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  if (formQ.isLoading || (formQ.data && !snapshot)) {
+  if (!formQ.isError && (!ready || (formQ.data && !snapshot))) {
     return (
       <Shell>
         <Skeleton className="h-10 w-64" />

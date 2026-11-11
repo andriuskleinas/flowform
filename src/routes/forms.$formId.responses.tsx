@@ -78,7 +78,10 @@ function ResponsesPage() {
 
   const formQ = useQuery({
     enabled: !!user,
-    queryKey: ["form", formId],
+    // Own keys: the editor caches the full form/questions under ["form", id] /
+    // ["questions", id]; sharing those with these partial selects made the
+    // editor open with missing status/description/logic.
+    queryKey: ["responses-form", formId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
@@ -92,7 +95,7 @@ function ResponsesPage() {
 
   const questionsQ = useQuery({
     enabled: !!user,
-    queryKey: ["questions", formId],
+    queryKey: ["responses-questions", formId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
