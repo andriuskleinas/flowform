@@ -3,14 +3,14 @@ import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { setThemePref, useThemePref, type ThemePref } from "@/lib/theme";
+import { setThemePref, useSystemDark, useThemePref, type ThemePref } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { ProfileSection } from "./section";
 
-const OPTIONS: { value: ThemePref; label: string; hint: string; Icon: typeof Sun }[] = [
-  { value: "light", label: "Light", hint: "Ink on warm paper", Icon: Sun },
-  { value: "dark", label: "Dark", hint: "Easy on the eyes at night", Icon: Moon },
-  { value: "system", label: "System", hint: "Follows your device", Icon: Monitor },
+const OPTIONS: { value: ThemePref; label: string; Icon: typeof Sun }[] = [
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "dark", label: "Dark", Icon: Moon },
+  { value: "system", label: "System", Icon: Monitor },
 ];
 
 /** Tiny static mock of the app in a given scheme. */
@@ -46,6 +46,7 @@ function Preview({ scheme }: { scheme: "light" | "dark" }) {
 
 export function AppearanceSection({ userId }: { userId: string }) {
   const pref = useThemePref();
+  const systemDark = useSystemDark();
   const qc = useQueryClient();
 
   const choose = async (next: ThemePref) => {
@@ -65,10 +66,10 @@ export function AppearanceSection({ userId }: { userId: string }) {
     <ProfileSection
       id="appearance"
       title="Appearance"
-      description="Choose how Flowform looks for you. Saved to your account, so it follows you to other devices."
+      description="Saved to your account, so it follows you to other devices."
     >
       <div role="radiogroup" aria-label="Theme" className="grid gap-3 p-5 sm:grid-cols-3 md:p-6">
-        {OPTIONS.map(({ value, label, hint, Icon }) => {
+        {OPTIONS.map(({ value, label, Icon }) => {
           const active = pref === value;
           return (
             <button
@@ -77,6 +78,11 @@ export function AppearanceSection({ userId }: { userId: string }) {
               role="radio"
               aria-checked={active}
               onClick={() => choose(value)}
+              title={
+                value === "system"
+                  ? `Matches your device — currently ${systemDark ? "dark" : "light"}`
+                  : undefined
+              }
               className={cn(
                 "group overflow-hidden rounded-lg border text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-brand/40",
                 active ? "border-brand ring-1 ring-brand" : "border-hairline hover:border-ink/25",
@@ -85,28 +91,33 @@ export function AppearanceSection({ userId }: { userId: string }) {
               <div className="flex h-20 border-b border-hairline">
                 {value === "system" ? (
                   <>
-                    <div className="w-1/2 overflow-hidden">
-                      <Preview scheme="light" />
-                    </div>
-                    <div className="w-1/2 overflow-hidden">
-                      <Preview scheme="dark" />
-                    </div>
+                    {/* The half your device is using right now gets a "Now" tag. */}
+                    {(["light", "dark"] as const).map((scheme) => {
+                      const current = (scheme === "dark") === systemDark;
+                      return (
+                        <div key={scheme} className="relative w-1/2 overflow-hidden">
+                          <Preview scheme={scheme} />
+                          {current && (
+                            <span className="absolute right-1.5 top-1.5 rounded-sm bg-brand px-1 py-px font-mono text-[9px] font-medium uppercase leading-tight text-brand-foreground">
+                              Now
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </>
                 ) : (
                   <Preview scheme={value} />
                 )}
               </div>
-              <div className="flex items-start justify-between gap-2 px-3 py-2.5">
-                <div>
-                  <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
-                    <Icon className="size-3.5 text-ink/60" />
-                    {label}
-                  </p>
-                  <p className="mt-0.5 text-xs text-ink/50">{hint}</p>
-                </div>
+              <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+                <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-ink">
+                  <Icon className="size-3.5 shrink-0 text-ink/60" />
+                  {label}
+                </p>
                 <span
                   className={cn(
-                    "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+                    "flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
                     active ? "border-brand bg-brand text-brand-foreground" : "border-ink/20",
                   )}
                 >

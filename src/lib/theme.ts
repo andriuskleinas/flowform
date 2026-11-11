@@ -66,6 +66,17 @@ export function useThemePref(): ThemePref {
   return useSyncExternalStore(subscribe, readThemePref, () => "light");
 }
 
+function subscribeSystem(cb: () => void) {
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+
+/** Whether the device is currently in dark mode (live). */
+export function useSystemDark(): boolean {
+  return useSyncExternalStore(subscribeSystem, systemDark, () => false);
+}
+
 /** Keeps "system" live when the OS flips, and syncs other tabs. Mount once. */
 export function useThemeEffects() {
   const pref = useThemePref();
