@@ -82,7 +82,6 @@ export type Database = {
       }
       forms: {
         Row: {
-          category: string | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -94,7 +93,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          category?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -106,7 +104,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          category?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
