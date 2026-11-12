@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Question } from "@/components/question-render";
 import { parseFollowUps, type Answers } from "@/lib/form-utils";
 
-type ExportRow = {
+export type ExportRow = {
   submitted_at: string;
   started_at: string | null;
   answers: Answers;
@@ -22,16 +22,11 @@ function formatAnswer(value: Answers[string]): string {
 }
 
 /**
- * Fetches every response for a form (paged past PostgREST's per-request cap)
- * and triggers a browser download of a UTF-8 CSV: one row per response, one
- * column per question in form order. RLS restricts the fetch to the owner.
+ * Fetches every response for a form (paged past PostgREST's per-request cap),
+ * oldest first, optionally limited to one form version. RLS restricts the
+ * fetch to workspace members.
  */
-export async function exportResponsesCsv(
-  formId: string,
-  formTitle: string,
-  questions: Question[],
-  version: number | null = null,
-) {
+export async function fetchAllResponses(formId: string, version: number | null = null) {
   const pageSize = 1000;
   const rows: ExportRow[] = [];
   for (let from = 0; ; from += pageSize) {
@@ -47,6 +42,41 @@ export async function exportResponsesCsv(
     rows.push(...((data ?? []) as ExportRow[]));
     if (!data || data.length < pageSize) break;
   }
+  return rows;
+}
+
+/** A filesystem-safe slug of the form title for download names. */
+export function fileSlug(title: string) {
+  return (
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "form"
+  );
+}
+
+export function downloadBlob(blob: Blob, filename: string) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+/**
+ * Triggers a browser download of a UTF-8 CSV: one row per response, one
+ * column per question in form order.
+ */
+export async function exportResponsesCsv(
+  formId: string,
+  formTitle: string,
+  questions: Question[],
+  version: number | null = null,
+) {
+  const rows = await fetchAllResponses(formId, version);
 
   // Questions with follow-ups (enabled now, or present in older responses)
   // get two extra columns right after their answer column.
@@ -87,19 +117,7 @@ export async function exportResponsesCsv(
 
   // BOM so Excel opens UTF-8 (accented answers, emoji) correctly.
   const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
-  const slug =
-    formTitle
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "form";
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${slug}-responses.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(a.href);
+  downloadBlob(blob, `${fileSlug(formTitle)}-responses.csv`);
 
   return rows.length;
 }
