@@ -78,7 +78,7 @@ function readPrefs(): DashboardPrefs {
     if (!raw) return fallback;
     const p = JSON.parse(raw) as Partial<DashboardPrefs>;
     return {
-      view: p.view === "grid" ? "grid" : "list",
+      view: p.view === "grid" || p.view === "board" ? p.view : "list",
       grouped: p.grouped === true,
     };
   } catch {
@@ -255,7 +255,13 @@ function DashboardAuthed({
   );
 
   const groups = useMemo(() => {
-    if (!prefs.grouped || categoryFilter !== null || categories.length === 0) return null;
+    if (
+      !prefs.grouped ||
+      prefs.view === "board" ||
+      categoryFilter !== null ||
+      categories.length === 0
+    )
+      return null;
     const out = categories.map((c) => ({
       key: c.id,
       label: c.name,
@@ -269,7 +275,7 @@ function DashboardAuthed({
       forms: visibleForms.filter((f) => !f.category_id),
     });
     return out.filter((g) => g.forms.length > 0);
-  }, [prefs.grouped, categoryFilter, categories, visibleForms]);
+  }, [prefs.grouped, prefs.view, categoryFilter, categories, visibleForms]);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", userId],

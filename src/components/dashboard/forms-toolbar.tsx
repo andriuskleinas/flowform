@@ -2,13 +2,11 @@ import {
   ListFilter,
   LayoutGrid,
   List,
-  Search,
+  SquareKanban,
   Settings2,
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
-
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -71,27 +69,12 @@ export function FormsToolbar({
   const activity: ActivityFilter = search.activity ?? "any";
   const sort: SortKey = search.sort ?? DEFAULT_SORT;
   const cat = search.cat ?? null;
-  const query = search.q ?? "";
   const activeFilters = (cat ? 1 : 0) + (activity !== "any" ? 1 : 0);
 
   const catLabel =
     cat === UNCATEGORIZED ? "Uncategorized" : categories.find((c) => c.id === cat)?.name;
   const catColor = categories.find((c) => c.id === cat)?.color ?? null;
   const activityLabel = ACTIVITY_OPTIONS.find((o) => o.key === activity)?.label;
-
-  // "/" focuses search, the way most list-heavy tools do.
-  const searchRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement | null;
-      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      e.preventDefault();
-      searchRef.current?.focus();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   return (
     <div>
@@ -133,39 +116,6 @@ export function FormsToolbar({
         </div>
 
         <div className="flex items-center gap-2 pb-2.5">
-          <div className="relative min-w-0 flex-1 md:flex-none">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink/40" />
-            <input
-              ref={searchRef}
-              type="search"
-              value={query}
-              onChange={(e) => setSearch({ q: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setSearch({ q: undefined });
-                  e.currentTarget.blur();
-                }
-              }}
-              placeholder="Search forms"
-              aria-label="Search forms"
-              className="h-8 w-full rounded-md border border-hairline bg-card pl-8 pr-7 text-sm outline-none transition-[width] placeholder:text-ink/40 focus:border-brand/40 focus:ring-2 focus:ring-brand/15 md:w-48 md:focus:w-60 [&::-webkit-search-cancel-button]:hidden"
-            />
-            {query ? (
-              <button
-                type="button"
-                aria-label="Clear search"
-                onClick={() => setSearch({ q: undefined })}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-ink/40 hover:text-ink"
-              >
-                <X className="size-3.5" />
-              </button>
-            ) : (
-              <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-hairline px-1 font-mono text-[10px] text-ink/35 md:block">
-                /
-              </kbd>
-            )}
-          </div>
-
           <DropdownMenu>
             <DropdownMenuTrigger className={`${control} ${activeFilters ? engaged : idle}`}>
               <ListFilter className="size-3.5" />
@@ -265,7 +215,7 @@ export function FormsToolbar({
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
-              {categories.length > 0 && (
+              {categories.length > 0 && view !== "board" && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuCheckboxItem
@@ -289,6 +239,7 @@ export function FormsToolbar({
               [
                 { mode: "list", label: "List", Icon: List },
                 { mode: "grid", label: "Cards", Icon: LayoutGrid },
+                { mode: "board", label: "Board", Icon: SquareKanban },
               ] as const
             ).map(({ mode, label, Icon }) => (
               <button
@@ -311,7 +262,7 @@ export function FormsToolbar({
         </div>
       </div>
 
-      {(activeFilters > 0 || query.trim()) && (
+      {activeFilters > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {cat && catLabel && (
             <Chip onRemove={() => setSearch({ cat: undefined })} label="Category">
@@ -322,11 +273,6 @@ export function FormsToolbar({
           {activity !== "any" && (
             <Chip onRemove={() => setSearch({ activity: undefined })} label="Activity">
               {activityLabel}
-            </Chip>
-          )}
-          {query.trim() && (
-            <Chip onRemove={() => setSearch({ q: undefined })} label="Search">
-              “{query.trim()}”
             </Chip>
           )}
           <button

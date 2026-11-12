@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useState, type DragEvent } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -44,7 +45,7 @@ export type DashboardForm = {
   views_90d: number;
 };
 
-export type ViewMode = "list" | "grid";
+export type ViewMode = "list" | "grid" | "board";
 
 export type FormActionHandlers = {
   /** Role gates (see lib/workspace): editors+ change forms, admins+ delete. */
@@ -88,6 +89,9 @@ export function FormsView({
   /** List view: hide the column header (e.g. on every group after the first). */
   showHeader?: boolean;
 }) {
+  if (view === "board") {
+    return <BoardView forms={forms} actions={actions} />;
+  }
   if (view === "grid") {
     return (
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -129,6 +133,190 @@ export function FormsView({
         ))}
       </ul>
     </div>
+  );
+}
+
+/* -------------------------------- Board ---------------------------------- */
+
+const BOARD_COLUMNS: { status: FormStatus; label: string; empty: string }[] = [
+  { status: "draft", label: "Draft", empty: "No drafts" },
+  { status: "published", label: "Live", empty: "Nothing live right now" },
+  { status: "closed", label: "Closed", empty: "No closed forms" },
+];
+
+/**
+ * Lifecycle moves a drag may make. Live forms are locked against edits, so
+ * nothing goes back to draft; a draft goes live through the publish flow.
+ */
+function canMove(from: FormStatus, to: FormStatus) {
+  if (from === to) return false;
+  if (to === "draft") return false;
+  if (from === "draft") return to === "published";
+  return true; // published <-> closed
+}
+
+const DRAG_TYPE = "application/x-flowform-form";
+
+function BoardView({ forms, actions }: { forms: DashboardForm[]; actions: FormActionHandlers }) {
+  const [dragging, setDragging] = useState<DashboardForm | null>(null);
+  const [over, setOver] = useState<FormStatus | null>(null);
+
+  const drop = (to: FormStatus) => {
+    const f = dragging;
+    setDragging(null);
+    setOver(null);
+    if (!f || !canMove(f.status, to)) return;
+    if (f.status === "draft") {
+      // Empty drafts can't be published; the publish flow handles the rest.
+      if (f.question_count > 0) actions.onShare(f);
+      return;
+    }
+    actions.onSetStatus(f, to);
+  };
+
+  return (
+    <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+      <div className="grid min-w-[46rem] grid-cols-3 gap-3">
+        {BOARD_COLUMNS.map((col) => {
+          const items = forms.filter((f) => f.status === col.status);
+          const droppable =
+            dragging !== null &&
+            canMove(dragging.status, col.status) &&
+            !(dragging.status === "draft" && dragging.question_count === 0);
+          const onDragOver = (e: DragEvent) => {
+            if (!droppable) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            if (over !== col.status) setOver(col.status);
+          };
+          return (
+            <section
+              key={col.status}
+              aria-label={`${col.label} forms`}
+              onDragOver={onDragOver}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                drop(col.status);
+              }}
+              className={
+                "flex min-h-[16rem] flex-col rounded-xl border bg-surface/60 p-2 transition-colors " +
+                (over === col.status
+                  ? "border-brand/50 bg-brand/[0.05]"
+                  : droppable
+                    ? "border-dashed border-ink/25"
+                    : "border-hairline")
+              }
+            >
+              <header className="flex items-center justify-between px-2 pb-2.5 pt-1.5">
+                <span className="text-xs">
+                  <StatusLabel status={col.status} />
+                </span>
+                <span className="font-mono text-[11px] tabular-nums text-ink/40">
+                  {items.length}
+                </span>
+              </header>
+              <ul className="flex flex-1 flex-col gap-2">
+                {items.map((f) => (
+                  <BoardCard
+                    key={f.id}
+                    form={f}
+                    actions={actions}
+                    dragging={dragging?.id === f.id}
+                    onDragStart={() => setDragging(f)}
+                    onDragEnd={() => {
+                      setDragging(null);
+                      setOver(null);
+                    }}
+                  />
+                ))}
+                {items.length === 0 && (
+                  <li className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-hairline px-3 py-8 text-center text-xs text-ink/40">
+                    {droppable
+                      ? `Drop to ${col.status === "published" ? "publish" : "close"}`
+                      : col.empty}
+                  </li>
+                )}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function BoardCard({
+  form: f,
+  actions,
+  dragging,
+  onDragStart,
+  onDragEnd,
+}: {
+  form: DashboardForm;
+  actions: FormActionHandlers;
+  dragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+}) {
+  const rate = completionRate(f);
+  const draggable = actions.canEdit;
+  return (
+    <li
+      draggable={draggable}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData(DRAG_TYPE, f.id);
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      className={
+        "group relative rounded-lg border border-hairline bg-card px-3.5 py-3 transition-[border-color,box-shadow,opacity] focus-within:border-ink/30 hover:border-ink/20 hover:shadow-[0_1px_2px_rgb(0_0_0/0.04),0_4px_12px_-4px_rgb(0_0_0/0.08)] " +
+        (draggable ? "cursor-grab active:cursor-grabbing " : "") +
+        (dragging ? "opacity-40" : "")
+      }
+    >
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="line-clamp-2 min-w-0 text-sm font-medium leading-snug">
+          <Link
+            to={titleHref(actions)}
+            params={{ formId: f.id }}
+            draggable={false}
+            className={stretchedLink}
+          >
+            {f.title}
+          </Link>
+        </h3>
+        <div className="relative z-10 -mr-1.5 -mt-1 shrink-0">
+          <FormMenu form={f} actions={actions} />
+        </div>
+      </div>
+      {f.category && (
+        <div className="mt-1.5 text-xs">
+          <CategoryButton form={f} actions={actions} />
+        </div>
+      )}
+      <div className="mt-3 flex items-center justify-between gap-2 font-mono text-[11px] text-ink/45">
+        <span className="truncate">
+          {f.response_count > 0 ? (
+            <>
+              <ResponsesLink form={f} className="text-ink/70" />{" "}
+              {f.response_count === 1 ? "response" : "responses"}
+              {rate !== null && ` · ${formatRate(rate)}`}
+            </>
+          ) : (
+            plural(f.question_count, "question")
+          )}
+        </span>
+        {f.responses_7d > 0 ? (
+          <span className="shrink-0 text-mint">+{f.responses_7d} wk</span>
+        ) : (
+          <span className="shrink-0">{timeAgo(f.updated_at)}</span>
+        )}
+      </div>
+    </li>
   );
 }
 
