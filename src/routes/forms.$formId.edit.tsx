@@ -14,6 +14,7 @@ import {
   Share2,
   Trash2,
   X,
+  Sparkles,
 } from "lucide-react";
 import {
   Dialog,
@@ -118,7 +119,9 @@ type DraftFormState = {
 
 function snapshotKey(
   form: DraftFormState,
-  questions: Array<Pick<Question, "id" | "type" | "label" | "options" | "required" | "logic">>,
+  questions: Array<
+    Pick<Question, "id" | "type" | "label" | "options" | "required" | "logic" | "ai_follow_up">
+  >,
 ) {
   return JSON.stringify({
     title: form.title.trim(),
@@ -132,6 +135,7 @@ function snapshotKey(
       options: q.options ?? null,
       required: q.required,
       logic: q.logic ?? null,
+      ai_follow_up: !!q.ai_follow_up,
     })),
   });
 }
@@ -190,7 +194,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position, required, logic")
+        .select("id, form_id, type, label, options, position, required, logic, ai_follow_up")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
@@ -306,6 +310,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       if (v.type !== s.type) return true;
       if (v.label !== s.label) return true;
       if (v.required !== s.required) return true;
+      if (!!v.ai_follow_up !== !!s.ai_follow_up) return true;
       if (!questionOptionsEqual(v.options ?? null, s.options ?? null)) return true;
       if (!logicEqual(v.logic, s.logic)) return true;
     }
@@ -332,12 +337,21 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       qs.map((q) =>
         q.id === id && q.type !== type
           ? // A type change invalidates choice-keyed jump rules along with options.
-            { ...q, type, options: defaultOptionsForType(type), logic: null }
+            {
+              ...q,
+              type,
+              options: defaultOptionsForType(type),
+              logic: null,
+              // Follow-ups only exist for open-text questions.
+              ai_follow_up: (type === "text" || type === "long_text") && !!q.ai_follow_up,
+            }
           : q,
       ),
     );
   const setDraftRequired = (id: string, required: boolean) =>
     setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, required } : q)));
+  const setDraftAiFollowUp = (id: string, ai_follow_up: boolean) =>
+    setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, ai_follow_up } : q)));
   const setDraftLogic = (id: string, logic: QuestionLogic) =>
     setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, logic } : q)));
   const addDraftQuestion = (type: QuestionType) =>
@@ -462,6 +476,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         options: q.options ?? null,
         required: q.required,
         logic: sanitizeLogic(q, i),
+        ai_follow_up: !!q.ai_follow_up,
       }));
 
       const { error } = await supabase.rpc("save_form_editor", {
@@ -940,6 +955,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                       onChangeOptions={(options) => setDraftOptions(q.id, options)}
                       onChangeType={(type) => setDraftType(q.id, type)}
                       onChangeRequired={(required) => setDraftRequired(q.id, required)}
+                      conversational={draftForm.display_mode === "conversational"}
+                      onChangeAiFollowUp={(on) => setDraftAiFollowUp(q.id, on)}
                       onChangeLogic={(logic) => setDraftLogic(q.id, logic)}
                       onDuplicate={() => duplicateDraftQuestion(q.id)}
                       onDelete={() => removeDraftQuestion(q.id)}
@@ -1208,6 +1225,8 @@ function SortableQuestionCard({
   onChangeType,
   onChangeRequired,
   onChangeLogic,
+  conversational,
+  onChangeAiFollowUp,
   onDuplicate,
   onDelete,
   onMoveUp,
@@ -1221,6 +1240,8 @@ function SortableQuestionCard({
   onChangeOptions: (options: QuestionOptions) => void;
   onChangeType: (type: QuestionType) => void;
   onChangeRequired: (required: boolean) => void;
+  conversational: boolean;
+  onChangeAiFollowUp: (on: boolean) => void;
   onChangeLogic: (logic: QuestionLogic) => void;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -1407,7 +1428,31 @@ function SortableQuestionCard({
         <Label htmlFor={`q-${question.id}-required`} className="text-xs font-normal">
           Required
         </Label>
+        {(question.type === "text" || question.type === "long_text") && (
+          <>
+            <span className="mx-2 h-4 w-px bg-hairline" aria-hidden />
+            <Switch
+              id={`q-${question.id}-ai-follow-up`}
+              checked={!!question.ai_follow_up}
+              onCheckedChange={onChangeAiFollowUp}
+            />
+            <Label
+              htmlFor={`q-${question.id}-ai-follow-up`}
+              className="inline-flex items-center gap-1 text-xs font-normal"
+            >
+              <Sparkles className="size-3.5 text-brand" aria-hidden />
+              AI follow-up
+            </Label>
+          </>
+        )}
       </div>
+      {!!question.ai_follow_up && (
+        <p className="mt-2 text-xs text-ink/50">
+          {conversational
+            ? "When an answer is short or vague, Claude asks one optional follow-up question before moving on."
+            : "Follow-ups are asked in conversational mode only. Switch the form's display mode to use them."}
+        </p>
+      )}
     </li>
   );
 }

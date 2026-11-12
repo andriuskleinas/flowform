@@ -25,6 +25,8 @@ export type Question = {
   required: boolean;
   /** Optional — routes that don't need jump rules may omit it from their select. */
   logic?: QuestionLogic;
+  /** Conversational mode asks one AI follow-up on thin text answers. */
+  ai_follow_up?: boolean;
 };
 
 type Props = {

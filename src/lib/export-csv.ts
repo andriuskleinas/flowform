@@ -1,11 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Question } from "@/components/question-render";
-import type { Answers } from "@/lib/form-utils";
+import { parseFollowUps, type Answers } from "@/lib/form-utils";
 
 type ExportRow = {
   submitted_at: string;
   started_at: string | null;
   answers: Answers;
+  follow_ups: unknown;
 };
 
 function csvEscape(value: string): string {
@@ -30,7 +31,7 @@ export async function exportResponsesCsv(formId: string, formTitle: string, ques
   for (let from = 0; ; from += pageSize) {
     const { data, error } = await supabase
       .from("responses")
-      .select("submitted_at, started_at, answers")
+      .select("submitted_at, started_at, answers, follow_ups")
       .eq("form_id", formId)
       .order("submitted_at", { ascending: true })
       .range(from, from + pageSize - 1);
@@ -39,10 +40,24 @@ export async function exportResponsesCsv(formId: string, formTitle: string, ques
     if (!data || data.length < pageSize) break;
   }
 
-  const header = ["Submitted at", "Fill time (s)", ...questions.map((q) => q.label)];
+  // Questions with follow-ups (enabled now, or present in older responses)
+  // get two extra columns right after their answer column.
+  const parsed = rows.map((r) => parseFollowUps(r.follow_ups));
+  const withFollowUps = new Set(questions.filter((q) => q.ai_follow_up).map((q) => q.id));
+  for (const f of parsed) for (const qid of Object.keys(f)) withFollowUps.add(qid);
+
+  const header = [
+    "Submitted at",
+    "Fill time (s)",
+    ...questions.flatMap((q) =>
+      withFollowUps.has(q.id)
+        ? [q.label, `${q.label} — AI follow-up`, `${q.label} — follow-up answer`]
+        : [q.label],
+    ),
+  ];
   const lines = [header.map(csvEscape).join(",")];
 
-  for (const r of rows) {
+  for (const [i, r] of rows.entries()) {
     const fillSeconds =
       r.started_at != null
         ? Math.round((new Date(r.submitted_at).getTime() - new Date(r.started_at).getTime()) / 1000)
@@ -50,7 +65,12 @@ export async function exportResponsesCsv(formId: string, formTitle: string, ques
     const cells = [
       new Date(r.submitted_at).toISOString(),
       fillSeconds != null && fillSeconds >= 0 ? String(fillSeconds) : "",
-      ...questions.map((q) => formatAnswer(r.answers?.[q.id])),
+      ...questions.flatMap((q) => {
+        const answer = formatAnswer(r.answers?.[q.id]);
+        if (!withFollowUps.has(q.id)) return [answer];
+        const fu = parsed[i][q.id];
+        return [answer, fu?.question ?? "", fu?.answer ?? ""];
+      }),
     ];
     lines.push(cells.map(csvEscape).join(","));
   }

@@ -12,10 +12,12 @@ import {
   validateAnswerLength,
   MAX_ANSWER_LENGTH,
   type Answers,
+  type FollowUps,
   type DisplayMode,
   type FormStatus,
 } from "@/lib/form-utils";
 import { getPublicFormMeta } from "@/lib/form-meta";
+import { generateFollowUp } from "@/lib/ai-follow-up";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionRender, type Question } from "@/components/question-render";
 import { ConversationalForm } from "@/components/conversational-form";
@@ -67,6 +69,7 @@ function PublicFormPage() {
   const { formId } = Route.useParams();
   const { user, loading: authLoading } = useAuth();
   const [answers, setAnswers] = useState<Answers>({});
+  const [followUps, setFollowUps] = useState<FollowUps>({});
   const [submitted, setSubmitted] = useState(false);
   // Only surface missing-required errors after a submit attempt.
   const [showErrors, setShowErrors] = useState(false);
@@ -122,9 +125,16 @@ function PublicFormPage() {
       if (localStorage.getItem(submittedKey)) setAlreadySubmitted(true);
       const raw = localStorage.getItem(draftKey);
       if (raw) {
-        const parsed = JSON.parse(raw) as { answers?: Answers; startedAt?: string };
+        const parsed = JSON.parse(raw) as {
+          answers?: Answers;
+          followUps?: FollowUps;
+          startedAt?: string;
+        };
         if (parsed?.answers && typeof parsed.answers === "object") {
           setAnswers(parsed.answers);
+          if (parsed.followUps && typeof parsed.followUps === "object") {
+            setFollowUps(parsed.followUps);
+          }
           if (typeof parsed.startedAt === "string") startedAtRef.current = parsed.startedAt;
         }
       }
@@ -137,11 +147,32 @@ function PublicFormPage() {
   useEffect(() => {
     if (!restoredRef.current || submitted || Object.keys(answers).length === 0) return;
     try {
-      localStorage.setItem(draftKey, JSON.stringify({ answers, startedAt: startedAtRef.current }));
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({ answers, followUps, startedAt: startedAtRef.current }),
+      );
     } catch {
       // Best-effort only.
     }
-  }, [answers, draftKey, submitted]);
+  }, [answers, followUps, draftKey, submitted]);
+
+  // Claim a rate-limited ticket, then let the server function ask Claude.
+  // Anything slow or failing resolves to null so the respondent just moves on.
+  const requestFollowUp = async (question: Question, answer: string) => {
+    const attempt = async () => {
+      const { data: ticket, error } = await supabase.rpc("request_ai_follow_up", {
+        p_form_id: formId,
+        p_question_id: question.id,
+      });
+      if (error || !ticket) return null;
+      const { followUp } = await generateFollowUp({
+        data: { ticket, answer: answer.slice(0, 2000) },
+      });
+      return followUp;
+    };
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
+    return Promise.race([attempt().catch(() => null), timeout]);
+  };
 
   const formQ = useQuery({
     queryKey: ["public-form", formId],
@@ -161,7 +192,7 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position, required, logic")
+        .select("id, form_id, type, label, options, position, required, logic, ai_follow_up")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
@@ -198,9 +229,23 @@ function PublicFormPage() {
       // Owner previews aren't recorded: show the success screen without saving
       // a response, so testing your own published form keeps stats clean.
       if (!!user && user.id === form?.user_id) return;
-      const { error } = await supabase
-        .from("responses")
-        .insert({ form_id: formId, answers, started_at: startedAtRef.current });
+      // Keep only answered follow-ups for questions still on the respondent's path.
+      const qs = questionsQ.data ?? [];
+      const path = new Set(computeVisiblePath(qs, answers).map((i) => qs[i].id));
+      const answeredFollowUps = Object.fromEntries(
+        Object.entries(followUps)
+          .filter(([qid, f]) => path.has(qid) && f.answer.trim())
+          .map(([qid, f]) => [
+            qid,
+            { question: f.question, answer: f.answer.trim().slice(0, MAX_ANSWER_LENGTH) },
+          ]),
+      );
+      const { error } = await supabase.from("responses").insert({
+        form_id: formId,
+        answers,
+        started_at: startedAtRef.current,
+        follow_ups: Object.keys(answeredFollowUps).length > 0 ? answeredFollowUps : null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -387,6 +432,16 @@ function PublicFormPage() {
               setAnswers((a) => ({ ...a, [qid]: v }));
             }}
             onShowQuestion={(qid) => trackEvent("reach", qid)}
+            followUps={followUps}
+            onFollowUpChange={(qid, entry) =>
+              setFollowUps((f) => {
+                const next = { ...f };
+                if (entry) next[qid] = entry;
+                else delete next[qid];
+                return next;
+              })
+            }
+            requestFollowUp={requestFollowUp}
             submitting={submit.isPending}
             onSubmit={() => {
               if (submit.isPending) return;

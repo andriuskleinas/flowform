@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import type { Database } from "@/integrations/supabase/types";
+import { parseFollowUps } from "@/lib/form-utils";
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ export const summarizeResponses = createServerFn({ method: "POST" })
 
     const { data: responses, error: rErr } = await supabase
       .from("responses")
-      .select("answers")
+      .select("answers, follow_ups")
       .eq("form_id", data.formId)
       .order("submitted_at", { ascending: false })
       .limit(1000);
@@ -99,12 +100,18 @@ export const summarizeResponses = createServerFn({ method: "POST" })
     const byQuestion = questions.map((q) => ({ label: q.label, answers: [] as string[] }));
     outer: for (const r of responses ?? []) {
       const answers = (r.answers ?? {}) as Record<string, unknown>;
+      const followUps = parseFollowUps(r.follow_ups);
       for (let i = 0; i < questions.length; i++) {
         const v = answers[questions[i].id];
         if (typeof v !== "string") continue;
         const trimmed = v.trim();
         if (!trimmed) continue;
-        const snippet = trimmed.slice(0, 500);
+        // An AI follow-up reply is part of the same answer: append it inline.
+        const fu = followUps[questions[i].id];
+        const combined = fu
+          ? `${trimmed} [follow-up "${fu.question}": ${fu.answer.trim()}]`
+          : trimmed;
+        const snippet = combined.slice(0, 800);
         byQuestion[i].answers.push(snippet);
         collected++;
         chars += snippet.length;
@@ -181,5 +188,7 @@ The JSON object must have exactly these fields:
 - "sentiment": "positive" | "mixed" | "negative" — the overall tone of the answers.
 - "themes": array of 2-6 objects, each { "name": string (short label, max 6 words), "detail": string (one sentence: what respondents said about it, roughly how common it was) }. Order from most to least prominent.
 - "quotes": array of 0-4 short verbatim quotes (max ~25 words each) that best illustrate the themes. Only use text that actually appears in the answers; trim but never rewrite.
+
+Some answers end with a bracketed AI follow-up question and the respondent's reply to it; treat that reply as part of the same respondent's answer.
 
 If the answers are too few or too thin for a confident analysis, say so honestly in "summary" and return fewer themes.`;

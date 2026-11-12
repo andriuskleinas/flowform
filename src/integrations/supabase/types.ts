@@ -156,6 +156,7 @@ export type Database = {
       }
       questions: {
         Row: {
+          ai_follow_up: boolean
           created_at: string
           form_id: string
           id: string
@@ -167,6 +168,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          ai_follow_up?: boolean
           created_at?: string
           form_id: string
           id?: string
@@ -178,6 +180,7 @@ export type Database = {
           type: string
         }
         Update: {
+          ai_follow_up?: boolean
           created_at?: string
           form_id?: string
           id?: string
@@ -230,6 +233,7 @@ export type Database = {
       responses: {
         Row: {
           answers: Json
+          follow_ups: Json | null
           form_id: string
           id: string
           started_at: string | null
@@ -237,6 +241,7 @@ export type Database = {
         }
         Insert: {
           answers: Json
+          follow_ups?: Json | null
           form_id: string
           id?: string
           started_at?: string | null
@@ -244,6 +249,7 @@ export type Database = {
         }
         Update: {
           answers?: Json
+          follow_ups?: Json | null
           form_id?: string
           id?: string
           started_at?: string | null
@@ -320,6 +326,14 @@ export type Database = {
         Args: { p_invite_id: string }
         Returns: string
       }
+      consume_ai_follow_up: {
+        Args: { p_ticket: string }
+        Returns: {
+          form_description: string
+          form_title: string
+          question_label: string
+        }[]
+      }
       delete_my_account: { Args: never; Returns: undefined }
       get_my_invites: {
         Args: never
@@ -379,6 +393,10 @@ export type Database = {
       get_form_analytics: {
         Args: { p_days?: number; p_form_id: string }
         Returns: Json
+      }
+      request_ai_follow_up: {
+        Args: { p_form_id: string; p_question_id: string }
+        Returns: string
       }
       record_form_event: {
         Args: { p_form_id: string; p_kind: string; p_question_id?: string }

@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 
 import { QuestionRender, type Question } from "@/components/question-render";
+import { Textarea } from "@/components/ui/textarea";
 import {
   getChoiceConfig,
   getRatingMax,
   isAnswered,
   resolveNextIndex,
   computeVisiblePath,
+  MAX_ANSWER_LENGTH,
   type Answers,
   type AnswerValue,
+  type FollowUp,
+  type FollowUps,
 } from "@/lib/form-utils";
 
 /**
@@ -18,6 +22,12 @@ import {
  * records the answer — respondents always confirm with OK/Enter, so a
  * misclick can be corrected before moving on. Owns only navigation state —
  * answers live in the parent so persistence and submission stay in one place.
+ *
+ * AI follow-ups: when a text question opts in and `requestFollowUp` is given,
+ * advancing first asks Claude whether the answer deserves one probing
+ * question. If so, a follow-up step appears before the next question. It is
+ * always optional, asked at most once per answer, and any failure or timeout
+ * simply moves on.
  */
 export function ConversationalForm({
   questions,
@@ -25,6 +35,9 @@ export function ConversationalForm({
   onAnswer,
   onSubmit,
   onShowQuestion,
+  followUps = {},
+  onFollowUpChange,
+  requestFollowUp,
   submitting = false,
   preview = false,
 }: {
@@ -34,6 +47,12 @@ export function ConversationalForm({
   onSubmit: () => void;
   /** Fired whenever a question becomes the visible step (funnel analytics). */
   onShowQuestion?: (questionId: string) => void;
+  /** AI follow-ups asked so far, keyed by question id (owned by the parent). */
+  followUps?: FollowUps;
+  /** Set (or with null, drop) the follow-up for a question. */
+  onFollowUpChange?: (questionId: string, entry: FollowUp | null) => void;
+  /** Resolves to a follow-up question, or null for none. Omit to disable follow-ups. */
+  requestFollowUp?: (question: Question, answer: string) => Promise<string | null>;
   submitting?: boolean;
   /** Preview mode disables the final submit. */
   preview?: boolean;
@@ -45,6 +64,13 @@ export function ConversationalForm({
   // In preview there's no real submission — clicking Submit shows a "preview
   // complete" confirmation instead of a dead, disabled button.
   const [previewSubmitted, setPreviewSubmitted] = useState(false);
+  // Index of the question whose AI follow-up is on screen (index stays put).
+  const [followUpFor, setFollowUpFor] = useState<number | null>(null);
+  // Waiting on Claude to decide whether to ask a follow-up.
+  const [thinking, setThinking] = useState(false);
+  // question id → the answer we already asked Claude about, so re-advancing
+  // with the same answer never triggers a second call.
+  const askedRef = useRef<Map<string, string>>(new Map());
 
   // Restored drafts skip ahead to the first unanswered question on the path.
   const fastForwarded = useRef(false);
@@ -79,22 +105,64 @@ export function ConversationalForm({
   const answeredCount = questions.filter((q) => isAnswered(q, answers[q.id])).length;
   const progress = atSubmit ? 100 : Math.round((answeredCount / Math.max(total, 1)) * 100);
 
-  const advanceFrom = (idx: number, value: AnswerValue | undefined) => {
+  const goNext = (idx: number, value: AnswerValue | undefined) => {
+    setHistory((h) => [...h, idx]);
+    setIndex(resolveNextIndex(questions, idx, value));
+  };
+
+  const advanceFrom = async (idx: number, value: AnswerValue | undefined) => {
+    if (thinking) return;
     const q = questions[idx];
     if (q.required && !isAnswered(q, value)) {
       setError(true);
       return;
     }
     setError(false);
-    setHistory((h) => [...h, idx]);
-    setIndex(resolveNextIndex(questions, idx, value));
+
+    const text = typeof value === "string" ? value.trim() : "";
+    if (q.ai_follow_up && requestFollowUp && text) {
+      // Already asked for this answer (e.g. the respondent came back): show it again.
+      if (followUps[q.id]) {
+        setFollowUpFor(idx);
+        return;
+      }
+      if (askedRef.current.get(q.id) !== text) {
+        askedRef.current.set(q.id, text);
+        setThinking(true);
+        const question = await requestFollowUp(q, text).catch(() => null);
+        setThinking(false);
+        if (question) {
+          onFollowUpChange?.(q.id, { question, answer: "" });
+          setFollowUpFor(idx);
+          return;
+        }
+      }
+    }
+    goNext(idx, value);
   };
 
   const advance = () => {
-    if (current) advanceFrom(index, answers[current.id]);
+    if (current) void advanceFrom(index, answers[current.id]);
+  };
+
+  const followUpQuestion = followUpFor !== null ? questions[followUpFor] : null;
+  const followUp = followUpQuestion ? followUps[followUpQuestion.id] : undefined;
+  const showFollowUp = !!followUpQuestion && !!followUp && !atSubmit;
+
+  const advanceFollowUp = () => {
+    if (followUpFor === null) return;
+    const idx = followUpFor;
+    setFollowUpFor(null);
+    goNext(idx, answers[questions[idx].id]);
   };
 
   const back = () => {
+    if (thinking) return;
+    if (followUpFor !== null) {
+      // Back from a follow-up returns to the question it followed.
+      setFollowUpFor(null);
+      return;
+    }
     setError(false);
     setPreviewSubmitted(false);
     setHistory((h) => {
@@ -108,6 +176,9 @@ export function ConversationalForm({
     if (!current) return;
     setError(false);
     onAnswer(current.id, value);
+    // Editing the original answer invalidates its follow-up; a fresh one may
+    // be asked when they advance again.
+    if (followUps[current.id]) onFollowUpChange?.(current.id, null);
   };
 
   // A window-level listener (rather than onKeyDown on the container) so Enter
@@ -116,6 +187,18 @@ export function ConversationalForm({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
+      if (thinking) {
+        if (e.key === "Enter") e.preventDefault();
+        return;
+      }
+      if (showFollowUp) {
+        // Plain Enter answers the follow-up; Shift+Enter makes a newline.
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          advanceFollowUp();
+        }
+        return;
+      }
       if (e.key !== "Enter") {
         // Letter / number shortcuts, matching the lettered options on screen.
         // Never while the respondent is typing into a field.
@@ -169,7 +252,67 @@ export function ConversationalForm({
         />
       </div>
 
-      {!atSubmit && current && (
+      {showFollowUp && followUpQuestion && followUp && (
+        <div
+          key={`follow-up-${followUpQuestion.id}`}
+          className="mt-10 motion-safe:animate-[demo-step-in_0.4s_ease-out_both]"
+        >
+          <button
+            type="button"
+            onClick={back}
+            className="mb-6 inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 -ml-2 text-sm text-ink/55 transition-colors hover:bg-ink/5 hover:text-ink"
+          >
+            <ArrowLeft className="size-4" /> Back
+          </button>
+
+          <p className="eyebrow inline-flex items-center gap-1.5">
+            <Sparkles className="size-3.5 text-brand" aria-hidden />
+            <span className="text-brand">Follow-up</span>
+            <span className="text-ink/40">· Optional</span>
+          </p>
+
+          <p className="mt-4 line-clamp-2 border-l-2 border-hairline pl-3 text-sm text-ink/50">
+            {followUpQuestion.label}
+            <span className="mt-0.5 block text-ink/70">
+              “{String(answers[followUpQuestion.id] ?? "")}”
+            </span>
+          </p>
+
+          <label
+            htmlFor="follow-up-answer"
+            className="mt-6 block font-display text-[1.6rem] leading-[1.1] text-balance text-ink md:text-[2.1rem]"
+          >
+            {followUp.question}
+          </label>
+          <Textarea
+            id="follow-up-answer"
+            autoFocus
+            rows={3}
+            maxLength={MAX_ANSWER_LENGTH}
+            value={followUp.answer}
+            onChange={(e) =>
+              onFollowUpChange?.(followUpQuestion.id, { ...followUp, answer: e.target.value })
+            }
+            placeholder="Type your answer…"
+            className="mt-6 resize-none text-base"
+          />
+
+          <div className="mt-8 flex items-center gap-4">
+            <button
+              type="button"
+              onClick={advanceFollowUp}
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-brand px-6 text-[15px] font-medium text-brand-foreground transition-colors hover:bg-brand/90"
+            >
+              {followUp.answer.trim() ? "OK" : "Skip"}
+            </button>
+            <span className="hidden font-mono text-[11px] text-ink/45 sm:inline">
+              press Enter ↵ · Shift + Enter for a new line
+            </span>
+          </div>
+        </div>
+      )}
+
+      {!showFollowUp && !atSubmit && current && (
         <div
           key={current.id}
           className="mt-10 motion-safe:animate-[demo-step-in_0.4s_ease-out_both]"
@@ -178,6 +321,7 @@ export function ConversationalForm({
             <button
               type="button"
               onClick={back}
+              disabled={thinking}
               className="mb-6 inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 -ml-2 text-sm text-ink/55 transition-colors hover:bg-ink/5 hover:text-ink"
             >
               <ArrowLeft className="size-4" /> Back
@@ -210,12 +354,22 @@ export function ConversationalForm({
             <button
               type="button"
               onClick={advance}
-              className="inline-flex h-11 items-center gap-2 rounded-md bg-brand px-6 text-[15px] font-medium text-brand-foreground transition-colors hover:bg-brand/90"
+              disabled={thinking}
+              aria-busy={thinking}
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-brand px-6 text-[15px] font-medium text-brand-foreground transition-colors hover:bg-brand/90 disabled:cursor-wait disabled:opacity-80"
             >
-              {current.required || isAnswered(current, answers[current.id]) ? "OK" : "Skip"}
+              {thinking ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" aria-hidden /> One moment…
+                </>
+              ) : current.required || isAnswered(current, answers[current.id]) ? (
+                "OK"
+              ) : (
+                "Skip"
+              )}
             </button>
             <span className="hidden font-mono text-[11px] text-ink/45 sm:inline">
-              {shortcutHint(current)}
+              {thinking ? "" : shortcutHint(current)}
             </span>
           </div>
         </div>

@@ -341,7 +341,7 @@ function DashboardAuthed({
       if (srcErr) throw srcErr;
       const { data: qs, error: qErr } = await supabase
         .from("questions")
-        .select("id, type, label, options, position, required, logic")
+        .select("id, type, label, options, position, required, logic, ai_follow_up")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (qErr) throw qErr;
@@ -372,6 +372,7 @@ function DashboardAuthed({
               options: q.options,
               position: q.position,
               required: q.required,
+              ai_follow_up: q.ai_follow_up,
             })),
           )
           .select("id, position");

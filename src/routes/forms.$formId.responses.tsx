@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -24,8 +24,11 @@ import {
   getChoiceConfig,
   getRatingMax,
   isAnswered,
+  parseFollowUps,
   type Answers,
   type AnswerValue,
+  type FollowUp,
+  type FollowUps,
 } from "@/lib/form-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaceRole } from "@/lib/workspace";
@@ -44,6 +47,7 @@ type ResponseRow = {
   submitted_at: string;
   started_at: string | null;
   answers: Answers;
+  follow_ups: FollowUps;
 };
 
 /** Shape returned by the `get_form_analytics` Postgres RPC (jsonb). */
@@ -100,7 +104,7 @@ function ResponsesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position, required")
+        .select("id, form_id, type, label, options, position, required, ai_follow_up")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
@@ -114,12 +118,18 @@ function ResponsesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("responses")
-        .select("id, submitted_at, started_at, answers")
+        .select("id, submitted_at, started_at, answers, follow_ups")
         .eq("form_id", formId)
         .order("submitted_at", { ascending: false })
         .limit(responseLimit + 1); // fetch one extra to detect if more exist
       if (error) throw error;
-      return (data ?? []) as ResponseRow[];
+      return (data ?? []).map((r) => ({
+        id: r.id,
+        submitted_at: r.submitted_at,
+        started_at: r.started_at,
+        answers: (r.answers ?? {}) as Answers,
+        follow_ups: parseFollowUps(r.follow_ups),
+      })) as ResponseRow[];
     },
   });
 
@@ -672,6 +682,9 @@ function QuestionAnalytics({
                 className="rounded-lg border border-hairline bg-surface/50 px-3 py-2 text-sm text-ink/80"
               >
                 {truncate(String(r.answers[question.id]), 160)}
+                {r.follow_ups[question.id] && (
+                  <FollowUpView followUp={r.follow_ups[question.id]} compact />
+                )}
               </li>
             ))}
           </ul>
@@ -861,6 +874,7 @@ function IndividualList({
                     <dt className="text-sm font-semibold text-ink">{q.label}</dt>
                     <dd className="mt-1 text-sm text-ink/70">
                       <AnswerView question={q} value={r.answers?.[q.id]} />
+                      {r.follow_ups[q.id] && <FollowUpView followUp={r.follow_ups[q.id]} />}
                     </dd>
                   </div>
                 ))}
@@ -906,6 +920,21 @@ function AnswerView({ question, value }: { question: Question; value: AnswerValu
     return <span>{value.join(", ")}</span>;
   }
   return <span>{String(value)}</span>;
+}
+
+/** An AI follow-up exchange, shown indented under the answer it followed. */
+function FollowUpView({ followUp, compact = false }: { followUp: FollowUp; compact?: boolean }) {
+  return (
+    <div className="mt-2 border-l-2 border-brand/30 pl-3">
+      <p className="inline-flex items-center gap-1 text-xs text-ink/50">
+        <Sparkles className="size-3 text-brand" aria-hidden />
+        {followUp.question}
+      </p>
+      <p className="mt-0.5 text-sm text-ink/75">
+        {compact ? truncate(followUp.answer, 160) : followUp.answer}
+      </p>
+    </div>
+  );
 }
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {

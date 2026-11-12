@@ -131,6 +131,29 @@ export type AnswerValue = string | string[] | number;
  */
 export type Answers = Record<string, AnswerValue | undefined>;
 
+/** One AI follow-up: the question Claude asked and the respondent's reply. */
+export type FollowUp = { question: string; answer: string };
+
+/**
+ * Map of question.id → its AI follow-up (stored in responses.follow_ups, kept
+ * apart from `answers` so aggregation and validation never see it).
+ */
+export type FollowUps = Record<string, FollowUp>;
+
+/** Defensive read of responses.follow_ups (jsonb) into a typed map. */
+export function parseFollowUps(raw: unknown): FollowUps {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: FollowUps = {};
+  for (const [qid, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!v || typeof v !== "object") continue;
+    const { question, answer } = v as Record<string, unknown>;
+    if (typeof question === "string" && typeof answer === "string" && answer.trim()) {
+      out[qid] = { question, answer };
+    }
+  }
+  return out;
+}
+
 export function isAnswered(question: { type: QuestionType }, value: unknown): boolean {
   if (value === undefined || value === null) return false;
   switch (question.type) {
