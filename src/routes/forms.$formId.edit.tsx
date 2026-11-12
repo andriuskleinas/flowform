@@ -7,6 +7,7 @@ import {
   ArrowUp,
   CopyPlus,
   Eye,
+  GitBranchPlus,
   GripVertical,
   Loader2,
   Lock,
@@ -173,7 +174,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       const { data, error } = await supabase
         .from("forms")
         .select(
-          "id, title, description, user_id, status, display_mode, thank_you_message, category_id",
+          "id, title, description, user_id, status, display_mode, thank_you_message, category_id, version",
         )
         .eq("id", formId)
         .maybeSingle();
@@ -219,6 +220,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const [discardOpen, setDiscardOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [newVersionOpen, setNewVersionOpen] = useState(false);
   // AI question suggestions (moved here from /forms/new so it's available for
   // any form, and the editor is the single canonical builder).
   const [suggestions, setSuggestions] = useState<SuggestedQuestion[]>([]);
@@ -589,6 +591,49 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     },
   });
 
+  // Answers already collected by the *current* version freeze it: editing would
+  // mix answers to two different surveys. Edits go into a new version instead.
+  const currentVersion = formQ.data?.version ?? 1;
+  const versionResponsesQ = useQuery({
+    queryKey: ["version-response-count", formId, currentVersion],
+    enabled: !!formQ.data,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("responses")
+        .select("id", { count: "exact", head: true })
+        .eq("form_id", formId)
+        .eq("form_version", currentVersion);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  const startNewVersion = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("start_new_form_version", {
+        p_form_id: formId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: async (next) => {
+      setNewVersionOpen(false);
+      toast.success(`Version ${next} started — edit away, then publish it when ready`);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["form", formId] }),
+        qc.invalidateQueries({ queryKey: ["version-response-count", formId] }),
+        qc.invalidateQueries({ queryKey: ["form-versions", formId] }),
+        qc.invalidateQueries({ queryKey: ["public-form", formId] }),
+        qc.invalidateQueries({ queryKey: ["dashboard-forms"] }),
+      ]);
+    },
+    onError: (e: Error) => {
+      setNewVersionOpen(false);
+      toast.error(e.message || "Could not start a new version");
+    },
+  });
+
   const deleteForm = useMutation({
     mutationFn: async () => {
       // Cascades to questions + responses via ON DELETE CASCADE.
@@ -672,7 +717,9 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   // Live (published) forms are read-only: editing questions under respondents
   // mid-survey would corrupt results. Close or unpublish first. The
   // save_form_editor RPC enforces the same rule server-side.
-  const isLocked = form.status === "published";
+  const isLive = form.status === "published";
+  const versionFrozen = (versionResponsesQ.data ?? 0) > 0;
+  const isLocked = isLive || versionFrozen;
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -756,7 +803,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               }
               className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand/90 transition-colors"
             >
-              Publish form
+              {currentVersion > 1 ? `Publish version ${currentVersion}` : "Publish form"}
             </button>
           )}
           {form.status === "published" && (
@@ -786,11 +833,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               <button
                 type="button"
                 onClick={() => setStatus.mutate("published")}
-                disabled={setStatus.isPending}
+                disabled={setStatus.isPending || isDirty}
                 title="Closed — the link shows a closed notice and no new responses are accepted."
                 className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-50 hover:bg-brand/90 transition-colors"
               >
-                Reopen form
+                {currentVersion > 1 && !versionFrozen
+                  ? `Publish version ${currentVersion}`
+                  : "Reopen form"}
               </button>
             </>
           )}
@@ -800,16 +849,32 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       {isLocked && (
         <div
           role="status"
-          className="mt-6 flex items-start gap-3 rounded-lg border border-brand/25 bg-accent px-4 py-3 text-sm text-ink"
+          className="mt-6 flex flex-wrap items-start gap-3 rounded-lg border border-brand/25 bg-accent px-4 py-3 text-sm text-ink"
         >
           <Lock className="mt-0.5 size-4 shrink-0 text-brand" />
-          <p>
-            <span className="font-semibold">This form is live, so it can't be edited.</span>{" "}
+          <p className="min-w-0 flex-1">
+            <span className="font-semibold">
+              {isLive
+                ? "This form is live, so it can't be edited."
+                : `Version ${currentVersion} has collected responses, so it's frozen.`}
+            </span>{" "}
             <span className="text-ink/70">
-              Changing questions while people are responding would mix answers to different
-              versions. Close or unpublish the form (top right) to make changes.
+              {versionFrozen
+                ? `Changing questions now would mix answers to different surveys. Start version ${currentVersion + 1} to make changes — your ${versionResponsesQ.data} ${versionResponsesQ.data === 1 ? "response stays" : "responses stay"} attached to version ${currentVersion}, and you can compare the two on the results page.`
+                : "Changing questions while people are responding would mix answers to different versions. Close or unpublish the form (top right) to make changes."}
             </span>
           </p>
+          {versionFrozen && (
+            <button
+              type="button"
+              onClick={() => setNewVersionOpen(true)}
+              disabled={startNewVersion.isPending}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-brand px-3.5 py-1.5 text-sm font-semibold text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
+            >
+              <GitBranchPlus className="size-4" />
+              {startNewVersion.isPending ? "Starting…" : `Start version ${currentVersion + 1}`}
+            </button>
+          )}
         </div>
       )}
 
@@ -884,7 +949,15 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             </div>
           </fieldset>
           <div className="flex flex-col items-end gap-2">
-            <StatusPill status={form.status as FormStatus} />
+            <div className="flex items-center gap-1.5">
+              <span
+                title={`Version ${currentVersion}`}
+                className="rounded-full border border-hairline px-2 py-0.5 font-mono text-xs font-medium text-ink/60"
+              >
+                v{currentVersion}
+              </span>
+              <StatusPill status={form.status as FormStatus} />
+            </div>
             <CategoryField
               userId={form.user_id}
               value={form.category_id ?? null}
@@ -911,14 +984,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           )}
 
           <fieldset disabled={isLocked} className="min-w-0 disabled:opacity-70">
-            {!isLocked && (responseCountQ.data ?? 0) > 0 && (
-              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                This form already has{" "}
-                <span className="font-semibold">
-                  {responseCountQ.data} {responseCountQ.data === 1 ? "response" : "responses"}
-                </span>
-                . Changing a question's type or deleting it can make those answers hard to interpret
-                in your results.
+            {!isLocked && currentVersion > 1 && (
+              <div className="mt-3 rounded-lg border border-hairline bg-surface px-4 py-3 text-sm text-ink/70">
+                You're drafting{" "}
+                <span className="font-semibold text-ink">version {currentVersion}</span>. Earlier
+                versions and their responses are kept as they were. Questions you keep stay
+                comparable across versions; deleted ones still show up in older results.
               </div>
             )}
 
@@ -1191,6 +1262,19 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         destructive
         onConfirm={doDiscard}
         onCancel={() => setDiscardOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={newVersionOpen}
+        title={`Start version ${currentVersion + 1}?`}
+        description={
+          isLive
+            ? `The form will close while you edit, so the link shows a closed notice until you publish version ${currentVersion + 1}. Version ${currentVersion} and its responses are kept for comparison.`
+            : `Version ${currentVersion} and its responses are kept for comparison. Your edits will go into version ${currentVersion + 1}, which starts collecting once you publish it.`
+        }
+        confirmLabel={`Start version ${currentVersion + 1}`}
+        onConfirm={() => startNewVersion.mutate()}
+        onCancel={() => setNewVersionOpen(false)}
       />
 
       <ConfirmDialog

@@ -7,6 +7,7 @@ type ExportRow = {
   started_at: string | null;
   answers: Answers;
   follow_ups: unknown;
+  form_version: number;
 };
 
 function csvEscape(value: string): string {
@@ -25,14 +26,21 @@ function formatAnswer(value: Answers[string]): string {
  * and triggers a browser download of a UTF-8 CSV: one row per response, one
  * column per question in form order. RLS restricts the fetch to the owner.
  */
-export async function exportResponsesCsv(formId: string, formTitle: string, questions: Question[]) {
+export async function exportResponsesCsv(
+  formId: string,
+  formTitle: string,
+  questions: Question[],
+  version: number | null = null,
+) {
   const pageSize = 1000;
   const rows: ExportRow[] = [];
   for (let from = 0; ; from += pageSize) {
-    const { data, error } = await supabase
+    let query = supabase
       .from("responses")
-      .select("submitted_at, started_at, answers, follow_ups")
-      .eq("form_id", formId)
+      .select("submitted_at, started_at, answers, follow_ups, form_version")
+      .eq("form_id", formId);
+    if (version != null) query = query.eq("form_version", version);
+    const { data, error } = await query
       .order("submitted_at", { ascending: true })
       .range(from, from + pageSize - 1);
     if (error) throw error;
@@ -48,6 +56,7 @@ export async function exportResponsesCsv(formId: string, formTitle: string, ques
 
   const header = [
     "Submitted at",
+    "Version",
     "Fill time (s)",
     ...questions.flatMap((q) =>
       withFollowUps.has(q.id)
@@ -64,6 +73,7 @@ export async function exportResponsesCsv(formId: string, formTitle: string, ques
         : null;
     const cells = [
       new Date(r.submitted_at).toISOString(),
+      `v${r.form_version}`,
       fillSeconds != null && fillSeconds >= 0 ? String(fillSeconds) : "",
       ...questions.flatMap((q) => {
         const answer = formatAnswer(r.answers?.[q.id]);

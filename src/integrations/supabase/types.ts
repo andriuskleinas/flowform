@@ -41,6 +41,7 @@ export type Database = {
       form_events: {
         Row: {
           form_id: string
+          form_version: number
           id: number
           ip_hash: string
           kind: string
@@ -49,6 +50,7 @@ export type Database = {
         }
         Insert: {
           form_id: string
+          form_version?: number
           id?: number
           ip_hash: string
           kind: string
@@ -57,6 +59,7 @@ export type Database = {
         }
         Update: {
           form_id?: string
+          form_version?: number
           id?: number
           ip_hash?: string
           kind?: string
@@ -80,6 +83,53 @@ export type Database = {
           },
         ]
       }
+      form_versions: {
+        Row: {
+          description: string | null
+          display_mode: string
+          form_id: string
+          id: string
+          questions: Json
+          retired_at: string
+          retired_by: string | null
+          thank_you_message: string | null
+          title: string
+          version: number
+        }
+        Insert: {
+          description?: string | null
+          display_mode: string
+          form_id: string
+          id?: string
+          questions: Json
+          retired_at?: string
+          retired_by?: string | null
+          thank_you_message?: string | null
+          title: string
+          version: number
+        }
+        Update: {
+          description?: string | null
+          display_mode?: string
+          form_id?: string
+          id?: string
+          questions?: Json
+          retired_at?: string
+          retired_by?: string | null
+          thank_you_message?: string | null
+          title?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_versions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forms: {
         Row: {
           category_id: string | null
@@ -91,6 +141,7 @@ export type Database = {
           thank_you_message: string | null
           title: string
           user_id: string
+          version: number
         }
         Insert: {
           category_id?: string | null
@@ -102,6 +153,7 @@ export type Database = {
           thank_you_message?: string | null
           title: string
           user_id: string
+          version?: number
         }
         Update: {
           category_id?: string | null
@@ -113,6 +165,7 @@ export type Database = {
           thank_you_message?: string | null
           title?: string
           user_id?: string
+          version?: number
         }
         Relationships: [
           {
@@ -235,6 +288,7 @@ export type Database = {
           answers: Json
           follow_ups: Json | null
           form_id: string
+          form_version: number
           id: string
           started_at: string | null
           submitted_at: string
@@ -243,6 +297,7 @@ export type Database = {
           answers: Json
           follow_ups?: Json | null
           form_id: string
+          form_version?: number
           id?: string
           started_at?: string | null
           submitted_at?: string
@@ -251,6 +306,7 @@ export type Database = {
           answers?: Json
           follow_ups?: Json | null
           form_id?: string
+          form_version?: number
           id?: string
           started_at?: string | null
           submitted_at?: string
@@ -390,8 +446,9 @@ export type Database = {
         Args: { p_days?: number; p_owner?: string }
         Returns: Json
       }
+      get_form_versions: { Args: { p_form_id: string }; Returns: Json }
       get_form_analytics: {
-        Args: { p_days?: number; p_form_id: string }
+        Args: { p_days?: number; p_form_id: string; p_version?: number }
         Returns: Json
       }
       request_ai_follow_up: {
@@ -402,6 +459,7 @@ export type Database = {
         Args: { p_form_id: string; p_kind: string; p_question_id?: string }
         Returns: undefined
       }
+      start_new_form_version: { Args: { p_form_id: string }; Returns: number }
       save_form_editor: {
         Args: { p_form: Json; p_form_id: string; p_questions: Json }
         Returns: undefined

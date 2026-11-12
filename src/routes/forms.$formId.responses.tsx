@@ -37,6 +37,8 @@ import { ClientOnly } from "@/components/client-only";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StarRating, type Question } from "@/components/question-render";
+import { VersionComparison } from "@/components/version-comparison";
+import { parseVersions, questionsForView } from "@/lib/form-versions";
 
 export const Route = createFileRoute("/forms/$formId/responses")({
   component: ResponsesPage,
@@ -48,6 +50,7 @@ type ResponseRow = {
   started_at: string | null;
   answers: Answers;
   follow_ups: FollowUps;
+  form_version: number;
 };
 
 /** Shape returned by the `get_form_analytics` Postgres RPC (jsonb). */
@@ -74,6 +77,8 @@ function ResponsesPage() {
   const [responseLimit, setResponseLimit] = useState(100);
   const [exporting, setExporting] = useState(false);
   const [days, setDays] = useState<RangeDays>(30);
+  // null = every version together; a number scopes the whole page to it.
+  const [version, setVersion] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -114,12 +119,14 @@ function ResponsesPage() {
 
   const responsesQ = useQuery({
     enabled: !!user,
-    queryKey: ["responses", formId, responseLimit],
+    queryKey: ["responses", formId, responseLimit, version],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("responses")
-        .select("id, submitted_at, started_at, answers, follow_ups")
-        .eq("form_id", formId)
+        .select("id, submitted_at, started_at, answers, follow_ups, form_version")
+        .eq("form_id", formId);
+      if (version != null) q = q.eq("form_version", version);
+      const { data, error } = await q
         .order("submitted_at", { ascending: false })
         .limit(responseLimit + 1); // fetch one extra to detect if more exist
       if (error) throw error;
@@ -129,6 +136,7 @@ function ResponsesPage() {
         started_at: r.started_at,
         answers: (r.answers ?? {}) as Answers,
         follow_ups: parseFollowUps(r.follow_ups),
+        form_version: r.form_version,
       })) as ResponseRow[];
     },
   });
@@ -137,14 +145,25 @@ function ResponsesPage() {
   // unlike the capped list above, these numbers never truncate.
   const analyticsQ = useQuery({
     enabled: !!user,
-    queryKey: ["form-analytics", formId, days],
+    queryKey: ["form-analytics", formId, days, version],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_form_analytics", {
         p_form_id: formId,
         p_days: days,
+        ...(version != null ? { p_version: version } : {}),
       });
       if (error) throw error;
       return data as unknown as FormAnalytics;
+    },
+  });
+
+  const versionsQ = useQuery({
+    enabled: !!user,
+    queryKey: ["form-versions", formId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_form_versions", { p_form_id: formId });
+      if (error) throw error;
+      return parseVersions(formId, data);
     },
   });
 
@@ -171,7 +190,17 @@ function ResponsesPage() {
     );
   }
 
-  const questions = questionsQ.data ?? [];
+  const versions = versionsQ.data ?? [];
+  const multiVersion = versions.length > 1;
+  const questions = questionsForView(versions, questionsQ.data ?? [], version);
+  // Which questions each version actually asked, so an individual response
+  // only lists its own version's questions.
+  const askedByVersion = new Map(
+    versions.map((v) => [
+      v.version,
+      new Set((v.is_current ? (questionsQ.data ?? []) : v.questions).map((q) => q.id)),
+    ]),
+  );
   const rawResponses = responsesQ.data ?? [];
   const hasMore = rawResponses.length > responseLimit;
   const responses = hasMore ? rawResponses.slice(0, responseLimit) : rawResponses;
@@ -192,7 +221,11 @@ function ResponsesPage() {
           <p className="mt-1 text-ink/60">
             {(() => {
               const total = analyticsQ.data?.totals.responses ?? responses.length;
-              return `${total} ${total === 1 ? "response" : "responses"}`;
+              const label = `${total} ${total === 1 ? "response" : "responses"}`;
+              if (!multiVersion) return label;
+              return version != null
+                ? `${label} · version ${version}`
+                : `${label} · ${versions.length} versions`;
             })()}
           </p>
         </div>
@@ -202,7 +235,7 @@ function ResponsesPage() {
           onClick={async () => {
             setExporting(true);
             try {
-              const count = await exportResponsesCsv(formId, formQ.data!.title, questions);
+              const count = await exportResponsesCsv(formId, formQ.data!.title, questions, version);
               toast.success(`Exported ${count} ${count === 1 ? "response" : "responses"} to CSV`);
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "Export failed");
@@ -221,6 +254,12 @@ function ResponsesPage() {
         </button>
       </header>
 
+      {multiVersion && (
+        <div className="mt-8">
+          <VersionComparison versions={versions} selected={version} onSelect={setVersion} />
+        </div>
+      )}
+
       <Tabs defaultValue="overview" className="mt-8">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -236,11 +275,16 @@ function ResponsesPage() {
             analyticsLoading={analyticsQ.isLoading}
             days={days}
             onDaysChange={setDays}
+            versions={multiVersion ? versions.map((v) => v.version) : []}
+            version={version}
+            onVersionChange={setVersion}
           />
         </TabsContent>
 
         <TabsContent value="individual" className="mt-6">
           <IndividualList
+            showVersion={multiVersion}
+            askedByVersion={askedByVersion}
             questions={questions}
             responses={responses}
             hasMore={hasMore}
@@ -260,6 +304,9 @@ function Overview({
   analyticsLoading,
   days,
   onDaysChange,
+  versions,
+  version,
+  onVersionChange,
 }: {
   formId: string;
   questions: Question[];
@@ -268,6 +315,10 @@ function Overview({
   analyticsLoading: boolean;
   days: RangeDays;
   onDaysChange: (d: RangeDays) => void;
+  /** Version numbers, newest first; empty when the form has only one. */
+  versions: number[];
+  version: number | null;
+  onVersionChange: (v: number | null) => void;
 }) {
   const [summary, setSummary] = useState<ResponseSummary | null>(null);
   const summarize = useMutation({
@@ -354,7 +405,29 @@ function Overview({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        {versions.length > 0 && (
+          <div
+            role="group"
+            aria-label="Version"
+            className="inline-flex rounded-md border border-hairline bg-card p-0.5"
+          >
+            {[null, ...versions].map((v) => (
+              <button
+                key={v ?? "all"}
+                type="button"
+                aria-pressed={version === v}
+                onClick={() => onVersionChange(v)}
+                className={
+                  "rounded-sm px-2.5 py-1 font-mono text-xs transition-colors " +
+                  (version === v ? "bg-ink text-paper" : "text-ink/55 hover:text-ink")
+                }
+              >
+                {v == null ? "All" : `v${v}`}
+              </button>
+            ))}
+          </div>
+        )}
         <div
           role="group"
           aria-label="Date range"
@@ -378,7 +451,11 @@ function Overview({
       </div>
 
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-hairline bg-hairline md:grid-cols-4">
-        <StatCard label="Total responses" value={String(totals.responses)} hint="All time" />
+        <StatCard
+          label="Total responses"
+          value={String(totals.responses)}
+          hint={version != null ? `Version ${version}` : "All time"}
+        />
         <StatCard label="Views" value={String(viewed)} hint={`Last ${days} days`} />
         <StatCard
           label="Completion rate"
@@ -831,11 +908,15 @@ function QuestionAnalytics({
 }
 
 function IndividualList({
+  showVersion,
+  askedByVersion,
   questions,
   responses,
   hasMore,
   onLoadMore,
 }: {
+  showVersion: boolean;
+  askedByVersion: Map<number, Set<string>>;
   questions: Question[];
   responses: ResponseRow[];
   hasMore: boolean;
@@ -860,6 +941,11 @@ function IndividualList({
             <li key={r.id} className="rounded-lg border border-hairline bg-card p-6">
               <div className="flex items-start justify-between gap-3">
                 <p className="eyebrow">
+                  {showVersion && (
+                    <span className="mr-2 rounded-sm border border-hairline px-1.5 py-px normal-case text-ink/60">
+                      v{r.form_version}
+                    </span>
+                  )}
                   {new Date(r.submitted_at).toLocaleString()}
                   {dur != null && dur > 0 && dur < 2 * 3600 && (
                     <span className="ml-2 text-ink/60 normal-case">
@@ -869,15 +955,17 @@ function IndividualList({
                 </p>
               </div>
               <dl className="mt-4 space-y-4">
-                {questions.map((q) => (
-                  <div key={q.id}>
-                    <dt className="text-sm font-semibold text-ink">{q.label}</dt>
-                    <dd className="mt-1 text-sm text-ink/70">
-                      <AnswerView question={q} value={r.answers?.[q.id]} />
-                      {r.follow_ups[q.id] && <FollowUpView followUp={r.follow_ups[q.id]} />}
-                    </dd>
-                  </div>
-                ))}
+                {questions
+                  .filter((q) => askedByVersion.get(r.form_version)?.has(q.id) ?? true)
+                  .map((q) => (
+                    <div key={q.id}>
+                      <dt className="text-sm font-semibold text-ink">{q.label}</dt>
+                      <dd className="mt-1 text-sm text-ink/70">
+                        <AnswerView question={q} value={r.answers?.[q.id]} />
+                        {r.follow_ups[q.id] && <FollowUpView followUp={r.follow_ups[q.id]} />}
+                      </dd>
+                    </div>
+                  ))}
               </dl>
             </li>
           );
