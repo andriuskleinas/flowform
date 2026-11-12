@@ -705,7 +705,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         >
           <ArrowLeft className="size-4" /> Back to dashboard
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {form.status === "published" && (
             <button
               type="button"
@@ -742,6 +742,58 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               {saveAll.isPending ? "Saving…" : "Save"}
             </button>
           )}
+          {form.status === "draft" && (
+            <button
+              type="button"
+              onClick={() => setStatus.mutate("published")}
+              disabled={setStatus.isPending || visibleDraftQuestions.length === 0 || isDirty}
+              title={
+                isDirty
+                  ? "Save your changes first"
+                  : visibleDraftQuestions.length === 0
+                    ? "Add at least one question first"
+                    : undefined
+              }
+              className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand/90 transition-colors"
+            >
+              Publish form
+            </button>
+          )}
+          {form.status === "published" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setStatus.mutate("closed")}
+                disabled={setStatus.isPending}
+                title="Stop accepting responses. The link keeps working and shows a closed notice."
+                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+              >
+                Close form
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatus.mutate("draft")}
+                disabled={setStatus.isPending}
+                title="Take the form offline entirely — the link shows an unpublished notice."
+                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+              >
+                Unpublish
+              </button>
+            </>
+          )}
+          {form.status === "closed" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setStatus.mutate("published")}
+                disabled={setStatus.isPending}
+                title="Closed — the link shows a closed notice and no new responses are accepted."
+                className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-50 hover:bg-brand/90 transition-colors"
+              >
+                Reopen form
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -755,7 +807,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             <span className="font-semibold">This form is live, so it can't be edited.</span>{" "}
             <span className="text-ink/70">
               Changing questions while people are responding would mix answers to different
-              versions. Close or unpublish the form below to make changes.
+              versions. Close or unpublish the form (top right) to make changes.
             </span>
           </p>
         </div>
@@ -845,62 +897,6 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               </span>
             )}
           </div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {form.status === "draft" && (
-            <button
-              type="button"
-              onClick={() => setStatus.mutate("published")}
-              disabled={setStatus.isPending || visibleDraftQuestions.length === 0 || isDirty}
-              title={
-                isDirty
-                  ? "Save your changes first"
-                  : visibleDraftQuestions.length === 0
-                    ? "Add at least one question first"
-                    : undefined
-              }
-              className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand/90 transition-colors"
-            >
-              Publish form
-            </button>
-          )}
-          {form.status === "published" && (
-            <>
-              <button
-                type="button"
-                onClick={() => setStatus.mutate("closed")}
-                disabled={setStatus.isPending}
-                title="Stop accepting responses. The link keeps working and shows a closed notice."
-                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
-              >
-                Close form
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatus.mutate("draft")}
-                disabled={setStatus.isPending}
-                title="Take the form offline entirely — the link shows an unpublished notice."
-                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
-              >
-                Unpublish
-              </button>
-            </>
-          )}
-          {form.status === "closed" && (
-            <>
-              <button
-                type="button"
-                onClick={() => setStatus.mutate("published")}
-                disabled={setStatus.isPending}
-                className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-50 hover:bg-brand/90 transition-colors"
-              >
-                Reopen form
-              </button>
-              <span className="text-xs text-ink/50">
-                Closed — the link shows "this survey is closed" and no new responses are accepted.
-              </span>
-            </>
-          )}
         </div>
       </header>
 
