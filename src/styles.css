@@ -80,9 +80,9 @@
   --color-mint-tint: var(--mint-tint);
   --color-sun: var(--sun);
   --color-sun-tint: var(--sun-tint);
-  --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Roboto", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /*
@@ -210,8 +210,8 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    /* Roboto is already compact; only a hair of tightening for display sizes. */
-    letter-spacing: -0.005em;
+    /* Figtree: open, rounded and readable at its natural spacing. */
+    letter-spacing: 0;
   }
 
   ::selection {
@@ -314,13 +314,13 @@
 }
 
 @layer components {
-  /* Headlines: Roboto, semibold and tightly tracked. */
+  /* Headlines: Figtree semibold, lightly tracked (soft, not squeezed). */
   .font-display {
     font-weight: 600;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.015em;
   }
 
-  /* Labels, counters and numbers: Roboto Mono at natural spacing. */
+  /* Labels, counters and numbers: DM Mono at natural spacing. */
   .font-mono {
     letter-spacing: 0;
   }

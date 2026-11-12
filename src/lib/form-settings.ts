@@ -42,7 +42,13 @@ export type FormSettings = {
 };
 
 export const FONT_CHOICES: { value: FormFont; label: string; family: string; href?: string }[] = [
-  { value: "roboto", label: "Roboto", family: '"Roboto", ui-sans-serif, system-ui, sans-serif' },
+  // "roboto" is the stored key for the app's default font (the DB whitelists
+  // it); the default itself is now Figtree.
+  {
+    value: "roboto",
+    label: "Figtree (default)",
+    family: '"Figtree", ui-sans-serif, system-ui, sans-serif',
+  },
   {
     value: "serif",
     label: "Lora (serif)",
@@ -57,8 +63,8 @@ export const FONT_CHOICES: { value: FormFont; label: string; family: string; hre
   },
   {
     value: "mono",
-    label: "Roboto Mono",
-    family: '"Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+    label: "DM Mono",
+    family: '"DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
   },
 ];
 

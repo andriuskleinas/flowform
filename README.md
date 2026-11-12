@@ -92,7 +92,7 @@ work.
 
 | | Choice |
 |---|---|
-| **Type** | [Roboto](https://fonts.google.com/specimen/Roboto) throughout: semibold and tightly tracked for headlines and questions, regular for interface text, with [Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono) for labels, counters and numbers |
+| **Type** | [Figtree](https://fonts.google.com/specimen/Figtree) throughout, an open, rounded sans chosen for readability: semibold for headlines and questions, regular for interface text, with [DM Mono](https://fonts.google.com/specimen/DM+Mono) for labels, counters and numbers |
 | **Colour** | Ink `#14161A` on paper `#FBFAF7`, with one Klein-style blue (`#1244D0`) reserved for actions, selection, focus and live data. The landing page adds soft sky, sun, coral and mint tints behind its product demos |
 | **Marks** | The logo is an ink tile with two "answer bars"; the Build / Branch / Learn icons are drawn from the same shapes rather than a stock icon set |
 | **Shape** | Tight 6–8 px radii, 1 px hairline borders, one soft shadow for floating "product sheets" only |
