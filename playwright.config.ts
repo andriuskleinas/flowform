@@ -23,14 +23,19 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `bunx vite dev --port ${PORT} --strictPort`,
+    // A production build, not `vite dev`: the dev server re-optimizes deps on
+    // first load and reloads the page, wiping anything typed into it.
+    command: `bun run build && node .output/server/index.mjs`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 240_000,
     env: {
       VITE_SUPABASE_URL: process.env.E2E_SUPABASE_URL ?? "",
       VITE_SUPABASE_PUBLISHABLE_KEY: process.env.E2E_SUPABASE_ANON_KEY ?? "",
       SUPABASE_URL: process.env.E2E_SUPABASE_URL ?? "",
+      PORT: String(PORT),
+      // Build for the plain Node server even if run inside a Vercel shell.
+      NITRO_PRESET: "node-server",
     },
   },
 });

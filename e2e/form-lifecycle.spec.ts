@@ -11,8 +11,11 @@ test("create, publish, respond and analyse a form", async ({ page, browser }) =>
 
   // --- Log in -------------------------------------------------------------
   await page.goto("/login");
+  // Wait for hydration so typed values land in React state.
+  await page.waitForLoadState("networkidle");
   await page.getByPlaceholder("you@example.com").fill(E2E_EMAIL);
   await page.getByPlaceholder("Your password").fill(E2E_PASSWORD);
+  await expect(page.getByPlaceholder("you@example.com")).toHaveValue(E2E_EMAIL);
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
 
