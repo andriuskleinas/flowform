@@ -462,45 +462,30 @@ function HeroForm() {
 /* Feature vignettes                                                        */
 /* ------------------------------------------------------------------------ */
 
-type DraftQ = { type: string; label: string; options?: string[] };
+type DraftQ = { type: string; label: string };
 
 const DRAFT_GOALS: Array<{ goal: string; questions: DraftQ[] }> = [
   {
     goal: "Why trial users don’t upgrade",
     questions: [
-      {
-        type: "Multiple choice",
-        label: "What were you hoping Flowform would help you do?",
-        options: ["Collect feedback", "Run research", "Qualify leads"],
-      },
-      { type: "NPS", label: "How likely are you to recommend Flowform to a colleague?" },
-      {
-        type: "Dropdown",
-        label: "Which plan did you look at?",
-        options: ["Free", "Team", "Business"],
-      },
+      { type: "Multiple choice", label: "What were you hoping Flowform would help you do?" },
+      { type: "Dropdown", label: "Which plan did you look at?" },
       { type: "Long answer", label: "What would make upgrading an easy decision?" },
     ],
   },
   {
     goal: "Feedback after a workshop",
     questions: [
-      { type: "Rating · 5 stars", label: "How would you rate the workshop overall?" },
-      {
-        type: "Multiple choice",
-        label: "Which sessions were most useful?",
-        options: ["Hands-on lab", "Panel", "Open Q&A"],
-      },
-      { type: "Yes / No", label: "Would you come to the next one?" },
+      { type: "Star rating", label: "How would you rate the workshop overall?" },
+      { type: "Multiple choice", label: "Which session was most useful?" },
       { type: "Long answer", label: "What should we change next time?" },
     ],
   },
   {
     goal: "How the team is feeling",
     questions: [
-      { type: "Rating · 5 stars", label: "How manageable was your workload this month?" },
+      { type: "Star rating", label: "How manageable was your workload this month?" },
       { type: "Yes / No", label: "Do you feel your work is recognised?" },
-      { type: "NPS", label: "How likely are you to recommend the team as a place to work?" },
       { type: "Long answer", label: "What’s one thing that would make next month better?" },
     ],
   },
@@ -511,25 +496,27 @@ function ClaudeTag() {
   return <Tag tone="brand">Claude</Tag>;
 }
 
-/** Placeholder rows shown while Claude is "drafting" / "reading". */
+/** Placeholder rows shown while Claude is "drafting". */
 function DraftingRows({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="space-y-4 py-4" aria-hidden>
+    <div className="space-y-5 pt-1" aria-hidden>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="space-y-2 motion-safe:animate-pulse">
-          <div className="h-3.5 w-20 rounded-sm bg-surface" />
-          <div className="h-4 rounded-sm bg-surface" style={{ width: `${88 - i * 14}%` }} />
+        <div key={i} className="flex gap-3 motion-safe:animate-pulse">
+          <div className="size-6 shrink-0 rounded-full bg-surface" />
+          <div className="flex-1 space-y-2 pt-1">
+            <div className="h-4 rounded-sm bg-surface" style={{ width: `${86 - i * 12}%` }} />
+            <div className="h-3 w-20 rounded-sm bg-surface" />
+          </div>
         </div>
       ))}
     </div>
   );
 }
 
-/** Lets a visitor pick a goal and watch Claude draft typed questions for it. */
+/** Goal in, questions out: pick a goal and watch Claude draft a form for it. */
 function BuilderVignette() {
   const [goalIdx, setGoalIdx] = useState(0);
   const [drafting, setDrafting] = useState(false);
-  const [added, setAdded] = useState<Record<string, boolean>>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -539,26 +526,19 @@ function BuilderVignette() {
   );
 
   const draft = (i: number) => {
+    if (i === goalIdx) return;
     setGoalIdx(i);
-    setAdded({});
     setDrafting(true);
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setDrafting(false), 1100);
+    timer.current = setTimeout(() => setDrafting(false), 900);
   };
-  const { goal, questions } = DRAFT_GOALS[goalIdx];
+  const { questions } = DRAFT_GOALS[goalIdx];
 
   return (
-    <Sheet
-      bar={
-        <>
-          <span className="truncate">New form · Draft with Claude</span>
-          <span className="shrink-0">Example output</span>
-        </>
-      }
-    >
+    <Sheet bar={<span className="truncate">New form · Draft with Claude</span>}>
       <div className="p-5 sm:p-6">
-        <p className="text-sm font-medium text-ink/70">What do you want to learn?</p>
-        <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Example goals">
+        <p className="text-sm text-ink/55">1. Pick what you want to learn</p>
+        <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="Example goals">
           {DRAFT_GOALS.map((g, i) => (
             <button
               key={g.goal}
@@ -566,96 +546,47 @@ function BuilderVignette() {
               role="radio"
               aria-checked={i === goalIdx}
               onClick={() => draft(i)}
-              className={`rounded-full border px-3 py-1 text-[13px] transition-colors ${
+              className={`rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
                 i === goalIdx
-                  ? "border-brand bg-accent text-ink"
-                  : "border-hairline bg-card text-ink/65 hover:border-ink/30"
+                  ? "border-brand bg-accent font-medium text-ink"
+                  : "border-hairline bg-card text-ink/60 hover:border-ink/30"
               }`}
             >
               {g.goal}
             </button>
           ))}
         </div>
-        <div className="mt-3 flex items-center gap-2">
-          <div className="min-w-0 flex-1 truncate rounded-md border border-input bg-surface px-3 py-2.5 text-[15px] text-ink">
-            {goal}
-          </div>
-          <button
-            type="button"
-            onClick={() => draft(goalIdx)}
-            disabled={drafting}
-            className="inline-flex h-[2.65rem] shrink-0 items-center gap-1.5 rounded-md bg-brand px-3.5 text-sm font-medium text-white transition-colors hover:bg-brand/90 disabled:opacity-60"
-          >
-            {drafting ? (
-              "Drafting…"
-            ) : (
-              <>
-                <RotateCcw className="size-3.5" /> Redraft
-              </>
-            )}
-          </button>
-        </div>
 
-        <div className="mt-5 flex items-center justify-between border-t border-hairline pt-4">
-          <p className="text-sm text-ink/60" aria-live="polite">
-            {drafting
-              ? "Claude is drafting questions…"
-              : `Showing ${questions.length} of 6 drafted questions`}
+        <div className="mt-7 flex items-center gap-2">
+          <p className="text-sm text-ink/55" aria-live="polite">
+            {drafting ? "2. Claude is writing your questions…" : "2. Claude writes the questions"}
           </p>
           <ClaudeTag />
         </div>
 
-        {drafting ? (
-          <DraftingRows />
-        ) : (
-          <ul className="mt-1 divide-y divide-hairline">
-            {questions.map((q, i) => {
-              const key = `${goalIdx}-${i}`;
-              const on = added[key] ?? i === 0;
-              return (
+        <div className="mt-4 min-h-[13rem]">
+          {drafting ? (
+            <DraftingRows />
+          ) : (
+            <ol className="space-y-5">
+              {questions.map((q, i) => (
                 <li
-                  key={key}
-                  className="flex items-start gap-4 py-3.5 motion-safe:animate-[demo-step-in_0.35s_ease-out_both]"
+                  key={`${goalIdx}-${i}`}
+                  className="flex gap-3 motion-safe:animate-[demo-step-in_0.35s_ease-out_both]"
                   style={{ animationDelay: `${i * 90}ms` }}
                 >
-                  <div className="min-w-0 flex-1">
-                    <Tag>{q.type}</Tag>
-                    <p className="mt-1.5 text-[15px] leading-snug text-ink">{q.label}</p>
-                    {q.options && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {q.options.map((o) => (
-                          <span
-                            key={o}
-                            className="rounded-sm border border-hairline px-1.5 py-0.5 text-xs text-ink/60"
-                          >
-                            {o}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                  <span className="mt-px inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-surface font-mono text-[11px] text-ink/55">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[15px] leading-snug text-ink">{q.label}</p>
+                    <p className="mt-1 text-xs text-ink/45">{q.type}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setAdded((a) => ({ ...a, [key]: !on }))}
-                    className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors ${
-                      on
-                        ? "border-transparent bg-ink text-paper"
-                        : "border-hairline bg-card text-ink hover:border-ink/30"
-                    }`}
-                  >
-                    {on ? (
-                      <>
-                        <Check className="size-3.5" /> Added
-                      </>
-                    ) : (
-                      "Add"
-                    )}
-                  </button>
                 </li>
-              );
-            })}
-          </ul>
-        )}
+              ))}
+            </ol>
+          )}
+        </div>
       </div>
     </Sheet>
   );
@@ -701,124 +632,39 @@ function LogicVignette() {
   );
 }
 
-const SUMMARY_THEMES: Array<{ name: string; detail: string; share: number }> = [
-  {
-    name: "Annual billing feels like a big jump",
-    detail: "Teams want a monthly plan before committing for a year.",
-    share: 46,
-  },
-  {
-    name: "Missing Slack and HubSpot integrations",
-    detail: "Mostly sales and support teams who live in those tools.",
-    share: 31,
-  },
-  {
-    name: "Setup took longer than expected",
-    detail: "Usually people building their first branching form.",
-    share: 18,
-  },
+const SUMMARY_THEMES: Array<{ name: string; share: number }> = [
+  { name: "Annual billing feels like a big jump", share: 46 },
+  { name: "Missing Slack and HubSpot", share: 31 },
+  { name: "Setup took longer than expected", share: 18 },
 ];
 
-/** Results view where the Claude summary is the headline, the funnel a footnote. */
+/** Claude's reading of the open answers: one headline, three themes. */
 function InsightVignette() {
-  const [reading, setReading] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-  const rerun = () => {
-    setReading(true);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setReading(false), 1200);
-  };
-
   return (
-    <Sheet
-      bar={
-        <>
-          <span className="truncate">Results · Trial feedback</span>
-          <span className="shrink-0">Illustrative data</span>
-        </>
-      }
-    >
-      <div className="grid grid-cols-3 divide-x divide-hairline border-b border-hairline">
-        {[
-          ["Responses", "688"],
-          ["Completion", "55%"],
-          ["Avg. time", "1m 42s"],
-        ].map(([k, v]) => (
-          <div key={k} className="px-4 py-3.5 sm:px-5">
-            <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">{k}</p>
-            <p className="mt-1 font-mono text-lg font-medium tracking-tight whitespace-nowrap tabular-nums text-ink sm:text-xl">
-              {v}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="px-5 py-5 sm:px-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-ink">Summary of 214 open answers</p>
-            <ClaudeTag />
-          </div>
-          <button
-            type="button"
-            onClick={rerun}
-            disabled={reading}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-card px-2.5 text-xs font-medium text-ink transition-colors hover:border-ink/35 disabled:opacity-60"
-          >
-            <RotateCcw className="size-3" /> {reading ? "Reading…" : "Re-run"}
-          </button>
+    <Sheet bar={<span className="truncate">Results · Trial feedback</span>}>
+      <div className="p-5 sm:p-6">
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-ink/55">Claude read 214 answers</p>
+          <ClaudeTag />
         </div>
+        <p className="mt-3 font-display text-xl leading-snug text-balance text-ink sm:text-2xl">
+          People like the product, but most stall at pricing.
+        </p>
 
-        {reading ? (
-          <DraftingRows rows={3} />
-        ) : (
-          <div className="motion-safe:animate-[demo-step-in_0.35s_ease-out_both]">
-            <div className="mt-3 flex items-start gap-2.5">
-              <span className="mt-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-sm border border-hairline px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-amber-800">
-                <span className="size-1.5 rounded-full bg-amber-500" />
-                Mixed
-              </span>
-              <p className="text-[15px] leading-relaxed text-ink">
-                People like the product but stall at pricing. Most want a monthly plan before
-                committing to annual.
-              </p>
-            </div>
-            <ol className="mt-4 space-y-3">
-              {SUMMARY_THEMES.map((t) => (
-                <li key={t.name}>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-sm font-medium text-ink">{t.name}</p>
-                    <span className="font-mono text-xs tabular-nums text-ink/55">{t.share}%</span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 rounded-sm bg-surface">
-                    <div className="h-1.5 rounded-sm bg-brand" style={{ width: `${t.share}%` }} />
-                  </div>
-                  <p className="mt-1 text-[13px] text-ink/55">{t.detail}</p>
-                </li>
-              ))}
-            </ol>
-            <blockquote className="mt-4 border-l-2 border-ink/15 pl-3 font-display text-base italic leading-snug text-ink/70">
-              “Would happily pay monthly. Annual feels like a big jump for a tool we’re still
-              trying.”
-            </blockquote>
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-hairline bg-paper px-5 py-3 font-mono text-[11px] text-ink/55 sm:px-6">
-        <span>Funnel</span>
-        <span className="text-ink/30">·</span>
-        <span>Opened 1,240</span>
-        <ArrowRight className="size-3 text-ink/30" />
-        <span>Started 912</span>
-        <ArrowRight className="size-3 text-ink/30" />
-        <span className="text-brand">Completed 688</span>
+        <p className="mt-7 text-sm text-ink/55">What people mention most</p>
+        <ol className="mt-3 space-y-4">
+          {SUMMARY_THEMES.map((t) => (
+            <li key={t.name}>
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-[15px] text-ink">{t.name}</p>
+                <span className="font-mono text-sm tabular-nums text-ink/55">{t.share}%</span>
+              </div>
+              <div className="mt-2 h-2 rounded-sm bg-surface">
+                <div className="h-2 rounded-sm bg-brand" style={{ width: `${t.share}%` }} />
+              </div>
+            </li>
+          ))}
+        </ol>
       </div>
     </Sheet>
   );
@@ -1004,80 +850,49 @@ const FEATURES: Array<{
   },
 ];
 
-/** Icon tints for the dark Features grid (light enough to read on ink). */
-const FEATURE_TONES = [
-  "text-[oklch(0.78_0.12_255)]",
-  "text-[oklch(0.78_0.13_40)]",
-  "text-[oklch(0.8_0.1_165)]",
-  "text-[oklch(0.86_0.12_88)]",
-];
+type Capability = { icon: LucideIcon; title: string; body: string };
 
-const CAPABILITIES: Array<{ icon: LucideIcon; title: string; body: string; ai?: boolean }> = [
-  {
-    icon: Lightbulb,
-    title: "Questions drafted for you",
-    body: "Describe your goal and Claude writes five to eight questions, each with the right type and answer options.",
-    ai: true,
-  },
+const AI_CAPABILITIES: Capability[] = [
+  { icon: Lightbulb, title: "Drafts your questions", body: "Describe a goal, get a ready form." },
   {
     icon: MessagesSquare,
-    title: "Follow-ups that dig deeper",
-    body: "When someone answers “it was fine”, Claude can ask one gentle follow-up, the way a good interviewer would.",
-    ai: true,
+    title: "Asks a follow-up",
+    body: "One gentle “why?” after a vague answer.",
   },
-  {
-    icon: Quote,
-    title: "Answers read for you",
-    body: "Hundreds of open answers become a few themes, an overall mood and quotes to back them up.",
-    ai: true,
-  },
-  {
-    icon: Search,
-    title: "Ask your results anything",
-    body: "Type a question like “What do people who rated us low complain about?” and see the answer, with the responses behind it.",
-    ai: true,
-  },
+  { icon: Quote, title: "Reads every answer", body: "Themes, mood and quotes in seconds." },
+  { icon: Search, title: "Answers your questions", body: "Ask your results in plain English." },
+];
+
+const CAPABILITIES: Capability[] = [
   {
     icon: TrendingDown,
-    title: "See exactly where people quit",
-    body: "Answers are saved as people go. You see the question unfinished visitors stopped on, and they can come back to finish.",
+    title: "See where people quit",
+    body: "The exact question they stopped on.",
   },
-  {
-    icon: Trophy,
-    title: "Quizzes with a score",
-    body: "Give answers points and show everyone a result at the end, like “Expert” or “Getting there”.",
-  },
-  {
-    icon: Palette,
-    title: "Looks like your brand",
-    body: "Pick your colour, font and cover image, then send people on to your own website when they finish.",
-  },
-  {
-    icon: Signpost,
-    title: "Know where answers come from",
-    body: "See whether responses came from your newsletter, a social post or your website, campaign by campaign.",
-  },
-  {
-    icon: Layers,
-    title: "Change a live form safely",
-    body: "Start a new version without losing old answers, then compare how each version performed.",
-  },
-  {
-    icon: Users,
-    title: "Bring your team",
-    body: "Invite teammates as admins, editors or viewers, so everyone sees the results and only some can edit.",
-  },
-  {
-    icon: QrCode,
-    title: "Share it anywhere",
-    body: "Send a short link, print a QR code, embed the form on your site or use your phone’s share sheet.",
-  },
-  {
-    icon: Download,
-    title: "Take your data with you",
-    body: "Browse every response as a spreadsheet, or download it as a CSV or a print-ready PDF report.",
-  },
+  { icon: Trophy, title: "Quizzes with a score", body: "Points and a result at the end." },
+  { icon: Palette, title: "Your brand", body: "Your colour, font and cover image." },
+  { icon: Signpost, title: "Traffic sources", body: "Newsletter, social post or website." },
+  { icon: Layers, title: "Safe edits", body: "New versions keep the old answers." },
+  { icon: Users, title: "Team roles", body: "Admins, editors and viewers." },
+  { icon: QrCode, title: "Share anywhere", body: "Link, QR code or embed." },
+  { icon: Download, title: "Export", body: "Spreadsheet, CSV or PDF report." },
 ];
+
+function CapabilityList({ items, tone }: { items: Capability[]; tone: string }) {
+  return (
+    <ul className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
+      {items.map(({ icon: Icon, title, body }) => (
+        <li key={title} className="flex gap-3">
+          <Icon className={`mt-0.5 size-5 shrink-0 ${tone}`} strokeWidth={1.75} />
+          <div>
+            <h3 className="text-[15px] font-medium tracking-normal text-paper">{title}</h3>
+            <p className="mt-0.5 text-sm text-paper/55">{body}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const FAQS: Array<{ q: string; a: string }> = [
   {
@@ -1285,28 +1100,20 @@ function Index() {
                   </Link>
                 </div>
               </div>
-              <ul className="grid border-t border-paper/15 sm:grid-cols-2">
-                {CAPABILITIES.map(({ icon: Icon, title, body, ai }, i) => (
-                  <li
-                    key={title}
-                    className={`border-b border-paper/15 py-6 sm:py-7 ${i % 2 === 0 ? "sm:pr-8" : "sm:border-l sm:pl-8"}`}
-                  >
-                    <h3 className="flex items-center gap-2.5 text-[15px] font-medium tracking-normal text-paper">
-                      <Icon
-                        className={`size-4 shrink-0 ${FEATURE_TONES[i % FEATURE_TONES.length]}`}
-                        strokeWidth={2}
-                      />
-                      {title}
-                      {ai && (
-                        <span className="rounded-sm border border-[oklch(0.78_0.12_255)]/40 px-1.5 py-px font-mono text-[10px] font-medium uppercase tracking-wide text-[oklch(0.78_0.12_255)]">
-                          Claude
-                        </span>
-                      )}
-                    </h3>
-                    <p className="mt-2 text-[15px] leading-relaxed text-paper/65">{body}</p>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-12">
+                <div>
+                  <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wide text-[oklch(0.78_0.12_255)]">
+                    Claude does the heavy lifting
+                  </p>
+                  <CapabilityList items={AI_CAPABILITIES} tone="text-[oklch(0.78_0.12_255)]" />
+                </div>
+                <div className="border-t border-paper/15 pt-10">
+                  <p className="font-mono text-[11px] uppercase tracking-wide text-paper/45">
+                    Everything else, built in
+                  </p>
+                  <CapabilityList items={CAPABILITIES} tone="text-paper/60" />
+                </div>
+              </div>
             </div>
           </div>
         </section>
