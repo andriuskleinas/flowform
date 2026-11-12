@@ -414,12 +414,13 @@ export function AuthField({
   const isPassword = type === "password";
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <Label htmlFor={id}>{label}</Label>
-        {labelAction}
-      </div>
-      <div className="relative">
+    // Grid so the label action (e.g. "Forgot password?") can sit beside the
+    // label visually while coming *after* the input in DOM/tab order.
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5">
+      <Label htmlFor={id} className="col-start-1 row-start-1">
+        {label}
+      </Label>
+      <div className="relative col-span-2 row-start-2">
         <Icon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink/35" />
         <Input
           id={id}
@@ -445,12 +446,13 @@ export function AuthField({
           </button>
         )}
       </div>
+      {labelAction && <div className="col-start-2 row-start-1">{labelAction}</div>}
       {error ? (
-        <p id={`${id}-error`} className="text-xs text-destructive">
+        <p id={`${id}-error`} className="col-span-2 text-xs text-destructive">
           {error}
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="text-xs text-ink/50">
+        <p id={`${id}-hint`} className="col-span-2 text-xs text-ink/50">
           {hint}
         </p>
       ) : null}
