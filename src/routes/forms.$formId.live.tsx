@@ -325,8 +325,7 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
 
       {!accepting && (
         <p className="border-b border-hairline bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-800 dark:text-amber-300">
-          This survey isn't accepting responses right now — publish or reopen it to collect live
-          answers.
+          This form isn’t taking responses. Publish or reopen it to collect live answers.
         </p>
       )}
 
@@ -342,7 +341,7 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
             <h2 className="mt-2 max-w-4xl font-display text-3xl leading-tight md:text-5xl">
               {current
                 ? recallText(current.label, {}) // no respondent here: drop {placeholders}
-                : "This survey has no questions yet"}
+                : "This form has no questions yet"}
             </h2>
           </div>
           {showCount && <ResponseCounter count={responses} pulse={pulse} />}
@@ -399,7 +398,7 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
         {accepting && formUrl && (
           <aside className="mt-8 flex items-center gap-4 self-start rounded-xl border border-hairline bg-card p-4 md:absolute md:bottom-8 md:right-10 md:mt-0 md:flex-col md:items-center md:gap-3 md:p-5">
             <div className="rounded-md bg-white p-2">
-              <QRCode value={formUrl} size={136} aria-label="QR code to answer this survey" />
+              <QRCode value={formUrl} size={136} aria-label="QR code to answer this form" />
             </div>
             <div className="md:text-center">
               <p className="text-sm font-semibold">Scan to answer</p>
@@ -420,7 +419,7 @@ function LiveBadge({ connected, accepting }: { connected: boolean; accepting: bo
   const live = connected && accepting;
   return (
     <span
-      title={connected ? "Updating in real time" : "Reconnecting — refreshing every few seconds"}
+      title={connected ? "Updating in real time" : "Reconnecting. Refreshing every few seconds…"}
       className={
         "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide " +
         (live
@@ -715,7 +714,7 @@ function Big({
 function EmptyNote() {
   return (
     <p className="mt-6 text-lg text-ink/45">
-      Waiting for the first answer — results appear here the moment someone responds.
+      Waiting for the first brave soul. Results appear the moment someone answers.
     </p>
   );
 }

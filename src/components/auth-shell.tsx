@@ -37,9 +37,9 @@ const PANEL_COPY: Record<"login" | "signup" | "default", PanelCopy> = {
 };
 
 const FEATURES = [
-  { icon: MessagesSquare, text: "One question at a time, so people keep going" },
-  { icon: GitBranch, text: "Logic jumps skip what doesn't apply" },
-  { icon: Sparkles, text: "Claude drafts questions and summarises answers" },
+  { icon: MessagesSquare, text: "One question at a time" },
+  { icon: GitBranch, text: "Skips what doesn’t apply" },
+  { icon: Sparkles, text: "Claude drafts the questions and reads the answers" },
 ];
 
 /**
@@ -358,7 +358,7 @@ function PreviewCard() {
                 <Check className="size-5" />
               </span>
               <p className="mt-4 font-display text-xl">Thanks, {answers[0] || "friend"}!</p>
-              <p className="mt-1 text-sm text-ink/55">That's everything. Your answers are in.</p>
+              <p className="mt-1 text-sm text-ink/55">That’s everything. Your answers are in.</p>
             </div>
           )}
         </div>

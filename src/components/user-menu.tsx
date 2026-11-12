@@ -48,7 +48,7 @@ export function UserMenu({ userId, email }: { userId: string; email: string }) {
       if (error) throw error;
     } catch (err) {
       signingOutRef.current = false;
-      const message = err instanceof Error ? err.message : "Could not sign out.";
+      const message = err instanceof Error ? err.message : "Couldn’t log out. Try again.";
       toast.error(message);
       return;
     }
@@ -91,7 +91,7 @@ export function UserMenu({ userId, email }: { userId: string; email: string }) {
           className="text-destructive focus:text-destructive"
         >
           <LogOut className="size-4" />
-          Sign out
+          Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

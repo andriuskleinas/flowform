@@ -145,7 +145,7 @@ function DashboardAuthed({
   // A link to a workspace you're not (or no longer) in falls back to your own.
   useEffect(() => {
     if (wsParam && workspacesLoaded && !workspaces.some((w) => w.owner_id === wsParam)) {
-      toast.error("You don't have access to that workspace");
+      toast.error("You don’t have access to that workspace");
       navigate({ to: "/dashboard", search: {}, replace: true });
     }
   }, [wsParam, workspacesLoaded, workspaces, navigate]);
@@ -270,7 +270,7 @@ function DashboardAuthed({
     }));
     out.push({
       key: UNCATEGORIZED,
-      label: "Uncategorized",
+      label: "Uncategorised",
       color: null,
       forms: visibleForms.filter((f) => !f.category_id),
     });
@@ -327,7 +327,7 @@ function DashboardAuthed({
         nowHidden
           ? {
               action: {
-                label: categoryId ? `Show ${name ?? "category"}` : "Show uncategorized",
+                label: categoryId ? `Show ${name ?? "category"}` : "Show uncategorised",
                 onClick: () => setSearch({ cat: categoryId ?? UNCATEGORIZED }),
               },
             }
@@ -335,7 +335,7 @@ function DashboardAuthed({
       );
       await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", ownerId] });
     },
-    onError: (e: Error) => toast.error(e.message || "Could not update category"),
+    onError: (e: Error) => toast.error(e.message || "Couldn’t update the category. Try again."),
   });
 
   const duplicateForm = useMutation({
@@ -347,11 +347,11 @@ function DashboardAuthed({
       return data;
     },
     onSuccess: async (newId) => {
-      toast.success("Form duplicated — opening the copy");
+      toast.success("Form duplicated. Opening the copy…");
       await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", ownerId] });
       navigate({ to: "/forms/$formId/edit", params: { formId: newId } });
     },
-    onError: (e: Error) => toast.error(e.message || "Could not duplicate form"),
+    onError: (e: Error) => toast.error(e.message || "Couldn’t duplicate the form. Try again."),
   });
 
   const deleteForm = useMutation({
@@ -370,7 +370,7 @@ function DashboardAuthed({
       await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", ownerId] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-summary", ownerId] });
     },
-    onError: (e: Error) => toast.error(e.message || "Could not delete form"),
+    onError: (e: Error) => toast.error(e.message || "Couldn’t delete the form. Try again."),
   });
 
   const setFormStatus = useMutation({
@@ -385,11 +385,11 @@ function DashboardAuthed({
     },
     onSuccess: async (status) => {
       toast.success(
-        status === "closed" ? "Form closed — no longer accepting responses" : "Form reopened",
+        status === "closed" ? "Form closed. It no longer takes responses." : "Form reopened",
       );
       await queryClient.invalidateQueries({ queryKey: ["dashboard-forms", ownerId] });
     },
-    onError: (e: Error) => toast.error(e.message || "Could not update form"),
+    onError: (e: Error) => toast.error(e.message || "Couldn’t update the form. Try again."),
   });
 
   const handleSignOut = async () => {
@@ -399,7 +399,7 @@ function DashboardAuthed({
       if (error) throw error;
     } catch (err) {
       signingOutRef.current = false;
-      const message = err instanceof Error ? err.message : "Could not sign out.";
+      const message = err instanceof Error ? err.message : "Couldn’t log out. Try again.";
       toast.error(message);
       return;
     }
@@ -422,7 +422,7 @@ function DashboardAuthed({
       const row = dashboardForms.find((f) => f.id === formId);
       if (row) setShareTarget({ ...row, status: "published" });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not publish form");
+      toast.error(error instanceof Error ? error.message : "Couldn’t publish the form. Try again.");
     }
   };
 
@@ -447,11 +447,11 @@ function DashboardAuthed({
   const pulse = isLoading
     ? ""
     : forms.length === 0
-      ? "Create your first form to start collecting responses."
+      ? "No forms yet. The void is patient."
       : weekResponses > 0
         ? `${weekResponses} new ${weekResponses === 1 ? "response" : "responses"} this week across ${liveCount} live ${liveCount === 1 ? "form" : "forms"}.`
         : liveCount > 0
-          ? `No new responses this week. ${liveCount} ${liveCount === 1 ? "form is" : "forms are"} live.`
+          ? `A quiet week. ${liveCount} ${liveCount === 1 ? "form is" : "forms are"} live.`
           : "Nothing is live yet. Publish a form to start collecting.";
 
   return (
@@ -496,7 +496,7 @@ function DashboardAuthed({
                 className="text-destructive focus:text-destructive"
               >
                 <LogOut className="size-4" />
-                Sign out
+                Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -561,7 +561,7 @@ function DashboardAuthed({
                 </>
               ) : role ? (
                 <span className="inline-flex flex-wrap items-center gap-2">
-                  You're here as <RoleBadge role={role} />
+                  You’re here as <RoleBadge role={role} />
                   {!can.canEdit && (
                     <span className="inline-flex items-center gap-1 text-sm">
                       <Eye className="size-3.5" /> View-only — responses and analytics are open to
@@ -652,7 +652,7 @@ function DashboardAuthed({
             {!isLoading && isError && (
               <div className="flex flex-col items-center rounded-xl border border-dashed border-destructive/30 bg-card px-6 py-14 text-center">
                 <FileText className="size-6 text-destructive" strokeWidth={1.5} />
-                <h3 className="mt-4 text-lg font-medium">Couldn't load your forms</h3>
+                <h3 className="mt-4 text-lg font-medium">Couldn’t load your forms</h3>
                 <p className="mt-2 max-w-sm text-sm text-ink/60">
                   Your forms are safe. This is only a loading problem.
                 </p>
@@ -738,7 +738,7 @@ function DashboardAuthed({
       <ConfirmDialog
         open={pendingPublish !== null}
         title="Publish this form?"
-        description="This will make the form visible to anyone with the link. You can unpublish it later from the editor."
+        description="Anyone with the link can answer it. You can unpublish it later from the editor."
         confirmLabel="Publish and share"
         onConfirm={() => pendingPublish && doPublishAndShare(pendingPublish)}
         onCancel={() => setPendingPublish(null)}
@@ -786,7 +786,7 @@ function EmptyWorkspace({ canCreate, ownerId }: { canCreate: boolean; ownerId: s
       title: "Share",
       body: "Publish and send the link. Respondents answer one question at a time.",
     },
-    { n: "3", title: "Learn", body: "Watch responses, drop-off and AI summaries arrive here." },
+    { n: "3", title: "Learn", body: "Responses, drop-off and Claude’s summaries land here." },
   ];
   return (
     <div className="rounded-xl border border-hairline bg-card px-6 py-12 text-center md:px-10">
@@ -795,8 +795,8 @@ function EmptyWorkspace({ canCreate, ownerId }: { canCreate: boolean; ownerId: s
       </h3>
       <p className="mx-auto mt-2 max-w-md text-sm text-ink/60">
         {canCreate
-          ? "Most people have their first form live in under five minutes."
-          : "When an editor creates a form, it will appear here with its results."}
+          ? "Three steps, and Claude can do most of the first one."
+          : "When an editor creates a form, it shows up here."}
       </p>
       {canCreate && (
         <>

@@ -24,7 +24,7 @@ function NotFoundComponent() {
         <h1 className="font-display text-5xl text-foreground">Page not found</h1>
 
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          It doesn’t exist, or it moved without telling anyone.
         </p>
         <div className="mt-6">
           <Link
@@ -46,9 +46,9 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="font-display text-4xl text-foreground">This page didn't load</h1>
+        <h1 className="font-display text-4xl text-foreground">This page didn’t load</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          Something broke on our side. Try again, or head home.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -77,17 +77,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Flowform — Forms that feel like a conversation" },
+      { title: "Flowform — Forms people actually finish" },
       {
         name: "description",
         content:
-          "Flowform helps you build engaging, one-question-at-a-time forms that people actually enjoy filling out.",
+          "One question at a time, nothing that doesn’t apply. Claude drafts the questions and reads the answers.",
       },
-      { property: "og:title", content: "Flowform — Forms that feel like a conversation" },
+      { property: "og:title", content: "Flowform — Forms people actually finish" },
       {
         property: "og:description",
         content:
-          "Build engaging, one-question-at-a-time forms that people actually enjoy filling out.",
+          "One question at a time, nothing that doesn’t apply. Claude drafts the questions and reads the answers.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://flowformapp.vercel.app" },
@@ -96,11 +96,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Flowform — Forms that feel like a conversation" },
+      { name: "twitter:title", content: "Flowform — Forms people actually finish" },
       {
         name: "twitter:description",
         content:
-          "Build engaging, one-question-at-a-time forms that people actually enjoy filling out.",
+          "One question at a time, nothing that doesn’t apply. Claude drafts the questions and reads the answers.",
       },
       { name: "twitter:image", content: "https://flowformapp.vercel.app/og-image.png" },
     ],

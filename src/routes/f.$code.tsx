@@ -11,7 +11,7 @@ import { LogoMark } from "@/components/logo";
  */
 export const Route = createFileRoute("/f/$code")({
   component: ShortLinkPage,
-  head: () => ({ meta: [{ title: "Opening survey — Flowform" }] }),
+  head: () => ({ meta: [{ title: "Opening form — Flowform" }] }),
 });
 
 function ShortLinkPage() {
@@ -39,17 +39,17 @@ function ShortLinkPage() {
       <LogoMark className="size-9" />
       {missing ? (
         <>
-          <h1 className="mt-5 font-display text-2xl text-ink">This link doesn't lead anywhere</h1>
+          <h1 className="mt-5 font-display text-2xl text-ink">This link doesn’t lead anywhere</h1>
           <p className="mt-2 max-w-sm text-ink/60">
-            The survey may have been unpublished, or the link was mistyped. Check the address and
-            try again.
+            The form may have been unpublished, or the link was mistyped. Check the address and try
+            again.
           </p>
           <Link to="/" className="mt-6 text-brand underline">
             Go to Flowform
           </Link>
         </>
       ) : (
-        <p className="mt-5 text-ink/60">Opening survey…</p>
+        <p className="mt-5 text-ink/60">Opening form…</p>
       )}
     </div>
   );

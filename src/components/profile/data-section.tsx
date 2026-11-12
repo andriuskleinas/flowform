@@ -90,7 +90,7 @@ function DeleteAccountDialog({
     const { error } = await supabase.rpc("delete_my_account");
     if (error) {
       setDeleting(false);
-      toast.error(error.message || "Couldn't delete the account");
+      toast.error(error.message || "Couldn’t delete the account");
       return;
     }
     // The user row is gone; clear the local session without a server call.
@@ -164,7 +164,7 @@ export function DataSection({ userId, email }: { userId: string; email: string }
       <ProfileSection
         id="data"
         title="Your data"
-        description="It's yours — take it with you any time."
+        description="It’s yours. Take it with you any time."
       >
         <SectionRow
           title="Export everything"
@@ -185,7 +185,7 @@ export function DataSection({ userId, email }: { userId: string; email: string }
       <ProfileSection id="danger" title="Danger zone" danger>
         <SectionRow
           title="Delete account"
-          description="Permanently remove your account, your workspace and all of its data. Workspaces you're a member of are not affected."
+          description="Permanently delete your account, your workspace and all of its data. Workspaces you’re a member of aren’t affected."
         >
           <button
             type="button"

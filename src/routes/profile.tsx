@@ -223,14 +223,14 @@ function ProfileAuthed({
       await queryClient.invalidateQueries({ queryKey: ["profile", userId] });
 
       if (emailNotice) {
-        toast.success("Confirmation email sent. Click the link to finalize the change.");
+        toast.success("Confirmation email sent. Click the link to finish the change.");
       } else if (nameChanged) {
         toast.success("Profile updated");
       } else {
         toast.message("No changes to save");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not update profile");
+      toast.error(err instanceof Error ? err.message : "Couldn’t update your profile. Try again.");
     } finally {
       setSubmitting(false);
     }

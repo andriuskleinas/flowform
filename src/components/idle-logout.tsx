@@ -50,7 +50,7 @@ export function IdleLogout() {
       } catch {
         // ignore
       }
-      toast.info("You've been logged out after 10 minutes of inactivity.");
+      toast.info("You were logged out after 10 quiet minutes. Your forms are safe.");
       supabase.auth.signOut().then(({ error }) => {
         if (error) reportError(error, { source: "IdleLogout.signOut" });
       });

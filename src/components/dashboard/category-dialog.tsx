@@ -220,7 +220,7 @@ export function CategoryDialog({
             )}
             {typedMatch && (
               <p className="mt-2 text-xs text-ink/50">
-                You already have “{typedMatch.name}” — it will be used.
+                You already have “{typedMatch.name}”. We’ll use that one.
               </p>
             )}
           </div>
@@ -357,8 +357,8 @@ export function ManageCategoriesDialog({
         <DialogHeader>
           <DialogTitle>Manage categories</DialogTitle>
           <DialogDescription>
-            Topics for grouping and filtering your forms. Renaming or recolouring updates every form
-            in the category.
+            Group and filter your forms by topic. Renaming or recolouring a category updates every
+            form in it.
           </DialogDescription>
         </DialogHeader>
 
@@ -457,7 +457,7 @@ function CategoryRow({
       toast.success(`Deleted “${c.name}”`);
       await invalidateCategoryViews(qc, userId);
     },
-    onError: (e: Error) => toast.error(e.message || "Could not delete category"),
+    onError: (e: Error) => toast.error(e.message || "Couldn’t delete the category. Try again."),
   });
 
   const commitName = () => {
@@ -517,7 +517,7 @@ function CategoryRow({
             disabled={remove.isPending}
             title={
               formCount > 0
-                ? `${formCount} ${formCount === 1 ? "form becomes" : "forms become"} uncategorized`
+                ? `${formCount} ${formCount === 1 ? "form becomes" : "forms become"} uncategorised`
                 : undefined
             }
             className="h-7 rounded-md bg-destructive px-2 text-xs font-medium text-white hover:bg-destructive/90 disabled:opacity-50"
@@ -539,7 +539,7 @@ function CategoryRow({
           aria-label={`Delete ${c.name}`}
           title={
             formCount > 0
-              ? `Delete — its ${formCount} ${formCount === 1 ? "form stays" : "forms stay"}, uncategorized`
+              ? `Delete. Its ${formCount} ${formCount === 1 ? "form stays" : "forms stay"}, uncategorised`
               : "Delete"
           }
           onClick={() => setConfirmDelete(true)}

@@ -57,7 +57,7 @@ export const Route = createFileRoute("/forms/$formId/")({
     const description =
       loaderData?.description?.trim() ||
       (loaderData?.title
-        ? `Share your answers to "${loaderData.title}" — it only takes a minute.`
+        ? `Answer “${loaderData.title}”. It takes about a minute.`
         : "A form built with Flowform.");
     return {
       meta: [
@@ -341,8 +341,8 @@ function PublicFormPage() {
       // (closed/unpublished) after the respondent loaded the page. Surface
       // that instead of the raw Postgres policy error.
       const msg = /row-level security/i.test(e.message)
-        ? "This form is no longer accepting responses."
-        : e.message || "Could not submit";
+        ? "This form no longer takes responses."
+        : e.message || "Couldn’t submit. Try again.";
       toast.error(msg);
     },
   });
@@ -414,9 +414,7 @@ function PublicFormPage() {
     return (
       <Shell width="sm">
         <h1 className="font-display text-3xl">Form not found</h1>
-        <p className="mt-3 text-ink/60">
-          This form may have been deleted or the link is incorrect.
-        </p>
+        <p className="mt-3 text-ink/60">It may have been deleted, or the link is wrong.</p>
         <Link to="/" className="mt-6 inline-block text-brand underline">
           Go home
         </Link>
@@ -433,14 +431,14 @@ function PublicFormPage() {
           <Pencil className="size-4" />
         </span>
         <div className="text-sm">
-          <p className="font-semibold text-ink">You're viewing the public version of this form.</p>
+          <p className="font-semibold text-ink">You’re viewing the public version of this form.</p>
           <p className="text-ink/60">
             {status === "draft" &&
-              "Draft — respondents can't see this yet. Publish from the editor to share it."}
+              "Draft. Respondents can’t see this yet. Publish it from the editor to share it."}
             {status === "published" &&
-              "This is what respondents see. Your visits and test submissions here aren't counted in analytics — open the editor to change questions."}
+              "This is what respondents see. Your visits and test submissions here aren’t counted. Open the editor to change questions."}
             {status === "closed" &&
-              "Closed — respondents see this notice. Reopen from the editor to accept more responses."}
+              "Closed. Respondents see this notice. Reopen it from the editor to take more responses."}
           </p>
         </div>
       </div>
@@ -470,10 +468,10 @@ function PublicFormPage() {
           <span className="flex size-14 items-center justify-center rounded-full bg-amber-100 text-amber-600">
             <CircleSlash className="size-7" />
           </span>
-          <h1 className="font-display mt-4 text-3xl">This survey is closed</h1>
+          <h1 className="font-display mt-4 text-3xl">This form is closed</h1>
           <p className="mt-3 max-w-sm text-ink/60">
-            <span className="font-semibold text-ink">{formQ.data.title}</span> is no longer
-            accepting responses. Thanks to everyone who took part.
+            <span className="font-semibold text-ink">{formQ.data.title}</span> no longer takes
+            responses. Thanks to everyone who took part.
           </p>
         </div>
       </Shell>
@@ -483,8 +481,8 @@ function PublicFormPage() {
   if (status === "draft" && !isOwner) {
     return (
       <Shell width="sm">
-        <h1 className="font-display text-3xl">This form isn't published yet</h1>
-        <p className="mt-3 text-ink/60">The owner hasn't published this form. Check back later.</p>
+        <h1 className="font-display text-3xl">This form isn’t published yet</h1>
+        <p className="mt-3 text-ink/60">The owner hasn’t published this form. Check back later.</p>
         <Link to="/" className="mt-6 inline-block text-brand underline">
           Go home
         </Link>
@@ -510,7 +508,7 @@ function PublicFormPage() {
           )}
           {isOwner && (
             <p className="eyebrow mt-4 text-ink/50">
-              Test submission — nothing was recorded or counted
+              Test submission. Nothing was recorded or counted.
             </p>
           )}
           {quizOn && settings.quiz?.show_score !== false && (
@@ -529,7 +527,7 @@ function PublicFormPage() {
           )}
           <p className="mt-2 max-w-md whitespace-pre-line text-ink/60">
             {isOwner && !quizOn
-              ? "This was a preview of your own form — nothing was recorded, and it isn't counted in analytics."
+              ? "This was a preview of your own form. Nothing was recorded or counted."
               : recall(formQ.data.thank_you_message?.trim() || "Your response was recorded.")}
           </p>
           {redirectUrl && <RedirectNotice url={redirectUrl} auto={!isOwner} />}
@@ -544,10 +542,10 @@ function PublicFormPage() {
         {ownerNav}
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
-          <h1 className="font-display mt-4 text-3xl">You've already responded</h1>
+          <h1 className="font-display mt-4 text-3xl">You’ve already responded</h1>
           <p className="mt-2 max-w-sm text-ink/60">
-            This form accepts one response per person, and we already have yours. Thanks for taking
-            part!
+            This form takes one response per person, and we already have one from this network.
+            Thanks for taking part.
           </p>
         </div>
       </Shell>

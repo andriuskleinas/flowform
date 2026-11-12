@@ -62,7 +62,7 @@ function ResetPasswordPage() {
     e.preventDefault();
     const next = {
       password: password.length >= 6 ? null : "Use at least 6 characters.",
-      confirm: confirm === password ? null : "Those passwords don't match.",
+      confirm: confirm === password ? null : "Those passwords don’t match.",
     };
     setErrors(next);
     if (next.password || next.confirm) return;
@@ -73,11 +73,13 @@ function ResetPasswordPage() {
         toast.error(error.message);
         return;
       }
-      toast.success("Password updated — you're logged in.");
+      toast.success("Password updated. You’re logged in.");
       navigate({ to: "/dashboard" });
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Could not update your password. Please try again.",
+        err instanceof Error
+          ? err.message
+          : "Couldn’t update your password. Try again in a moment.",
       );
     } finally {
       setSubmitting(false);
@@ -100,8 +102,8 @@ function ResetPasswordPage() {
         <div className="text-center">
           <h1 className="font-display text-3xl">This link has expired</h1>
           <p className="mt-3 text-ink/60">
-            Password reset links work once and expire after an hour. Request a fresh one and we'll
-            email it right over.
+            Reset links work once and expire after an hour. Ask for a new one and we’ll send it
+            straight over.
           </p>
           <Link
             to="/forgot-password"

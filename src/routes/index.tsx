@@ -430,7 +430,7 @@ function HeroForm() {
                       {HERO_SHORT[id]}
                     </span>
                     <span className={`text-right ${skipped ? "text-ink/40 italic" : "text-ink"}`}>
-                      {skipped ? "Not asked, didn’t apply" : answers[id]}
+                      {skipped ? "Skipped, didn’t apply" : answers[id]}
                     </span>
                   </li>
                 );
@@ -624,8 +624,7 @@ function LogicVignette() {
           ))}
         </div>
         <p className="mt-4 font-mono text-[11px] text-ink/45">
-          Jumps only skip ahead. Questions that get skipped, even required ones, never stop someone
-          from submitting.
+          Jumps only skip ahead. A skipped question never blocks submitting, even a required one.
         </p>
       </div>
     </Sheet>
@@ -780,18 +779,18 @@ const FEATURES: Array<{
   {
     hue: "sun",
     glyph: "build",
-    note: "AI drafting by Claude",
+    note: "Drafted by Claude",
     label: "Build",
     title: (
       <>
         Start from a goal, <em>not</em> a blank page.
       </>
     ),
-    body: "Tell Claude what you want to learn. It drafts five to eight questions, each with the right type and answer options. Keep the ones you like, edit the rest, reorder by drag and drop.",
+    body: "Tell Claude what you want to learn. It drafts the questions, picks the types and writes the options. You keep the good ones.",
     points: [
-      "Claude picks the question type and writes the options",
-      "Short, vague answer? Claude can ask one friendly “why?”",
-      "Your colours, font and cover image, previewed live",
+      "Five to eight questions, ready to edit",
+      "One gentle “why?” after a vague answer",
+      "Your colour, font and cover image",
     ],
     visual: <BuilderVignette />,
   },
@@ -804,29 +803,29 @@ const FEATURES: Array<{
         Skip what doesn’t <em>apply.</em>
       </>
     ),
-    body: "Each person only sees the questions that fit their answers, so nobody is asked something that doesn’t concern them. Later questions can even use what they told you earlier.",
+    body: "People only see the questions that fit their answers. Nobody gets asked about a team they don’t have.",
     points: [
-      "Skip ahead based on any choice someone makes",
-      "Greet people by name: “Thanks, Sam! What brought you here?”",
-      "One question at a time, or every question on one page",
+      "Jump ahead based on any answer",
+      "Reuse earlier answers: “Thanks, Sam. What brought you here?”",
+      "One question at a time, or all on one page",
     ],
     visual: <LogicVignette />,
   },
   {
     hue: "mint",
     glyph: "learn",
-    note: "AI summaries by Claude",
+    note: "Summaries by Claude",
     label: "Learn",
     title: (
       <>
         Know what people <em>really think.</em>
       </>
     ),
-    body: "Claude reads every open answer and sums them up in a few clear themes, so you see what matters without reading them all.",
+    body: "Claude reads every open answer and sums them up in a few themes. You read one summary, not 214 replies.",
     points: [
-      "Ask “What do unhappy customers mention?” and get an answer",
-      "The question where unfinished visitors stopped, not a guess",
-      "Browse as a spreadsheet, or download a CSV or PDF report",
+      "Ask “What do unhappy customers mention?”",
+      "See the exact question where people quit",
+      "Export a CSV or a PDF report",
     ],
     visual: <InsightVignette />,
   },
@@ -840,11 +839,11 @@ const FEATURES: Array<{
         Turn any form into a <em>live poll.</em>
       </>
     ),
-    body: "Running a talk, a class or a workshop? Put the results on the big screen. People scan the QR code, answer on their phones, and the bars move the moment their answers arrive.",
+    body: "Put the results on the big screen. People scan, answer on their phones and watch the bars move. A meeting with a measurable outcome, at last.",
     points: [
-      "Results update live, no refreshing",
-      "QR code and a short link right on the screen",
-      "Hide the count or stay on one question while you talk",
+      "Updates live, no refreshing",
+      "QR code and short link on screen",
+      "Hide the count until the reveal",
     ],
     visual: <LiveVignette />,
   },
@@ -897,31 +896,31 @@ function CapabilityList({ items, tone }: { items: Capability[]; tone: string }) 
 const FAQS: Array<{ q: string; a: string }> = [
   {
     q: "Is Flowform free?",
-    a: "Yes. Flowform is free while it’s in early access, with every feature included and no credit card required.",
+    a: "Yes, while it’s in early access. Every feature, no credit card.",
   },
   {
     q: "Do respondents need an account?",
-    a: "No. You share a link (or a QR code, or an embed) and it opens straight in the browser on any device.",
+    a: "No. They open a link, scan a QR code or find the form on your site, and start answering. The world has enough passwords.",
   },
   {
     q: "How do the AI features work?",
-    a: "Describe what you want to learn and Claude drafts questions you can accept or edit. On the results side, Claude reads your open-text answers and pulls out themes, sentiment and representative quotes. Summaries are labelled as AI-generated.",
+    a: "Claude drafts questions you can keep or edit. Later, it reads the open answers and returns themes, mood and quotes. Anything Claude wrote is labelled.",
   },
   {
     q: "Can I use it at a live event?",
-    a: "Yes. Open the live results screen, put it on a projector, and people answer on their phones by scanning the QR code. The charts update as answers come in.",
+    a: "Yes. Put the live results on a projector. People scan the QR code, answer on their phones, and the bars move as answers arrive.",
   },
   {
     q: "Can I change a form after people have answered?",
-    a: "Yes. Start a new version: the people who already answered keep their responses, new visitors get the updated form, and you can compare the two versions side by side.",
+    a: "Yes. Start a new version. Old responses stay put, new visitors see the update, and you can compare the two.",
   },
   {
     q: "How is this different from a classic survey?",
-    a: "A classic survey shows a wall of questions at once. Flowform shows one question at a time, skips what doesn’t apply, and tells you exactly where people drop off so you can fix it.",
+    a: "A classic survey is a wall of questions and a quiet hope. Flowform asks one at a time, skips what doesn’t apply and shows exactly where people stop.",
   },
   {
     q: "Where is my data stored?",
-    a: "In a managed Postgres database on Supabase, protected by row-level security so only you, and teammates you invite, can read your forms and responses. It isn’t sold or shared.",
+    a: "In a Postgres database on Supabase. Row-level security means only you and the teammates you invite can read your forms and responses. We don’t sell or share it.",
   },
 ];
 
@@ -1011,16 +1010,16 @@ function Index() {
                 Forms people actually <em className="text-brand">finish.</em>
               </h1>
               <p className="mt-7 max-w-lg text-lg leading-relaxed text-ink/65">
-                Flowform turns a survey into a conversation: one question at a time, skipping what
-                doesn’t apply, with Claude helping you write the questions and read the answers.
+                One question at a time, nothing that doesn’t apply. Claude drafts the questions and
+                reads the answers. The 40-question survey can rest in peace.
               </p>
               <div className="mt-9 flex flex-wrap items-center gap-3">
-                <PrimaryCTA>{session ? "Open dashboard" : "Start building, free"}</PrimaryCTA>
+                <PrimaryCTA>{session ? "Open dashboard" : "Start free"}</PrimaryCTA>
                 <Link
                   to="/demo"
                   className="inline-flex h-12 items-center gap-2 rounded-md border border-ink/15 bg-card px-5 text-[15px] font-medium text-ink transition-colors hover:border-ink/35"
                 >
-                  Try the live demo
+                  Try the demo
                 </Link>
               </div>
               <ul className="mt-10 flex flex-wrap gap-x-8 gap-y-3">
@@ -1087,15 +1086,14 @@ function Index() {
                   Everything a form needs. <em>Nothing it doesn’t.</em>
                 </h2>
                 <p className="mt-6 max-w-sm text-[17px] leading-relaxed text-paper/60">
-                  Claude writes the first draft, asks the follow-up and reads the answers.
-                  Everything in between, from branding to sharing, takes a click.
+                  Claude drafts, follows up and reads. The rest takes a click.
                 </p>
                 <div className="mt-8">
                   <Link
                     to="/demo"
                     className="inline-flex h-11 items-center gap-2 rounded-md bg-paper px-4 text-sm font-medium text-ink transition-colors hover:bg-card"
                   >
-                    Try the live demo
+                    Try the demo
                     <ArrowRight className="size-4" />
                   </Link>
                 </div>
@@ -1103,13 +1101,13 @@ function Index() {
               <div className="space-y-12">
                 <div>
                   <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wide text-[oklch(0.78_0.12_255)]">
-                    Claude does the heavy lifting
+                    Done by Claude
                   </p>
                   <CapabilityList items={AI_CAPABILITIES} tone="text-[oklch(0.78_0.12_255)]" />
                 </div>
                 <div className="border-t border-paper/15 pt-10">
                   <p className="font-mono text-[11px] uppercase tracking-wide text-paper/45">
-                    Everything else, built in
+                    Built in
                   </p>
                   <CapabilityList items={CAPABILITIES} tone="text-paper/60" />
                 </div>
@@ -1160,7 +1158,7 @@ function Index() {
                   <em>at a time.</em>
                 </h2>
                 <p className="mt-6 max-w-md text-[17px] text-paper/75">
-                  Free while in early access. Every feature, every question type, no credit card.
+                  Free in early access. Every feature, no credit card.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">

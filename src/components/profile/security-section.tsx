@@ -34,7 +34,7 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
       return;
     }
     if (password !== confirm) {
-      setError("The passwords don't match.");
+      setError("The passwords don’t match.");
       return;
     }
     setSaving(true);
@@ -115,7 +115,7 @@ export function SecuritySection({ lastSignInAt }: { lastSignInAt: string | undef
     setConfirmOthers(false);
     const { error } = await supabase.auth.signOut({ scope: "others" });
     if (error) toast.error(error.message);
-    else toast.success("Signed out of every other device");
+    else toast.success("Logged out of every other device");
   };
 
   return (
@@ -126,7 +126,7 @@ export function SecuritySection({ lastSignInAt }: { lastSignInAt: string | undef
             <KeyRound className="size-4 text-ink/50" /> Password
           </span>
         }
-        description={editingPassword ? undefined : "Change the password you use to sign in."}
+        description={editingPassword ? undefined : "Change the password you use to log in."}
         className={cn(editingPassword && "md:items-start")}
       >
         {editingPassword ? (
@@ -146,7 +146,7 @@ export function SecuritySection({ lastSignInAt }: { lastSignInAt: string | undef
         description={
           <>
             Last sign-in <span className="text-ink/75">{formatDateTime(lastSignInAt)}</span>. Lost a
-            device? End every other session; this one stays signed in.
+            device? End every other session; this one stays logged in.
           </>
         }
       >
@@ -155,14 +155,14 @@ export function SecuritySection({ lastSignInAt }: { lastSignInAt: string | undef
           className={btnSecondary + " shrink-0"}
           onClick={() => setConfirmOthers(true)}
         >
-          Sign out other devices
+          Log out other devices
         </button>
       </SectionRow>
 
       <ConfirmDialog
         open={confirmOthers}
-        title="Sign out of other devices?"
-        description="Every other browser and device signed in to this account will be signed out. You stay signed in here."
+        title="Log out of other devices?"
+        description="Every other browser and device logged in to this account will be logged out. You stay logged in here."
         confirmLabel="Sign them out"
         onConfirm={signOutOthers}
         onCancel={() => setConfirmOthers(false)}

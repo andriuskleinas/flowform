@@ -88,10 +88,10 @@ export function PendingInvitations({
       if (error) throw error;
     },
     onSuccess: async () => {
-      toast.success("You've joined the workspace");
+      toast.success("You’ve joined the workspace");
       await refresh();
     },
-    onError: (e) => toast.error(friendly(e, "Couldn't accept the invitation")),
+    onError: (e) => toast.error(friendly(e, "Couldn’t accept the invitation")),
   });
 
   const decline = useMutation({
@@ -103,7 +103,7 @@ export function PendingInvitations({
       toast.message("Invitation declined");
       await refresh();
     },
-    onError: (e) => toast.error(friendly(e, "Couldn't decline the invitation")),
+    onError: (e) => toast.error(friendly(e, "Couldn’t decline the invitation")),
   });
 
   if (invites.length === 0) return null;
@@ -234,12 +234,12 @@ function TeamPanel({
     },
     onSuccess: async () => {
       toast.success(`Invitation ready for ${email.trim()}`, {
-        description: "It appears on their profile when they sign in or sign up with that email.",
+        description: "It appears on their profile when they log in or sign up with that email.",
       });
       setEmail("");
       await refreshTeam();
     },
-    onError: (e) => toast.error(friendly(e, "Couldn't create the invitation")),
+    onError: (e) => toast.error(friendly(e, "Couldn’t create the invitation")),
   });
 
   const changeRole = useMutation({
@@ -255,7 +255,7 @@ function TeamPanel({
       toast.success("Role updated");
       await refreshTeam();
     },
-    onError: (e) => toast.error(friendly(e, "Couldn't change the role")),
+    onError: (e) => toast.error(friendly(e, "Couldn’t change the role")),
   });
 
   const remove = useMutation({
@@ -272,7 +272,7 @@ function TeamPanel({
       toast.success("Removed from the workspace");
       await refreshTeam();
     },
-    onError: (e) => toast.error(friendly(e, "Couldn't remove that member")),
+    onError: (e) => toast.error(friendly(e, "Couldn’t remove that member")),
   });
 
   const revoke = useMutation({
@@ -281,7 +281,7 @@ function TeamPanel({
       if (error) throw error;
     },
     onSuccess: refreshTeam,
-    onError: (e) => toast.error(friendly(e, "Couldn't revoke the invitation")),
+    onError: (e) => toast.error(friendly(e, "Couldn’t revoke the invitation")),
   });
 
   const submitInvite = (e: React.FormEvent) => {
@@ -294,9 +294,9 @@ function TeamPanel({
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/profile#invitations`);
-      toast.success("Link copied — send it along with the invite");
+      toast.success("Link copied. Send it with the invite.");
     } catch {
-      toast.error("Couldn't copy the link");
+      toast.error("Couldn’t copy the link. Select it and copy it by hand.");
     }
   };
 
@@ -458,7 +458,7 @@ function TeamPanel({
       <ConfirmDialog
         open={pendingRemove !== null}
         title={`Remove ${pendingRemove?.name || pendingRemove?.email || "member"}?`}
-        description="They'll lose access to every form and response in this workspace straight away. You can invite them again later."
+        description="They’ll lose access to every form and response in this workspace straight away. You can invite them again later."
         confirmLabel="Remove"
         destructive
         onConfirm={() => pendingRemove && remove.mutate(pendingRemove.user_id)}
@@ -558,7 +558,7 @@ export function TeamSection({ userId }: { userId: string }) {
       toast.success("You left the workspace");
       await qc.invalidateQueries({ queryKey: workspacesKey(userId) });
     },
-    onError: (e) => toast.error(friendly(e, "Couldn't leave the workspace")),
+    onError: (e) => toast.error(friendly(e, "Couldn’t leave the workspace")),
   });
 
   const leaving = others.find((w) => w.owner_id === pendingLeave);
@@ -567,7 +567,7 @@ export function TeamSection({ userId }: { userId: string }) {
     <ProfileSection
       id="team"
       title="Team"
-      description="Invite people into your workspace and choose what they can do. Everything is enforced by the database, not just hidden in the UI."
+      description="Invite people and choose what they can do. The database enforces it, not just the buttons."
     >
       {manageable.length > 1 && (
         <div className="flex flex-wrap items-center gap-2 border-b border-hairline p-4 md:px-6">
@@ -635,7 +635,7 @@ export function TeamSection({ userId }: { userId: string }) {
       <ConfirmDialog
         open={pendingLeave !== null}
         title={`Leave ${leaving ? workspaceName(leaving) : "this workspace"}?`}
-        description="You'll lose access to its forms and responses. An admin can invite you back."
+        description="You’ll lose access to its forms and responses. An admin can invite you back."
         confirmLabel="Leave workspace"
         destructive
         onConfirm={() => pendingLeave && leave.mutate(pendingLeave)}

@@ -350,7 +350,7 @@ function ResponsesPage() {
           <Link
             to="/forms/$formId/live"
             params={{ formId }}
-            title="Full-screen results that update as answers arrive — for talks and workshops"
+            title="Full-screen results that update as answers arrive. Made for talks and workshops."
             className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:bg-brand/90"
           >
             <Presentation className="size-4" />
@@ -363,7 +363,7 @@ function ResponsesPage() {
               disabled={exporting !== null || responses.length === 0}
               title={
                 kind === "pdf"
-                  ? "A printable report: summary plus a chart or quotes for every question"
+                  ? "A printable report with a chart or quotes for every question"
                   : "Every response as a spreadsheet row"
               }
               onClick={async () => {
@@ -375,7 +375,7 @@ function ResponsesPage() {
                     `Exported ${count} ${count === 1 ? "response" : "responses"} to ${kind.toUpperCase()}`,
                   );
                 } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Export failed");
+                  toast.error(e instanceof Error ? e.message : "Export failed. Try again.");
                 } finally {
                   setExporting(null);
                 }
@@ -565,7 +565,7 @@ function Overview({
     onSuccess: (result, scope) => {
       if (scope === versionRef.current) setSummary(result);
     },
-    onError: (e: Error) => toast.error(e.message || "Could not summarize responses"),
+    onError: (e: Error) => toast.error(e.message || "Couldn’t summarise the responses. Try again."),
   });
   const hasTextQuestions = questions.some((q) => q.type === "text" || q.type === "long_text");
   // value → count per question, aggregated server-side over ALL responses.
@@ -616,9 +616,7 @@ function Overview({
   if (totals.responses === 0 && funnel.views === 0) {
     return (
       <div className="rounded-lg border border-dashed border-ink/15 bg-card/50 p-10 text-center">
-        <p className="text-ink/60">
-          No responses yet. Share your form to start collecting answers.
-        </p>
+        <p className="text-ink/60">No responses yet. Share the link and give it a minute.</p>
       </div>
     );
   }
@@ -747,7 +745,7 @@ function Overview({
                   <RefreshCw className="size-3.5" /> Refresh
                 </>
               ) : (
-                "Summarize answers"
+                "Summarise answers"
               )}
             </button>
           </div>
@@ -814,9 +812,8 @@ function Overview({
               )}
 
               <p className="font-mono text-[11px] text-ink/45">
-                Analyzed {summary.analyzed_count}{" "}
-                {summary.analyzed_count === 1 ? "answer" : "answers"} · AI-generated, may contain
-                inaccuracies.
+                Read {summary.analyzed_count} {summary.analyzed_count === 1 ? "answer" : "answers"}{" "}
+                · Written by Claude, so check anything important.
               </p>
             </div>
           )}
@@ -850,8 +847,7 @@ function Overview({
           ))}
           {viewed === 0 && (
             <p className="text-xs text-ink/40">
-              Views are tracked from the moment this update shipped — share your form to see the
-              funnel fill in.
+              No views tracked yet. Share your form and the funnel fills in.
             </p>
           )}
         </div>
@@ -944,7 +940,7 @@ function DropoffCard({
       >
         {worst && worstIdx >= 0 && (
           <p className="mb-4 text-sm text-ink/70">
-            Most people who leave do it on{" "}
+            Most people who leave, leave on{" "}
             <span className="font-medium text-ink">
               Q{worstIdx + 1} “{truncate(questions[worstIdx].label, 60)}”
             </span>{" "}
@@ -997,7 +993,7 @@ function DropoffCard({
     <Card title="Question drop-off" subtitle="How many respondents reached each question">
       {maxReach === 0 ? (
         <p className="text-sm text-ink/40">
-          No data yet — drop-off appears as respondents move through the form.
+          No data yet. Drop-off appears as people move through the form.
         </p>
       ) : (
         <div className="space-y-2">

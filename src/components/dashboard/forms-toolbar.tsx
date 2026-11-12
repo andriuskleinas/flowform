@@ -72,7 +72,7 @@ export function FormsToolbar({
   const activeFilters = (cat ? 1 : 0) + (activity !== "any" ? 1 : 0);
 
   const catLabel =
-    cat === UNCATEGORIZED ? "Uncategorized" : categories.find((c) => c.id === cat)?.name;
+    cat === UNCATEGORIZED ? "Uncategorised" : categories.find((c) => c.id === cat)?.name;
   const catColor = categories.find((c) => c.id === cat)?.color ?? null;
   const activityLabel = ACTIVITY_OPTIONS.find((o) => o.key === activity)?.label;
 
@@ -155,7 +155,7 @@ export function FormsToolbar({
                     ))}
                     {uncategorizedCount > 0 && (
                       <DropdownMenuRadioItem value={UNCATEGORIZED}>
-                        <span className="flex-1 text-ink/60">Uncategorized</span>
+                        <span className="flex-1 text-ink/60">Uncategorised</span>
                         <span className="font-mono text-[10px] text-ink/40">
                           {uncategorizedCount}
                         </span>

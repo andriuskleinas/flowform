@@ -272,8 +272,7 @@ export async function runAsk({
   const check = (m: Anthropic.Beta.BetaMessage) => {
     if (m.stop_reason === "refusal")
       throw new Error("Claude declined this question. Try rewording it.");
-    if (m.stop_reason === "max_tokens")
-      throw new Error("Claude's reply was cut off. Please try again.");
+    if (m.stop_reason === "max_tokens") throw new Error("Claude’s reply was cut off. Try again.");
   };
 
   // Turn 1: Claude turns the question into a filter. Sonnet 5.5 can't be
@@ -357,7 +356,7 @@ export async function runAsk({
     const start = raw.indexOf("{");
     answer = AnswerSchema.parse(JSON.parse(raw.slice(start, raw.lastIndexOf("}") + 1)));
   } catch {
-    if (!text) throw new Error("Claude returned no answer. Please try again.");
+    if (!text) throw new Error("Claude didn’t reply. Try again.");
     answer = { answer: text.slice(0, 3000), highlights: [] };
   }
 

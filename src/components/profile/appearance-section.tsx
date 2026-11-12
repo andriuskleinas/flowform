@@ -56,7 +56,7 @@ export function AppearanceSection({ userId }: { userId: string }) {
     const { error } = await supabase.from("profiles").update({ theme: next }).eq("id", userId);
     if (error) {
       setThemePref(prev);
-      toast.error("Couldn't save your theme. Try again.");
+      toast.error("Couldn’t save your theme. Try again.");
       return;
     }
     qc.setQueryData(["profile-theme", userId], next);
@@ -80,7 +80,7 @@ export function AppearanceSection({ userId }: { userId: string }) {
               onClick={() => choose(value)}
               title={
                 value === "system"
-                  ? `Matches your device — currently ${systemDark ? "dark" : "light"}`
+                  ? `Matches your device, currently ${systemDark ? "dark" : "light"}`
                   : undefined
               }
               className={cn(

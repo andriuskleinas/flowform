@@ -36,7 +36,7 @@ function createUserScopedClient() {
   if (!url || !key) throw new Error("Supabase environment variables are not configured.");
   const authHeader = getRequest()?.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    throw new Error("You must be signed in to ask about responses.");
+    throw new Error("Log in to ask about responses.");
   }
   return createClient<Database>(url, key, {
     global: { headers: { Authorization: authHeader } },
@@ -108,7 +108,7 @@ export const askResponses = createServerFn({ method: "POST" })
       ...r,
       answers: (r.answers ?? {}) as Record<string, unknown>,
     }));
-    if (rows.length === 0) throw new Error("No responses yet — nothing to ask about.");
+    if (rows.length === 0) throw new Error("No responses yet, so there’s nothing to ask about.");
 
     return runAsk({
       client: new Anthropic({ apiKey }),

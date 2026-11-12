@@ -68,7 +68,7 @@ function LoginPage() {
       setUnconfirmedEmail(null);
       navigate({ to: redirect });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not log in. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Couldn’t log in. Try again in a moment.");
     } finally {
       setSubmitting(false);
     }
@@ -84,9 +84,11 @@ function LoginPage() {
         options: { emailRedirectTo: `${window.location.origin}/confirmed` },
       });
       if (error) toast.error(error.message);
-      else toast.success("Confirmation email sent — check your inbox");
+      else toast.success("Confirmation email sent. Check your inbox.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not resend the email.");
+      toast.error(
+        err instanceof Error ? err.message : "Couldn’t resend the email. Try again in a moment.",
+      );
     } finally {
       setResending(false);
     }
@@ -95,7 +97,7 @@ function LoginPage() {
   return (
     <AuthShell panel="login">
       <h1 className="font-display text-4xl">Welcome back</h1>
-      <p className="mt-2 text-ink/60">Log in to manage your forms and read new responses.</p>
+      <p className="mt-2 text-ink/60">Your forms are where you left them.</p>
       {confirmed && (
         <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
@@ -144,8 +146,8 @@ function LoginPage() {
         {unconfirmedEmail && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             <p>
-              <span className="font-semibold">{unconfirmedEmail}</span> hasn't been verified yet.
-              Click the confirmation link we emailed you, then log in.
+              <span className="font-semibold">{unconfirmedEmail}</span> hasn’t been confirmed yet.
+              Click the link we emailed you, then log in.
             </p>
             <button
               type="button"

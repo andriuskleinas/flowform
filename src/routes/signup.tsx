@@ -82,7 +82,7 @@ function SignupPage() {
       }
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Could not create account. Please try again.",
+        err instanceof Error ? err.message : "Couldn’t create your account. Try again in a moment.",
       );
     } finally {
       setSubmitting(false);
@@ -99,9 +99,11 @@ function SignupPage() {
         options: { emailRedirectTo: `${window.location.origin}/confirmed` },
       });
       if (error) toast.error(error.message);
-      else toast.success("Confirmation email sent again");
+      else toast.success("Sent again. Check your inbox.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not resend the email.");
+      toast.error(
+        err instanceof Error ? err.message : "Couldn’t resend the email. Try again in a moment.",
+      );
     } finally {
       setResending(false);
     }
@@ -119,12 +121,10 @@ function SignupPage() {
           <h1 className="font-display mt-5 text-3xl">Check your inbox</h1>
           <p className="mt-3 text-ink/60">
             We sent a confirmation link to{" "}
-            <span className="font-semibold text-ink">{confirmationSentTo}</span>. Click it to
-            activate your account, then log in.
+            <span className="font-semibold text-ink">{confirmationSentTo}</span>. Click it, then log
+            in.
           </p>
-          <p className="mt-3 text-sm text-ink/50">
-            Nothing there? Check your spam folder, or resend the email.
-          </p>
+          <p className="mt-3 text-sm text-ink/50">Nothing yet? Check spam, or send it again.</p>
           <button
             type="button"
             onClick={resendConfirmation}
@@ -148,7 +148,7 @@ function SignupPage() {
       ) : (
         <>
           <h1 className="font-display text-4xl">Create your account</h1>
-          <p className="mt-2 text-ink/60">Build your first conversational form in minutes.</p>
+          <p className="mt-2 text-ink/60">Your first form is a few minutes away.</p>
           <form onSubmit={onSubmit} noValidate className="mt-8 space-y-5">
             <AuthField
               label="Email"

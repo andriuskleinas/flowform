@@ -65,7 +65,7 @@ export function normalizeCategoryName(raw: string) {
 /** Turn a unique-violation on (user_id, lower(name)) into a readable message. */
 export function categoryErrorMessage(e: { code?: string; message?: string }, name?: string) {
   if (e.code === "23505") return `You already have a category called “${name ?? "that"}”.`;
-  return e.message || "Could not save the category";
+  return e.message || "Couldn’t save the category. Try again.";
 }
 
 /** Next colour that isn't used yet, so new categories are easy to tell apart. */

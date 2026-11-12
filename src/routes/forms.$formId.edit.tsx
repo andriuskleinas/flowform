@@ -444,7 +444,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         setAddedSuggestionIds(new Set());
       } catch (err: unknown) {
         setSuggestError(
-          err instanceof Error ? err.message : "Could not get suggestions. Please try again.",
+          err instanceof Error ? err.message : "Claude couldn’t draft questions. Try again.",
         );
       }
     });
@@ -633,7 +633,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         next === "published"
           ? "Form published"
           : next === "closed"
-            ? "Form closed — no longer accepting responses"
+            ? "Form closed. It no longer takes responses."
             : "Moved back to draft",
       );
       qc.invalidateQueries({ queryKey: ["form", formId] });
@@ -674,7 +674,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       qc.invalidateQueries({ queryKey: ["form", formId] });
       qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
     },
-    onError: (e: Error) => toast.error(e.message || "Could not update category"),
+    onError: (e: Error) => toast.error(e.message || "Couldn’t update the category. Try again."),
   });
 
   // Response count powers the delete-dialog warning ("…and its 32 responses").
@@ -718,7 +718,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     },
     onSuccess: async (next) => {
       setNewVersionOpen(false);
-      toast.success("Survey unlocked — make your changes, then publish the update");
+      toast.success("Form unlocked. Make your changes, then publish the update.");
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["form", formId] }),
         qc.invalidateQueries({ queryKey: ["version-response-count", formId] }),
@@ -729,7 +729,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     },
     onError: (e: Error) => {
       setNewVersionOpen(false);
-      toast.error(e.message || "Could not start a new version");
+      toast.error(e.message || "Couldn’t start a new version. Try again.");
     },
   });
 
@@ -740,11 +740,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       return data;
     },
     onSuccess: async (newId) => {
-      toast.success("Copy created — edit it, then publish when ready");
+      toast.success("Copy created. Edit it, then publish when ready.");
       qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
       await navigate({ to: "/forms/$formId/edit", params: { formId: newId } });
     },
-    onError: (e: Error) => toast.error(e.message || "Could not copy this survey"),
+    onError: (e: Error) => toast.error(e.message || "Couldn’t copy this form. Try again."),
   });
 
   const closeOriginalForm = useMutation({
@@ -754,14 +754,14 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     },
     onSuccess: (_d, id) => {
       setCloseOriginal(null);
-      toast.success("Original survey closed");
+      toast.success("Original form closed");
       qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
       qc.invalidateQueries({ queryKey: ["form", id] });
       qc.invalidateQueries({ queryKey: ["public-form", id] });
     },
     onError: (e: Error) => {
       setCloseOriginal(null);
-      toast.error(e.message || "Could not close the original survey");
+      toast.error(e.message || "Couldn’t close the original form. Try again.");
     },
   });
 
@@ -778,7 +778,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
       await navigate({ to: "/dashboard", search: dashboardSearch });
     },
-    onError: (e: Error) => toast.error(e.message || "Could not delete form"),
+    onError: (e: Error) => toast.error(e.message || "Couldn’t delete the form. Try again."),
   });
 
   // A brand-new throwaway draft — never published, no responses, and still the
@@ -811,8 +811,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       <Shell>
         <h1 className="text-2xl font-semibold">View-only access</h1>
         <p className="mt-2 max-w-md text-ink/60">
-          You're a viewer in this workspace, so “{form.title}” can't be edited here — but its
-          responses and analytics are open to you.
+          You’re a viewer in this workspace, so you can’t edit “{form.title}”. Its responses and
+          analytics are open to you.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
@@ -837,7 +837,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     return (
       <Shell>
         <h1 className="text-2xl font-semibold">Form not found</h1>
-        <p className="mt-2 text-ink/60">It may have been deleted, or you don't have access.</p>
+        <p className="mt-2 text-ink/60">It may have been deleted, or you don’t have access.</p>
         <Link to="/dashboard" className="mt-6 inline-block text-brand underline">
           Back to dashboard
         </Link>
@@ -943,7 +943,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 type="button"
                 onClick={() => setStatus.mutate("closed")}
                 disabled={setStatus.isPending}
-                title="Stop accepting responses. The link keeps working and shows a closed notice."
+                title="Stop taking responses. The link stays up and shows a closed notice."
                 className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
               >
                 Close form
@@ -952,7 +952,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 type="button"
                 onClick={() => setStatus.mutate("draft")}
                 disabled={setStatus.isPending}
-                title="Take the form offline entirely — the link shows an unpublished notice."
+                title="Take the form offline. The link shows an unpublished notice."
                 className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
               >
                 Unpublish
@@ -965,7 +965,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 type="button"
                 onClick={() => setStatus.mutate("published")}
                 disabled={setStatus.isPending || isDirty}
-                title="Closed — the link shows a closed notice and no new responses are accepted."
+                title="Closed. The link shows a closed notice and takes no new responses."
                 className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-50 hover:bg-brand/90 transition-colors"
               >
                 {currentVersion > 1 && !versionFrozen ? "Publish update" : "Reopen form"}
@@ -985,12 +985,12 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             <p className="min-w-0 flex-1">
               <span className="font-semibold">
                 {versionFrozen
-                  ? `This survey has ${versionResponsesQ.data} ${versionResponsesQ.data === 1 ? "response" : "responses"}, so its questions are locked.`
-                  : "This survey is live, so it can't be edited."}
+                  ? `This form has ${versionResponsesQ.data} ${versionResponsesQ.data === 1 ? "response" : "responses"}, so its questions are locked.`
+                  : "This form is live, so it can’t be edited."}
               </span>{" "}
               <span className="text-ink/70">
                 {versionFrozen
-                  ? "Changing them now would mix answers to different questions. Make your changes in a copy, or update this survey under the same link."
+                  ? "Editing now would mix answers to different questions. Edit a copy, or update this form under the same link."
                   : "Close or unpublish it (top right) to make changes, or edit a copy instead."}
               </span>
             </p>
@@ -1000,7 +1000,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               type="button"
               onClick={() => copyForm.mutate()}
               disabled={copyForm.isPending}
-              title="A new draft survey with the same questions and its own link"
+              title="A new draft form with the same questions and its own link"
               className="inline-flex items-center gap-1.5 rounded-md bg-brand px-3.5 py-1.5 text-sm font-semibold text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
             >
               <CopyPlus className="size-4" />
@@ -1015,20 +1015,20 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-card px-3.5 py-1.5 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
               >
                 <GitBranchPlus className="size-4" />
-                {startNewVersion.isPending ? "Starting…" : "Update this survey"}
+                {startNewVersion.isPending ? "Starting…" : "Update this form"}
               </button>
             )}
           </div>
           {versionFrozen && (
             <ul className="mt-2.5 space-y-0.5 pl-7 text-xs text-ink/55">
               <li>
-                <span className="font-medium text-ink/75">Edit a copy</span> — a new survey with its
+                <span className="font-medium text-ink/75">Edit a copy:</span> a new form with its
                 own link and results. Best for a new event, round or audience.
               </li>
               <li>
-                <span className="font-medium text-ink/75">Update this survey</span> — same link (QR
-                codes, embeds and emails keep working). Earlier answers are kept as v
-                {currentVersion} so you can compare.
+                <span className="font-medium text-ink/75">Update this form:</span> same link, so QR
+                codes, embeds and emails keep working. Earlier answers are kept as v{currentVersion}{" "}
+                so you can compare.
               </li>
             </ul>
           )}
@@ -1045,7 +1045,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               <DebouncedInput
                 value={draftForm.title}
                 onChange={(v) => setDraftForm((f) => ({ ...f, title: v }))}
-                placeholder="Start your best survey!"
+                placeholder="Name your form"
                 className="font-display text-2xl md:text-3xl"
               />
             </div>
@@ -1056,7 +1056,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               <DebouncedTextarea
                 value={draftForm.description ?? ""}
                 onChange={(v) => setDraftForm((f) => ({ ...f, description: v === "" ? null : v }))}
-                placeholder="What's this form for?"
+                placeholder="What’s this form for?"
               />
             </div>
             <div className="space-y-1.5">
@@ -1069,7 +1069,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 onChange={(v) =>
                   setDraftForm((f) => ({ ...f, thank_you_message: v === "" ? null : v }))
                 }
-                placeholder="Thanks! Your response was recorded."
+                placeholder="Thanks. Your response was recorded."
                 rows={2}
               />
             </div>
@@ -1100,8 +1100,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               </div>
               <p className="text-xs text-ink/40">
                 {draftForm.display_mode === "conversational"
-                  ? "Respondents see one question at a time with a progress bar — logic jumps apply here."
-                  : "Respondents see every question on a single page."}
+                  ? "One question at a time, with a progress bar. Logic jumps apply."
+                  : "Every question on one page."}
               </p>
             </div>
           </fieldset>
@@ -1149,18 +1149,18 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           <h2 className="text-lg font-semibold">Questions</h2>
           {!isLocked && (
             <p className="mt-1 text-xs text-ink/50">
-              Drag the handle to reorder. Click <span className="font-semibold">Save</span> to keep
-              your changes.
+              Drag to reorder. Click <span className="font-semibold">Save</span> to keep your
+              changes.
             </p>
           )}
 
           <fieldset disabled={isLocked} className="min-w-0 disabled:opacity-70">
             {!isLocked && currentVersion > 1 && (
               <div className="mt-3 rounded-lg border border-hairline bg-surface px-4 py-3 text-sm text-ink/70">
-                You're updating this survey (
-                <span className="font-semibold text-ink">v{currentVersion}</span>). Answers
-                collected before are kept as they were; questions you keep stay comparable, and
-                deleted ones still show up in earlier results.
+                You’re updating this form (
+                <span className="font-semibold text-ink">v{currentVersion}</span>). Earlier answers
+                stay as they were. Questions you keep stay comparable, and deleted ones still show
+                in earlier results.
               </div>
             )}
 
@@ -1259,7 +1259,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                       </span>
                     </h3>
                     <p className="mt-0.5 text-xs text-ink/55">
-                      Claude drafts questions from your form's title and description.
+                      Claude drafts questions from your title and description.
                     </p>
                   </div>
                   <button
@@ -1387,15 +1387,15 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             ) : null}
             <p className="eyebrow mt-2">
               {isDirty
-                ? "Preview — includes unsaved changes"
-                : "Preview — this is what respondents will see"}
+                ? "Preview, including unsaved changes"
+                : "Preview. This is what respondents see."}
             </p>
           </DialogHeader>
 
           <div className="mt-4 space-y-6" style={themeStyle(draftForm.settings.theme)}>
             {visibleDraftQuestions.length === 0 ? (
               <p className="rounded-xl border border-dashed border-ink/15 p-6 text-center text-sm text-ink/50">
-                No questions yet — add one to see a preview.
+                No questions yet. Add one to see a preview.
               </p>
             ) : draftForm.display_mode === "conversational" ? (
               <ConversationalForm
@@ -1428,7 +1428,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
             {visibleDraftQuestions.length > 0 && draftForm.display_mode === "classic" && (
               <div className="flex items-center justify-between gap-3 pt-2">
-                <p className="text-xs text-ink/50">Responses aren't recorded in preview.</p>
+                <p className="text-xs text-ink/50">Responses aren’t recorded in preview.</p>
                 <button
                   type="button"
                   disabled
@@ -1447,8 +1447,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         title={discardDeletesDraft ? "Discard this draft?" : "Discard changes?"}
         description={
           discardDeletesDraft
-            ? "This empty draft will be deleted and you'll return to the dashboard. This cannot be undone."
-            : "All unsaved changes will be lost. This cannot be undone."
+            ? "This empty draft will be deleted and you’ll go back to the dashboard. This can’t be undone."
+            : "Your unsaved changes will be lost. This can’t be undone."
         }
         confirmLabel={discardDeletesDraft ? "Delete draft" : "Discard"}
         cancelLabel="Keep editing"
@@ -1459,21 +1459,21 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
       <ConfirmDialog
         open={newVersionOpen}
-        title="Update this survey?"
+        title="Update this form?"
         description={
           (isLive
-            ? "The survey closes while you edit, so its link shows a closed notice until you publish the update. "
+            ? "The form closes while you edit, so its link shows a closed notice until you publish the update. "
             : "Your edits go live under the same link when you publish. ") +
           `The ${versionResponsesQ.data ?? 0} answers collected so far are kept as v${currentVersion}, and new answers are counted as v${currentVersion + 1} so you can compare them on the results page.`
         }
-        confirmLabel="Update this survey"
+        confirmLabel="Update this form"
         onConfirm={() => startNewVersion.mutate()}
         onCancel={() => setNewVersionOpen(false)}
       />
 
       <ConfirmDialog
         open={closeOriginal !== null}
-        title="Close the original survey?"
+        title="Close the original form?"
         description={`“${closeOriginal?.title ?? ""}” is still live. Close it so new answers only go to this copy? Its link will show a closed notice and its results stay as they are.`}
         confirmLabel="Close original"
         cancelLabel="Keep both live"
@@ -1484,7 +1484,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       <ConfirmDialog
         open={blocker.status === "blocked"}
         title="Leave without saving?"
-        description="You have unsaved changes that will be lost if you leave."
+        description="Your unsaved changes will be lost."
         confirmLabel="Leave"
         cancelLabel="Stay"
         destructive
@@ -1618,7 +1618,7 @@ function SortableQuestionCard({
             if (unknown.length === 0) return null;
             return (
               <p className="text-[11px] text-amber-700">
-                {unknown.map((k) => `{${k}}`).join(", ")} doesn't match an earlier answer or hidden
+                {unknown.map((k) => `{${k}}`).join(", ")} doesn’t match an earlier answer or hidden
                 field, so it will be left out.
               </p>
             );
@@ -1712,9 +1712,7 @@ function SortableQuestionCard({
           >
             <summary className="cursor-pointer text-xs font-semibold text-ink/70">
               Logic jumps{" "}
-              <span className="font-normal text-ink/40">
-                — skip questions based on their answer
-              </span>
+              <span className="font-normal text-ink/40">skip questions based on the answer</span>
             </summary>
             <div className="mt-3 space-y-2">
               {choices.map((choice) => (
@@ -1790,7 +1788,7 @@ function SortableQuestionCard({
         <p className="mt-2 text-xs text-ink/50">
           {conversational
             ? "When an answer is short or vague, Claude asks one optional follow-up question before moving on."
-            : "Follow-ups are asked in conversational mode only. Switch the form's display mode to use them."}
+            : "Follow-ups only work in one-question-at-a-time mode. Switch the display mode to use them."}
         </p>
       )}
     </li>

@@ -57,8 +57,8 @@ function ConfirmedPage() {
         <div className="rounded-2xl border border-hairline bg-card p-8 text-center">
           <h1 className="font-display text-2xl">This link has expired</h1>
           <p className="mt-3 text-ink/60">
-            Confirmation links work once. Log in and we'll send you a fresh one if your email still
-            needs confirming.
+            Confirmation links work once. Log in, and if your email still needs confirming, we’ll
+            send a new one.
           </p>
           <Link
             to="/login"

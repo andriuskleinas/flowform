@@ -73,7 +73,7 @@ export const suggestQuestions = createServerFn({ method: "POST" })
       throw new Error("Claude declined this request. Try rewording it.");
     }
     if (message.stop_reason === "max_tokens") {
-      throw new Error("Claude's reply was cut off. Please try again.");
+      throw new Error("Claude’s reply was cut off. Try again.");
     }
 
     const textBlock = message.content.find((b) => b.type === "text");
@@ -90,12 +90,12 @@ export const suggestQuestions = createServerFn({ method: "POST" })
         .replace(/```\s*$/, "");
       parsed = JSON.parse(raw);
     } catch {
-      throw new Error("Claude returned non-JSON output. Please try again.");
+      throw new Error("Claude replied in a format we couldn’t read. Try again.");
     }
 
     const validated = RawSuggestionsSchema.safeParse(parsed);
     if (!validated.success) {
-      throw new Error("Claude returned unexpected question structure. Please try again.");
+      throw new Error("Claude replied in a format we couldn’t read. Try again.");
     }
 
     return validated.data.map((q) => ({

@@ -50,7 +50,7 @@ export function DeleteFormDialog({
             Delete this form?
           </DialogTitle>
           <DialogDescription>
-            <span className="font-semibold text-ink">"{formTitle}"</span>
+            <span className="font-semibold text-ink">“{formTitle}”</span>
             {typeof responseCount === "number" && responseCount > 0 ? (
               <>
                 {" "}
@@ -63,7 +63,7 @@ export function DeleteFormDialog({
             ) : (
               <> will be permanently deleted.</>
             )}{" "}
-            This cannot be undone.
+            This can’t be undone.
           </DialogDescription>
         </DialogHeader>
 

@@ -15,17 +15,17 @@ import { Logo } from "@/components/logo";
 export const Route = createFileRoute("/demo")({
   head: () => ({
     meta: [
-      { title: "Experience Flowform — Live demo" },
+      { title: "Try Flowform — Live demo" },
       {
         name: "description",
         content:
-          "Try a real Flowform: five questions, one at a time, in under a minute. It adapts, remembers and digs deeper. Nothing is stored.",
+          "Five questions, one at a time, under a minute. It remembers, adapts and asks why. Nothing is stored.",
       },
-      { property: "og:title", content: "Experience Flowform — Live demo" },
+      { property: "og:title", content: "Try Flowform — Live demo" },
       {
         property: "og:description",
         content:
-          "Try a real Flowform: five questions, one at a time, in under a minute. It adapts, remembers and digs deeper. Nothing is stored.",
+          "Five questions, one at a time, under a minute. It remembers, adapts and asks why. Nothing is stored.",
       },
     ],
   }),
@@ -46,7 +46,7 @@ type UseCase = (typeof USE_CASES)[number];
 const FOLLOW_UPS: Record<UseCase, { label: string; options: string[] }> = {
   "Customer feedback": {
     label: "How do you collect feedback today?",
-    options: ["Email threads", "Spreadsheets", "Another form tool", "We don't — yet"],
+    options: ["Email threads", "Spreadsheets", "Another form tool", "We don’t, yet"],
   },
   "Research & surveys": {
     label: "How many responses does a typical study need?",
@@ -312,11 +312,11 @@ function DemoPage() {
               This is a <em className="text-brand">Flowform.</em>
             </h1>
             <p className="mt-6 max-w-md text-lg text-ink/65">
-              One question at a time, like a conversation. Five questions, under a minute. Watch it
-              remember your name, adapt to your answers and ask a follow-up when you’re brief.
+              Five questions, one at a time. Watch it remember your name, adapt to your answers and
+              ask why when you’re brief. Shorter than most meetings about surveys.
             </p>
             <p className="mt-3 text-sm text-ink/45">
-              Nothing is stored. It all happens in your browser.
+              Nothing is stored. It all runs in your browser.
             </p>
             <div className="mt-10 flex items-center gap-4">
               <button
@@ -348,7 +348,7 @@ function DemoPage() {
             {idx === 0 && (
               <>
                 <h2 className="font-display text-3xl leading-[1.08] text-balance md:text-4xl">
-                  First things first — what should we call you?
+                  First things first. What should we call you?
                 </h2>
                 <input
                   ref={inputRef}
@@ -456,19 +456,17 @@ function DemoPage() {
                           confirmStep();
                         }
                       }}
-                      placeholder="Optional — add a little more…"
+                      placeholder="Optional. Add a little more…"
                       maxLength={200}
                       className="mt-3 w-full border-b border-ink/20 bg-transparent pb-2 text-lg text-ink outline-none transition-colors placeholder:text-ink/30 focus:border-brand"
                     />
                     <p className="mt-3 text-xs text-ink/50">
-                      In your forms, Claude writes these follow-ups on the spot. This demo runs
-                      without a server, so it uses a preset.
+                      In your forms, Claude writes this on the spot. The demo has no server, so it
+                      uses a preset.
                     </p>
                   </div>
                 ) : (
-                  <p className="mt-3 text-xs text-ink/45">
-                    Tip: keep it short and see what happens.
-                  </p>
+                  <p className="mt-3 text-xs text-ink/45">Tip: be brief and see what happens.</p>
                 )}
                 <StepConfirm answered={stepAnswered} onConfirm={confirmStep} hint="press Enter ↵" />
               </>
@@ -477,7 +475,7 @@ function DemoPage() {
             {idx === 4 && (
               <>
                 <h2 className="font-display text-3xl leading-[1.08] text-balance md:text-4xl">
-                  Last one — how does answering one question at a time feel?
+                  Last one. How does one question at a time feel?
                 </h2>
                 <div className="mt-8 grid grid-cols-5 gap-2 sm:grid-cols-10">
                   {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
@@ -522,9 +520,8 @@ function DemoPage() {
                 That was a Flowform{name.trim() ? `, ${name.trim().split(/\s+/)[0]}` : ""}.
               </h1>
               <p className="mt-4 max-w-md text-lg text-ink/65">
-                {TOTAL_QUESTIONS} answers in {elapsed} second{elapsed === 1 ? "" : "s"}. No wall of
-                questions: it remembered your name, adapted to your answers and asked a follow-up
-                when one was short.
+                {TOTAL_QUESTIONS} answers in {elapsed} second{elapsed === 1 ? "" : "s"}. It
+                remembered your name, adapted to your answers and asked why when you were brief.
               </p>
             </div>
 
@@ -547,7 +544,7 @@ function DemoPage() {
               ))}
             </dl>
             <p className="mt-3 font-mono text-[11px] text-ink/45">
-              Your answers weren't stored — this demo runs entirely in your browser.
+              Nothing was stored. The demo runs entirely in your browser.
             </p>
 
             {useCase && <OwnerView choice={useCase} />}
@@ -557,7 +554,7 @@ function DemoPage() {
                 to="/signup"
                 className="inline-flex h-12 items-center gap-2 rounded-md bg-ink px-6 text-[15px] font-medium text-paper transition-colors hover:bg-ink/85"
               >
-                Build your own, free
+                Build your own
                 <ArrowRight className="size-4" />
               </Link>
               <button
@@ -609,8 +606,7 @@ function OwnerView({ choice }: { choice: UseCase }) {
     <section className="mt-12">
       <h2 className="font-display text-2xl leading-tight text-ink">What the form’s owner sees</h2>
       <p className="mt-2 max-w-md text-[15px] text-ink/60">
-        Answers show up on the results page the moment they arrive, so you can even put them on a
-        big screen as a live poll.
+        Answers arrive the moment they’re sent. Put them on a big screen and it’s a live poll.
       </p>
       <div className="mt-6 overflow-hidden rounded-lg border border-hairline bg-card">
         <div className="flex items-center justify-between gap-4 border-b border-hairline px-5 py-2.5 font-mono text-[11px] text-ink/45">
@@ -652,8 +648,8 @@ function OwnerView({ choice }: { choice: UseCase }) {
           </ul>
         </div>
         <p className="border-t border-hairline bg-paper px-5 py-3 text-[13px] text-ink/60">
-          Also on the owner’s side: a Claude summary of open answers like yours, the exact question
-          where people give up, “Ask your results” in plain English, and CSV or PDF export.
+          Also on the owner’s side: a Claude summary of answers like yours, the question where
+          people quit, “Ask your results” and CSV or PDF export.
         </p>
       </div>
     </section>

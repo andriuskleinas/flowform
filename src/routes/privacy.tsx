@@ -8,7 +8,7 @@ export const Route = createFileRoute("/privacy")({
       { title: "Privacy policy — Flowform" },
       {
         name: "description",
-        content: "How Flowform collects, uses, and protects your data.",
+        content: "What Flowform collects, why, and how it’s protected.",
       },
     ],
   }),
@@ -17,68 +17,70 @@ export const Route = createFileRoute("/privacy")({
 
 function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="November 12, 2026">
+    <LegalPage title="Privacy policy" updated="13 November 2026">
       <section>
         <h2>What we collect</h2>
-        <p>
-          When you create a Flowform account we store your email address and the profile details you
-          choose to add. When you build forms we store the forms, questions, and settings you
-          create. When someone responds to your form we store their answers on your behalf. Answers
-          are saved as they are given, before the form is submitted, so the form's owner can see
-          where people stop; unfinished answers are deleted after 90 days.
-        </p>
+        <ul>
+          <li>Your account: your email address and any profile details you add.</li>
+          <li>Your forms: the questions, settings and images you create.</li>
+          <li>
+            Responses: the answers people give to your forms, stored on your behalf. Answers are
+            saved as people go, so you can see where they stop. Unfinished answers are deleted after
+            90 days.
+          </li>
+          <li>
+            A SHA-256 hash of each respondent’s IP address, not the address itself. We use it to
+            limit each form to one response per network and to stop abuse.
+          </li>
+        </ul>
       </section>
 
       <section>
         <h2>How we use it</h2>
         <ul>
-          <li>To provide the service — creating, sharing, and analyzing your forms.</li>
-          <li>To secure your account and authenticate you when you log in.</li>
-          <li>To notify you about important changes to the service.</li>
+          <li>To run the service: building, sharing and analysing your forms.</li>
+          <li>To keep your account secure and log you in.</li>
+          <li>To tell you about important changes to the service.</li>
         </ul>
-        <p>We do not sell your data, and we do not share it with third parties for advertising.</p>
+        <p>We don’t sell your data or share it with anyone for advertising.</p>
       </section>
 
       <section>
-        <h2>AI features</h2>
+        <h2>Claude features</h2>
         <p>
-          When you use AI question suggestions, the goal you describe is sent to Anthropic&apos;s
-          Claude API to generate suggestions. Your form responses are never used to train AI models.
+          Some features send text to Anthropic’s Claude API. Drafting sends the goal you describe.
+          Follow-ups send the respondent’s answer to that question. Summaries and “Ask your results”
+          send the answers being analysed. Flowform never uses your responses to train AI models.
         </p>
       </section>
 
       <section>
         <h2>Where your data lives</h2>
         <p>
-          Your data is stored in a managed Postgres database (Supabase) protected with row-level
-          security, so each account can only access its own forms and responses. Connections to the
-          service are encrypted in transit.
+          In a managed Postgres database on Supabase. Row-level security means each workspace can
+          only read its own forms and responses. Every connection is encrypted.
         </p>
       </section>
 
       <section>
         <h2>Cookies</h2>
         <p>
-          Flowform uses only the cookies and local storage needed to keep you signed in. There are
-          no third-party advertising or tracking cookies.
+          Flowform only uses the cookies and local storage that keep you logged in and remember your
+          settings. There are no advertising or tracking cookies.
         </p>
       </section>
 
       <section>
         <h2>Your rights</h2>
         <p>
-          You can update your profile at any time from your account settings. You may request a copy
-          or deletion of your data — deleting your account removes your forms and the responses
-          collected with them.
+          You can edit your profile at any time. You can ask for a copy of your data or for it to be
+          deleted. Deleting your account removes your forms and their responses.
         </p>
       </section>
 
       <section>
         <h2>Contact</h2>
-        <p>
-          Questions about this policy? Reach out to the Flowform team and we&apos;ll get back to you
-          promptly.
-        </p>
+        <p>Questions about this policy? Contact the Flowform team and we’ll reply promptly.</p>
       </section>
     </LegalPage>
   );

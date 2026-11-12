@@ -78,7 +78,7 @@ function deriveInsights(
       tone: "neutral",
       icon: Moon,
       title: `${plural(quiet.length, "live form")} ${quiet.length === 1 ? "has" : "have"} gone quiet`,
-      detail: "No responses in 30+ days. Share the link again, or close what's no longer needed.",
+      detail: "No responses in 30+ days. Share the link again, or close what’s no longer needed.",
       action: { kind: "filter", label: "Review", search: { status: undefined, activity: "quiet" } },
     });
   }
@@ -104,7 +104,7 @@ function deriveInsights(
       title: `${plural(drafts.length, "draft")} not published`,
       detail:
         ready.length === drafts.length
-          ? "They have questions but aren't collecting responses yet."
+          ? "They have questions, but nobody can answer them yet."
           : `${ready.length} ${ready.length === 1 ? "has" : "have"} questions, ${drafts.length - ready.length} ${drafts.length - ready.length === 1 ? "is" : "are"} still empty.`,
       action: {
         kind: "filter",

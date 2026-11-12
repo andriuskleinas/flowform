@@ -3,6 +3,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validateEmail(email: string) {
   if (!email.trim()) return "Enter your email address.";
-  if (!EMAIL_RE.test(email.trim())) return "That doesn't look like an email address.";
+  if (!EMAIL_RE.test(email.trim())) return "That doesn’t look like an email address.";
   return null;
 }

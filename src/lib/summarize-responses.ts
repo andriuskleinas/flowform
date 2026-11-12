@@ -52,7 +52,7 @@ function createUserScopedClient() {
   if (!url || !key) throw new Error("Supabase environment variables are not configured.");
   const authHeader = getRequest()?.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    throw new Error("You must be signed in to summarize responses.");
+    throw new Error("Log in to summarise responses.");
   }
   return createClient<Database>(url, key, {
     global: { headers: { Authorization: authHeader } },
@@ -138,7 +138,7 @@ export const summarizeResponses = createServerFn({ method: "POST" })
       throw new Error(
         data.version != null
           ? `Version ${data.version} has no open-text questions to summarize.`
-          : "This form has no open-text questions to summarize.",
+          : "This form has no open-text questions to summarise.",
       );
     }
 
@@ -176,7 +176,7 @@ export const summarizeResponses = createServerFn({ method: "POST" })
         if (collected >= MAX_ANSWERS || chars >= MAX_PROMPT_CHARS) break outer;
       }
     }
-    if (collected === 0) throw new Error("No text answers yet — nothing to summarize.");
+    if (collected === 0) throw new Error("No text answers yet, so there’s nothing to summarise.");
 
     const userContent =
       `Form title: ${form.title}\n\n` +
@@ -209,7 +209,7 @@ export const summarizeResponses = createServerFn({ method: "POST" })
       throw new Error("Claude declined this request. Try rewording it.");
     }
     if (message.stop_reason === "max_tokens") {
-      throw new Error("Claude's reply was cut off. Please try again.");
+      throw new Error("Claude’s reply was cut off. Try again.");
     }
 
     const textBlock = message.content.find((b) => b.type === "text");
@@ -225,12 +225,12 @@ export const summarizeResponses = createServerFn({ method: "POST" })
         .replace(/```\s*$/, "");
       parsed = JSON.parse(raw);
     } catch {
-      throw new Error("Claude returned non-JSON output. Please try again.");
+      throw new Error("Claude replied in a format we couldn’t read. Try again.");
     }
 
     const validated = RawSummarySchema.safeParse(parsed);
     if (!validated.success) {
-      throw new Error("Claude returned an unexpected structure. Please try again.");
+      throw new Error("Claude replied in a format we couldn’t read. Try again.");
     }
 
     return { ...validated.data, analyzed_count: collected };

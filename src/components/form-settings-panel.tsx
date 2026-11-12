@@ -418,7 +418,7 @@ function TrackingTab({
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               } catch {
-                toast.error("Could not copy");
+                toast.error("Couldn’t copy. Select the text and copy it by hand.");
               }
             }}
             className="inline-flex shrink-0 items-center gap-1 rounded-md border border-ink/15 bg-card px-2.5 py-1.5 text-xs font-medium hover:bg-ink/5"
@@ -428,7 +428,7 @@ function TrackingTab({
           </button>
         </div>
         <p className="text-[11px] text-ink/45">
-          Results show views and completion per source, so you can see which channel converts.
+          See views and completion per source, so you know which channel works.
         </p>
       </div>
     </div>
@@ -622,7 +622,7 @@ function CoverUploadButton({
       if (error) throw error;
       const { data } = supabase.storage.from("form-covers").getPublicUrl(path);
       onUploaded(data.publicUrl);
-      toast.success("Cover uploaded — save to apply it.");
+      toast.success("Cover uploaded. Save to apply it.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
     } finally {

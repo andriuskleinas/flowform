@@ -46,7 +46,7 @@ function ForgotPasswordPage() {
       setSentTo(email);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Could not send the reset link. Please try again.",
+        err instanceof Error ? err.message : "Couldn’t send the link. Try again in a moment.",
       );
     } finally {
       setSubmitting(false);
@@ -65,7 +65,7 @@ function ForgotPasswordPage() {
             If <span className="font-semibold text-ink">{sentTo}</span> has a Flowform account, we
             just sent it a link to choose a new password. The link expires in an hour.
           </p>
-          <p className="mt-3 text-sm text-ink/50">Nothing there? Check your spam folder.</p>
+          <p className="mt-3 text-sm text-ink/50">Nothing yet? Check spam.</p>
           <Link
             to="/login"
             search={{ redirect: "/dashboard" }}
@@ -81,9 +81,7 @@ function ForgotPasswordPage() {
   return (
     <AuthShell>
       <h1 className="font-display text-4xl">Reset your password</h1>
-      <p className="mt-2 text-ink/60">
-        Enter your email and we'll send you a link to choose a new one.
-      </p>
+      <p className="mt-2 text-ink/60">Enter your email. We’ll send a link to choose a new one.</p>
       <form onSubmit={onSubmit} noValidate className="mt-8 space-y-5">
         <AuthField
           label="Email"

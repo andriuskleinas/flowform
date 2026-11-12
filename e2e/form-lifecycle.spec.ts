@@ -25,7 +25,7 @@ test("create, publish, respond and analyse a form", async ({ page, browser }) =>
   await expect(page).toHaveURL(/\/forms\/[0-9a-f-]{36}\/edit/);
   const formId = page.url().match(/forms\/([0-9a-f-]{36})/)![1];
 
-  await page.getByPlaceholder("Start your best survey!").fill(title);
+  await page.getByPlaceholder("Name your form").fill(title);
   await page.getByRole("button", { name: "Classic", exact: true }).click();
   await page.getByRole("button", { name: "Add question" }).click();
   await page.getByRole("menuitem", { name: "Short answer" }).click();

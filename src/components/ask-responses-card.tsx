@@ -44,7 +44,8 @@ export function AskResponsesCard({
       })),
     }),
     onSuccess: setResult,
-    onError: (e: Error) => toast.error(e.message || "Could not answer that question"),
+    onError: (e: Error) =>
+      toast.error(e.message || "Claude couldn’t answer that. Try rephrasing it."),
   });
 
   const submit = (q: string) => {
@@ -170,7 +171,7 @@ export function AskResponsesCard({
             <p className="text-[11px] text-ink/40">
               {result.capped
                 ? `Searched the newest ${result.total} responses.`
-                : "Claude picked the filter; the matching itself is exact."}
+                : "Claude chose the filter. The matching is exact."}
             </p>
             {result.matchedCount > 0 && result.filter.conditions.length > 0 && (
               <button

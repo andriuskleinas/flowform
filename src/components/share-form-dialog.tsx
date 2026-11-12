@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 function buildEmbedSnippet(url: string) {
-  return `<iframe src="${url}" width="100%" height="600" style="border:none;border-radius:12px" title="Flowform survey"></iframe>`;
+  return `<iframe src="${url}" width="100%" height="600" style="border:none;border-radius:12px" title="Flowform"></iframe>`;
 }
 
 /**
@@ -57,7 +57,7 @@ export function ShareFormDialog({
       setCopied(which);
       setTimeout(() => setCopied((c) => (c === which ? null : c)), 2000);
     } catch {
-      toast.error("Could not copy to clipboard");
+      toast.error("Couldn’t copy. Select the text and copy it by hand.");
     }
   };
 
@@ -102,7 +102,7 @@ export function ShareFormDialog({
             <div className="text-sm text-ink/60">
               <p className="font-semibold text-ink">QR code</p>
               <p className="mt-1">
-                Point a phone camera at it — great for posters, slides, and in-person events.
+                Point a phone camera at it. Good for posters, slides and events.
               </p>
             </div>
           </div>

@@ -49,8 +49,8 @@ const TEMPLATES: Template[] = [
     emoji: "💜",
     name: "Customer feedback",
     blurb: "NPS + satisfaction + open feedback",
-    title: "Customer feedback survey",
-    description: "Help us understand how we're doing and what to improve.",
+    title: "Customer feedback",
+    description: "Help us understand how we’re doing and what to improve.",
     questions: [
       {
         type: "nps",
@@ -79,7 +79,7 @@ const TEMPLATES: Template[] = [
     name: "Event feedback",
     blurb: "Rating, highlights, suggestions",
     title: "Event feedback",
-    description: "Thanks for joining us — tell us how it went!",
+    description: "Thanks for coming. Tell us how it went.",
     questions: [
       {
         type: "rating",
@@ -108,7 +108,7 @@ const TEMPLATES: Template[] = [
     name: "Employee pulse",
     blurb: "Quick weekly team check-in",
     title: "Team pulse check",
-    description: "A quick, anonymous check-in — it takes less than a minute.",
+    description: "A quick, anonymous check-in. Under a minute.",
     questions: [
       {
         type: "rating",
@@ -130,7 +130,7 @@ const TEMPLATES: Template[] = [
       },
       {
         type: "long_text",
-        label: "Anything you'd like to share with the team?",
+        label: "Anything you’d like to share with the team?",
         options: null,
         required: false,
       },
@@ -209,7 +209,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
     },
     onError: (err: Error) => {
       setPendingId(null);
-      toast.error(err.message || "Could not create form");
+      toast.error(err.message || "Couldn’t create the form. Try again.");
     },
   });
 
@@ -232,11 +232,11 @@ function NewFormAuthed({ userId }: { userId: string }) {
     return (
       <div className="min-h-screen bg-surface text-ink">
         <main className="mx-auto max-w-xl px-6 py-24 text-center">
-          <h1 className="font-display text-3xl">You can't create forms here</h1>
+          <h1 className="font-display text-3xl">You can’t create forms here</h1>
           <p className="mt-3 text-ink/60">
             {role === "viewer"
-              ? "You're a viewer in this workspace. Ask an admin for editor access."
-              : "You don't have access to this workspace."}
+              ? "You’re a viewer in this workspace. Ask an admin for editor access."
+              : "You don’t have access to this workspace."}
           </p>
           <Link to="/dashboard" className="mt-6 inline-block text-brand underline">
             Back to dashboard
@@ -268,7 +268,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
         <div className="max-w-2xl">
           <h1 className="font-display text-4xl md:text-5xl">Create a new form</h1>
           <p className="mt-3 text-base text-ink/60 md:text-lg">
-            Start blank or from a template. You'll add questions, logic, and AI suggestions in the
+            Start blank or from a template. Questions, logic and Claude’s drafts come next, in the
             editor.
           </p>
           {!isOwn && workspace && (
@@ -305,7 +305,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
             </span>
             <div>
               <p className="text-base font-semibold text-ink">Blank form</p>
-              <p className="mt-0.5 text-sm text-ink/50">Start from scratch with an empty form.</p>
+              <p className="mt-0.5 text-sm text-ink/50">An empty page. Brave.</p>
             </div>
           </div>
           <ArrowRight className="size-5 shrink-0 text-ink/30 transition-colors group-hover:text-brand" />
