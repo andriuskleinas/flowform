@@ -273,5 +273,5 @@ CREATE POLICY "Editors update form covers" ON storage.objects
 CREATE POLICY "Editors delete form covers" ON storage.objects
   FOR DELETE TO authenticated
   USING (bucket_id = 'form-covers' AND private.can_edit_cover(name));
--- Public bucket: reads go through the public URL, no SELECT policy needed
--- (one would let anyone list every file).
+-- Public bucket: reads go through the public URL. A SELECT policy scoped to
+-- editors is added in 20261113130000 (needed for deletes).
