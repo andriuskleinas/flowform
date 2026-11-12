@@ -819,10 +819,10 @@ const FEATURES: Array<{
     label: "Learn",
     title: (
       <>
-        See where people stop, <em>and why.</em>
+        Know what people <em>really think.</em>
       </>
     ),
-    body: "Claude reads every open answer and comes back with the main themes, the overall mood and quotes that prove it. Got a specific question? Just ask it, in plain English. And because answers are saved as people go, you see the exact question where people gave up.",
+    body: "Claude reads every open answer and sums them up in a few clear themes, so you see what matters without reading them all.",
     points: [
       "Ask “What do unhappy customers mention?” and get an answer",
       "The question where unfinished visitors stopped, not a guess",
