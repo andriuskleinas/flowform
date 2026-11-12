@@ -7,18 +7,23 @@ import {
   CornerDownLeft,
   Download,
   Gift,
-  History,
+  Layers,
   Lightbulb,
-  ListChecks,
-  Power,
+  MessagesSquare,
+  Palette,
   QrCode,
   Quote,
   RotateCcw,
-  Rows3,
+  Search,
+  Signpost,
+  TrendingDown,
+  Trophy,
   UserRoundX,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import QRCode from "react-qr-code";
 
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/user-menu";
@@ -76,7 +81,7 @@ const HUE: Record<Hue, { tag: string; stage: string; dot: string }> = {
   sun: { tag: "bg-sun-tint text-sun", stage: "bg-sun-tint", dot: "bg-sun" },
 };
 
-type Glyph = "build" | "branch" | "learn";
+type Glyph = "build" | "branch" | "learn" | "present";
 
 /** Accent bar colour per hue, bright enough to read on the ink tile. */
 const GLYPH_ACCENT: Record<Hue, string> = {
@@ -111,6 +116,16 @@ function SectionGlyph({ kind, hue }: { kind: Glyph; hue: Hue }) {
           <rect x="23.5" y="16" width="1.5" height="4" rx="0.75" fill={accent} />
           <rect x="7" y="20" width="7.5" height="4" rx="1.5" fill={paper} opacity="0.35" />
           <rect x="17.5" y="20" width="7.5" height="4" rx="1.5" fill={accent} />
+        </>
+      )}
+      {kind === "present" && (
+        <>
+          <rect x="7" y="8" width="18" height="11" rx="1.5" fill={paper} opacity="0.35" />
+          <rect x="9.5" y="14" width="3" height="3" rx="0.75" fill={paper} />
+          <rect x="14.5" y="11" width="3" height="6" rx="0.75" fill={accent} />
+          <rect x="19.5" y="12.5" width="3" height="4.5" rx="0.75" fill={paper} />
+          <rect x="15" y="19" width="2" height="4" rx="0.75" fill={paper} opacity="0.35" />
+          <rect x="11" y="23" width="10" height="1.5" rx="0.75" fill={paper} opacity="0.35" />
         </>
       )}
       {kind === "learn" && (
@@ -809,6 +824,93 @@ function InsightVignette() {
   );
 }
 
+const LIVE_OPTIONS = ["Pricing pages", "Onboarding emails", "Customer interviews", "Churn"];
+const LIVE_START = [14, 9, 21, 6];
+
+/**
+ * Presenter view: a live poll on the big screen. Answers "arrive" on a timer
+ * so the bars move like the real Realtime view; still for reduced motion.
+ */
+function LiveVignette() {
+  const [counts, setCounts] = useState(LIVE_START);
+  const [bumped, setBumped] = useState<number | null>(null);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setInterval(() => {
+      // Weighted toward the leader, so the race stays readable.
+      const i = Math.random() < 0.45 ? 2 : Math.floor(Math.random() * LIVE_START.length);
+      setBumped(i);
+      setCounts((c) =>
+        c.reduce((a, b) => a + b, 0) >= 120 ? LIVE_START : c.map((n, j) => (j === i ? n + 1 : n)),
+      );
+    }, 1300);
+    return () => clearInterval(t);
+  }, []);
+  const total = counts.reduce((a, b) => a + b, 0);
+  const max = Math.max(...counts);
+
+  return (
+    <Sheet
+      bar={
+        <>
+          <span className="truncate">Live results · Growth workshop</span>
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-coral">
+            <span className="size-1.5 rounded-full bg-coral motion-safe:animate-pulse" />
+            LIVE
+          </span>
+        </>
+      }
+    >
+      <div className="px-5 py-5 sm:px-6">
+        <p className="font-mono text-[11px] text-ink/45">
+          <span className="text-brand">02</span> / 04
+        </p>
+        <p className="mt-1.5 font-display text-xl leading-snug text-ink">
+          Which topic should we cover next?
+        </p>
+        <ul className="mt-4 space-y-3">
+          {LIVE_OPTIONS.map((o, i) => (
+            <li key={o}>
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className={counts[i] === max ? "font-medium text-ink" : "text-ink/75"}>
+                  {o}
+                </span>
+                <span
+                  key={bumped === i ? counts[i] : undefined}
+                  className="font-mono text-xs tabular-nums text-ink/55 motion-safe:animate-[demo-step-in_0.35s_ease-out_both]"
+                >
+                  {counts[i]}
+                </span>
+              </div>
+              <div className="mt-1.5 h-2 rounded-sm bg-surface">
+                <div
+                  className={`h-2 rounded-sm transition-[width] duration-700 ease-out ${counts[i] === max ? "bg-brand" : "bg-ink/25"}`}
+                  style={{ width: `${(counts[i] / total) * 100}%` }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="flex items-center gap-4 border-t border-hairline bg-paper px-5 py-4 sm:px-6">
+        <div className="shrink-0 rounded-md border border-hairline bg-white p-1.5">
+          <QRCode value="https://flowformapp.vercel.app/demo" size={56} fgColor="#1b1c22" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-ink">Scan to answer</p>
+          <p className="truncate font-mono text-[11px] text-ink/50">
+            flowformapp.vercel.app/f/growth
+          </p>
+        </div>
+        <p className="ml-auto shrink-0 text-right font-mono text-[11px] text-ink/50">
+          <span className="block text-lg font-medium tabular-nums text-ink">{total}</span>
+          answers
+        </p>
+      </div>
+    </Sheet>
+  );
+}
+
 /* ------------------------------------------------------------------------ */
 /* Content                                                                  */
 /* ------------------------------------------------------------------------ */
@@ -842,8 +944,8 @@ const FEATURES: Array<{
     body: "Tell Claude what you want to learn. It drafts five to eight questions, each with the right type and answer options. Keep the ones you like, edit the rest, reorder by drag and drop.",
     points: [
       "Claude picks the question type and writes the options",
-      "Redraft as often as you like, or start from a template",
-      "Live preview of exactly what respondents see",
+      "Short, vague answer? Claude can ask one friendly “why?”",
+      "Your colours, font and cover image, previewed live",
     ],
     visual: <BuilderVignette />,
   },
@@ -856,11 +958,11 @@ const FEATURES: Array<{
         Skip what doesn’t <em>apply.</em>
       </>
     ),
-    body: "Jump rules send each respondent down the path that fits their answers, so nobody is asked a question that doesn’t concern them.",
+    body: "Each person only sees the questions that fit their answers, so nobody is asked something that doesn’t concern them. Later questions can even use what they told you earlier.",
     points: [
-      "Answer-based jumps on any choice question",
-      "Path-aware validation for required questions",
-      "Conversational or classic one-page layout",
+      "Skip ahead based on any choice someone makes",
+      "Greet people by name: “Thanks, Sam! What brought you here?”",
+      "One question at a time, or every question on one page",
     ],
     visual: <LogicVignette />,
   },
@@ -874,13 +976,31 @@ const FEATURES: Array<{
         See where people stop, <em>and why.</em>
       </>
     ),
-    body: "Claude reads every open answer for you and comes back with the main themes, how often each came up, the overall sentiment and quotes that prove it. Alongside: a real funnel and drop-off per question.",
+    body: "Claude reads every open answer and comes back with the main themes, the overall mood and quotes that prove it. Got a specific question? Just ask it, in plain English. And because answers are saved as people go, you see the exact question where people gave up.",
     points: [
-      "Themes, sentiment and quotes from open answers",
-      "Completion rate, time to fill and 7, 30 and 90-day trends",
-      "CSV export whenever you need the raw data",
+      "Ask “What do unhappy customers mention?” and get an answer",
+      "The question where unfinished visitors stopped, not a guess",
+      "Browse as a spreadsheet, or download a CSV or PDF report",
     ],
     visual: <InsightVignette />,
+  },
+  {
+    hue: "sky",
+    glyph: "present",
+    note: "Live results",
+    label: "Present",
+    title: (
+      <>
+        Turn any form into a <em>live poll.</em>
+      </>
+    ),
+    body: "Running a talk, a class or a workshop? Put the results on the big screen. People scan the QR code, answer on their phones, and the bars move the moment their answers arrive.",
+    points: [
+      "Results update live, no refreshing",
+      "QR code and a short link right on the screen",
+      "Hide the count or stay on one question while you talk",
+    ],
+    visual: <LiveVignette />,
   },
 ];
 
@@ -900,40 +1020,62 @@ const CAPABILITIES: Array<{ icon: LucideIcon; title: string; body: string; ai?: 
     ai: true,
   },
   {
-    icon: Quote,
-    title: "Answers read for you",
-    body: "Hundreds of open answers become a few themes, an overall sentiment and quotes to back them up.",
+    icon: MessagesSquare,
+    title: "Follow-ups that dig deeper",
+    body: "When someone answers “it was fine”, Claude can ask one gentle follow-up, the way a good interviewer would.",
     ai: true,
   },
   {
-    icon: ListChecks,
-    title: "Seven question types",
-    body: "Short and long answers, multiple choice, dropdowns, yes or no, NPS and star ratings.",
+    icon: Quote,
+    title: "Answers read for you",
+    body: "Hundreds of open answers become a few themes, an overall mood and quotes to back them up.",
+    ai: true,
   },
   {
-    icon: Rows3,
-    title: "Two ways to ask",
-    body: "One question at a time, like a conversation, or every question on a single page.",
+    icon: Search,
+    title: "Ask your results anything",
+    body: "Type a question like “What do people who rated us low complain about?” and see the answer, with the responses behind it.",
+    ai: true,
+  },
+  {
+    icon: TrendingDown,
+    title: "See exactly where people quit",
+    body: "Answers are saved as people go. You see the question unfinished visitors stopped on, and they can come back to finish.",
+  },
+  {
+    icon: Trophy,
+    title: "Quizzes with a score",
+    body: "Give answers points and show everyone a result at the end, like “Expert” or “Getting there”.",
+  },
+  {
+    icon: Palette,
+    title: "Looks like your brand",
+    body: "Pick your colour, font and cover image, then send people on to your own website when they finish.",
+  },
+  {
+    icon: Signpost,
+    title: "Know where answers come from",
+    body: "See whether responses came from your newsletter, a social post or your website, campaign by campaign.",
+  },
+  {
+    icon: Layers,
+    title: "Change a live form safely",
+    body: "Start a new version without losing old answers, then compare how each version performed.",
+  },
+  {
+    icon: Users,
+    title: "Bring your team",
+    body: "Invite teammates as admins, editors or viewers, so everyone sees the results and only some can edit.",
   },
   {
     icon: QrCode,
     title: "Share it anywhere",
-    body: "Send a link, print a QR code, embed the form on your site or use your phone’s share sheet.",
-  },
-  {
-    icon: History,
-    title: "Finish later",
-    body: "Answers are saved as people go, so anyone interrupted can come back and pick up where they left off.",
-  },
-  {
-    icon: Power,
-    title: "Open and close on your terms",
-    body: "Close a form to stop new responses, reopen it any time. Nothing you’ve collected is lost.",
+    body: "Send a short link, print a QR code, embed the form on your site or use your phone’s share sheet.",
   },
   {
     icon: Download,
     title: "Take your data with you",
-    body: "Export every response to CSV whenever you need it in a spreadsheet.",
+    body: "Browse every response as a spreadsheet, or download it as a CSV or a print-ready PDF report.",
   },
 ];
 
@@ -951,12 +1093,20 @@ const FAQS: Array<{ q: string; a: string }> = [
     a: "Describe what you want to learn and Claude drafts questions you can accept or edit. On the results side, Claude reads your open-text answers and pulls out themes, sentiment and representative quotes. Summaries are labelled as AI-generated.",
   },
   {
+    q: "Can I use it at a live event?",
+    a: "Yes. Open the live results screen, put it on a projector, and people answer on their phones by scanning the QR code. The charts update as answers come in.",
+  },
+  {
+    q: "Can I change a form after people have answered?",
+    a: "Yes. Start a new version: the people who already answered keep their responses, new visitors get the updated form, and you can compare the two versions side by side.",
+  },
+  {
     q: "How is this different from a classic survey?",
     a: "A classic survey shows a wall of questions at once. Flowform shows one question at a time, skips what doesn’t apply, and tells you exactly where people drop off so you can fix it.",
   },
   {
     q: "Where is my data stored?",
-    a: "In a managed Postgres database on Supabase, protected by row-level security so only you can read your forms and responses. It isn’t sold or shared.",
+    a: "In a managed Postgres database on Supabase, protected by row-level security so only you, and teammates you invite, can read your forms and responses. It isn’t sold or shared.",
   },
 ];
 
@@ -1038,9 +1188,9 @@ function Index() {
             <div>
               <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-card py-1 pr-3 pl-1.5 text-sm text-ink/70">
                 <span className="rounded-full bg-mint-tint px-2 py-0.5 text-xs font-medium text-mint">
-                  Updated
+                  New
                 </span>
-                AI features now run on Claude Sonnet 5.5
+                Live polls, quizzes and “Ask your results”
               </span>
               <h1 className="mt-6 font-display text-[2.8rem] leading-[1.02] text-ink sm:text-6xl lg:text-[4.4rem]">
                 Forms people actually <em className="text-brand">finish.</em>
@@ -1122,8 +1272,8 @@ function Index() {
                   Everything a form needs. <em>Nothing it doesn’t.</em>
                 </h2>
                 <p className="mt-6 max-w-sm text-[17px] leading-relaxed text-paper/60">
-                  Claude writes the first draft and reads the answers. Everything in between, from
-                  sharing to closing a form, takes a click.
+                  Claude writes the first draft, asks the follow-up and reads the answers.
+                  Everything in between, from branding to sharing, takes a click.
                 </p>
                 <div className="mt-8">
                   <Link
