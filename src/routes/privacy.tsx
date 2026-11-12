@@ -17,13 +17,15 @@ export const Route = createFileRoute("/privacy")({
 
 function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="July 3, 2026">
+    <LegalPage title="Privacy policy" updated="November 12, 2026">
       <section>
         <h2>What we collect</h2>
         <p>
           When you create a Flowform account we store your email address and the profile details you
           choose to add. When you build forms we store the forms, questions, and settings you
-          create. When someone responds to your form we store their answers on your behalf.
+          create. When someone responds to your form we store their answers on your behalf. Answers
+          are saved as they are given, before the form is submitted, so the form's owner can see
+          where people stop; unfinished answers are deleted after 90 days.
         </p>
       </section>
 

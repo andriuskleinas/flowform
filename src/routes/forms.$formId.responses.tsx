@@ -8,7 +8,9 @@ import {
   Loader2,
   Presentation,
   RefreshCw,
+  Rows3,
   Sparkles,
+  Table2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -50,6 +52,7 @@ import { StarRating, type Question } from "@/components/question-render";
 import { VersionComparison } from "@/components/version-comparison";
 import { AskResponsesCard } from "@/components/ask-responses-card";
 import { ResponseInsights, type FormInsights } from "@/components/response-insights";
+import { ResponsesTable } from "@/components/responses-table";
 import {
   maxScore,
   parseFormSettings,
@@ -94,6 +97,14 @@ type FormAnalytics = {
   value_counts: { question_id: string; value: string | null; count: number }[];
 };
 
+/** Shape returned by `get_form_dropoff`: drop-off from saved partial sessions. */
+type FormDropoff = {
+  started: number;
+  completed: number;
+  abandoned: number;
+  by_question: { question_id: string; reached: number; stopped: number }[];
+};
+
 const RANGE_CHOICES = [7, 30, 90] as const;
 type RangeDays = (typeof RANGE_CHOICES)[number];
 
@@ -107,6 +118,25 @@ function ResponsesPage() {
   // null = every version together; a number scopes the whole page to it.
   const [version, setVersion] = useState<number | null>(null);
   const [tab, setTab] = useState("overview");
+  // Individual responses as cards or a spreadsheet-style table (remembered).
+  const [layout, setLayoutState] = useState<"cards" | "table">(() => {
+    try {
+      return typeof window !== "undefined" &&
+        localStorage.getItem("flowform:responses-layout") === "table"
+        ? "table"
+        : "cards";
+    } catch {
+      return "cards";
+    }
+  });
+  const setLayout = (l: "cards" | "table") => {
+    setLayoutState(l);
+    try {
+      localStorage.setItem("flowform:responses-layout", l);
+    } catch {
+      // Best-effort only.
+    }
+  };
   // "Ask your responses" → "Show these responses": the individual tab lists
   // exactly the responses Claude's filter matched.
   const [askFilter, setAskFilter] = useState<{
@@ -196,6 +226,20 @@ function ResponsesPage() {
       });
       if (error) throw error;
       return data as unknown as FormAnalytics;
+    },
+  });
+
+  const dropoffQ = useQuery({
+    enabled: !!user,
+    queryKey: ["form-dropoff", formId, days, version],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_form_dropoff", {
+        p_form_id: formId,
+        p_days: days,
+        ...(version != null ? { p_version: version } : {}),
+      });
+      if (error) throw error;
+      return data as unknown as FormDropoff;
     },
   });
 
@@ -387,6 +431,7 @@ function ResponsesPage() {
             questions={questions}
             responses={responses}
             analytics={analyticsQ.data ?? null}
+            dropoff={dropoffQ.data ?? null}
             analyticsLoading={analyticsQ.isLoading}
             days={days}
             onDaysChange={setDays}
@@ -419,15 +464,63 @@ function ResponsesPage() {
               </button>
             </div>
           )}
-          <IndividualList
-            outcomes={outcomes}
-            showVersion={multiVersion}
-            askedByVersion={askedByVersion}
-            questions={questions}
-            responses={responses}
-            hasMore={hasMore}
-            onLoadMore={() => setResponseLimit((l) => l + 100)}
-          />
+          <div className="mb-4 flex justify-end">
+            <div
+              role="group"
+              aria-label="Layout"
+              className="inline-flex rounded-md border border-hairline bg-card p-0.5"
+            >
+              {(["cards", "table"] as const).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  aria-pressed={layout === l}
+                  onClick={() => setLayout(l)}
+                  className={
+                    "inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-xs transition-colors " +
+                    (layout === l ? "bg-ink text-paper" : "text-ink/55 hover:text-ink")
+                  }
+                >
+                  {l === "cards" ? <Rows3 className="size-3.5" /> : <Table2 className="size-3.5" />}
+                  {l === "cards" ? "Cards" : "Table"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {layout === "table" ? (
+            <>
+              <ResponsesTable
+                key={version ?? "all"}
+                formId={formId}
+                version={version}
+                questions={questions}
+                responses={responses}
+                showVersion={multiVersion}
+                allowUnfinished={!askFilter}
+              />
+              {hasMore && (
+                <div className="mt-6 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setResponseLimit((l) => l + 100)}
+                    className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ink/5"
+                  >
+                    Load more responses
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <IndividualList
+              outcomes={outcomes}
+              showVersion={multiVersion}
+              askedByVersion={askedByVersion}
+              questions={questions}
+              responses={responses}
+              hasMore={hasMore}
+              onLoadMore={() => setResponseLimit((l) => l + 100)}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </Shell>
@@ -439,6 +532,7 @@ function Overview({
   questions,
   responses,
   analytics,
+  dropoff,
   analyticsLoading,
   days,
   onDaysChange,
@@ -450,6 +544,7 @@ function Overview({
   questions: Question[];
   responses: ResponseRow[];
   analytics: FormAnalytics | null;
+  dropoff: FormDropoff | null;
   analyticsLoading: boolean;
   days: RangeDays;
   onDaysChange: (d: RangeDays) => void;
@@ -794,39 +889,13 @@ function Overview({
         </div>
       </Card>
 
-      <Card
-        title="Question drop-off"
-        subtitle="How many respondents reached each question (conversational mode)"
-      >
-        {maxReach === 0 ? (
-          <p className="text-sm text-ink/40">
-            No data yet — drop-off is measured as respondents move through the conversational form.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {questions.map((q, i) => {
-              const n = reachByQuestion.get(q.id) ?? 0;
-              return (
-                <div key={q.id} className="flex items-center gap-3">
-                  <span className="w-8 shrink-0 font-mono text-xs text-ink/45">Q{i + 1}</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-sm bg-surface">
-                    <div
-                      className="h-full rounded-sm bg-ink/70 transition-all duration-500"
-                      style={{ width: `${(n / maxReach) * 100}%` }}
-                    />
-                  </div>
-                  <span className="w-24 shrink-0 truncate text-xs text-ink/50" title={q.label}>
-                    {q.label}
-                  </span>
-                  <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-ink">
-                    {n}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
+      <DropoffCard
+        questions={questions}
+        dropoff={dropoff}
+        reachByQuestion={reachByQuestion}
+        maxReach={maxReach}
+        days={days}
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         {questions.map((q) => (
@@ -839,6 +908,122 @@ function Overview({
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * Where respondents stop. Prefers saved partial sessions (exact: who reached
+ * each question, who left on it); falls back to deduped "reach" events for
+ * periods before sessions were recorded.
+ */
+function DropoffCard({
+  questions,
+  dropoff,
+  reachByQuestion,
+  maxReach,
+  days,
+}: {
+  questions: Question[];
+  dropoff: FormDropoff | null;
+  reachByQuestion: Map<string, number>;
+  maxReach: number;
+  days: number;
+}) {
+  if (dropoff && dropoff.started > 0) {
+    const byQ = new Map(dropoff.by_question.map((r) => [r.question_id, r]));
+    const top = Math.max(1, ...dropoff.by_question.map((r) => r.reached));
+    const worst = dropoff.by_question.reduce<{ id: string; stopped: number } | null>(
+      (w, r) => (r.stopped > (w?.stopped ?? 0) ? { id: r.question_id, stopped: r.stopped } : w),
+      null,
+    );
+    const worstIdx = worst ? questions.findIndex((q) => q.id === worst.id) : -1;
+    return (
+      <Card
+        title="Where people drop off"
+        subtitle={`${dropoff.started} started · ${dropoff.completed} finished · ${dropoff.abandoned} left unfinished · last ${days} days`}
+      >
+        {worst && worstIdx >= 0 && (
+          <p className="mb-4 text-sm text-ink/70">
+            Most people who leave do it on{" "}
+            <span className="font-medium text-ink">
+              Q{worstIdx + 1} “{truncate(questions[worstIdx].label, 60)}”
+            </span>{" "}
+            ({worst.stopped} of {dropoff.abandoned}).
+          </p>
+        )}
+        <div className="space-y-2">
+          {questions.map((q, i) => {
+            const r = byQ.get(q.id);
+            const reached = r?.reached ?? 0;
+            const stopped = r?.stopped ?? 0;
+            return (
+              <div key={q.id} className="flex items-center gap-3">
+                <span className="w-8 shrink-0 font-mono text-xs text-ink/45">Q{i + 1}</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-sm bg-surface">
+                  <div
+                    className="h-full rounded-sm bg-ink/70 transition-all duration-500"
+                    style={{ width: `${(reached / top) * 100}%` }}
+                  />
+                </div>
+                <span className="w-24 shrink-0 truncate text-xs text-ink/50" title={q.label}>
+                  {q.label}
+                </span>
+                <span
+                  className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-ink"
+                  title="Reached this question"
+                >
+                  {reached}
+                </span>
+                <span
+                  className={
+                    "w-16 shrink-0 text-right font-mono text-xs tabular-nums " +
+                    (stopped > 0 ? "text-destructive" : "text-ink/30")
+                  }
+                  title="Left the form on this question"
+                >
+                  {stopped > 0 ? `−${stopped} left` : "—"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-4 text-xs text-ink/45">
+          Answers are saved as people go, so these are real sessions, not estimates.
+        </p>
+      </Card>
+    );
+  }
+  return (
+    <Card title="Question drop-off" subtitle="How many respondents reached each question">
+      {maxReach === 0 ? (
+        <p className="text-sm text-ink/40">
+          No data yet — drop-off appears as respondents move through the form.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {questions.map((q, i) => {
+            const n = reachByQuestion.get(q.id) ?? 0;
+            return (
+              <div key={q.id} className="flex items-center gap-3">
+                <span className="w-8 shrink-0 font-mono text-xs text-ink/45">Q{i + 1}</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-sm bg-surface">
+                  <div
+                    className="h-full rounded-sm bg-ink/70 transition-all duration-500"
+                    style={{ width: `${(n / maxReach) * 100}%` }}
+                  />
+                </div>
+                <span className="w-24 shrink-0 truncate text-xs text-ink/50" title={q.label}>
+                  {q.label}
+                </span>
+                <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-ink">
+                  {n}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
   );
 }
 

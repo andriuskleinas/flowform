@@ -1,5 +1,18 @@
-import { useEffect, useState } from "react";
-import { Check, Copy, Link2, Palette, Plus, Trophy, Variable, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Check,
+  Copy,
+  Link2,
+  Loader2,
+  Palette,
+  Plus,
+  Trophy,
+  Upload,
+  Variable,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -154,15 +167,33 @@ export function FormSettingsPanel({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="settings-cover" className="text-xs">
-                  Cover image URL <span className="font-normal text-ink/40">(optional, https)</span>
+                  Cover image <span className="font-normal text-ink/40">(optional)</span>
                 </Label>
-                <Input
-                  id="settings-cover"
-                  value={theme.cover_url ?? ""}
-                  onChange={(e) => set({ theme: { ...theme, cover_url: e.target.value } })}
-                  placeholder="https://images.example.com/banner.jpg"
-                  autoComplete="off"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="settings-cover"
+                    value={theme.cover_url ?? ""}
+                    onChange={(e) => set({ theme: { ...theme, cover_url: e.target.value } })}
+                    placeholder="Upload, or paste an https:// image link"
+                    autoComplete="off"
+                  />
+                  <CoverUploadButton
+                    formId={formId}
+                    disabled={disabled}
+                    onUploaded={(url) => set({ theme: { ...theme, cover_url: url } })}
+                  />
+                  {theme.cover_url && (
+                    <button
+                      type="button"
+                      aria-label="Remove cover image"
+                      title="Remove cover image"
+                      onClick={() => set({ theme: { ...theme, cover_url: undefined } })}
+                      className="inline-flex h-9 shrink-0 items-center rounded-md border border-ink/15 px-2 text-ink/60 hover:bg-ink/5 hover:text-ink"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
                 {theme.cover_url && !isSafeUrl(theme.cover_url, true) && (
                   <p className="text-xs text-destructive">Use a full https:// image link.</p>
                 )}
@@ -550,5 +581,76 @@ function QuizTab({
         </>
       )}
     </div>
+  );
+}
+
+const COVER_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const COVER_MAX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Uploads a cover image to the public `form-covers` bucket under
+ * `<form id>/…` (storage RLS lets only the form's editors write there) and
+ * hands back its public URL, which is stored like a pasted link.
+ */
+function CoverUploadButton({
+  formId,
+  disabled,
+  onUploaded,
+}: {
+  formId: string;
+  disabled?: boolean;
+  onUploaded: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const upload = async (file: File) => {
+    if (!COVER_TYPES.includes(file.type)) {
+      toast.error("Use a PNG, JPG, WebP or GIF image.");
+      return;
+    }
+    if (file.size > COVER_MAX_BYTES) {
+      toast.error("Images can be up to 5 MB.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const ext = file.type.split("/")[1].replace("jpeg", "jpg");
+      const path = `${formId}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("form-covers")
+        .upload(path, file, { contentType: file.type, cacheControl: "31536000" });
+      if (error) throw error;
+      const { data } = supabase.storage.from("form-covers").getPublicUrl(path);
+      onUploaded(data.publicUrl);
+      toast.success("Cover uploaded — save to apply it.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={COVER_TYPES.join(",")}
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void upload(f);
+        }}
+      />
+      <button
+        type="button"
+        disabled={disabled || busy}
+        onClick={() => inputRef.current?.click()}
+        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-ink/15 px-3 text-sm font-medium text-ink hover:bg-ink/5 disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+        Upload
+      </button>
+    </>
   );
 }

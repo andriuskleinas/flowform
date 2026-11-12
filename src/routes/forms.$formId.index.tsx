@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
+  answersOnPath,
+  classicProgress,
   computeVisiblePath,
   isAnswered,
   validateAnswerLength,
@@ -96,6 +98,12 @@ function PublicFormPage() {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   // Set on first interaction, not page load, so fill-time reflects actual engagement.
   const startedAtRef = useRef<string | null>(null);
+  // Partial-response session: minted on first interaction, kept in the draft
+  // so a reload continues it. Progress is saved before submit so drop-off is
+  // measured from real sessions.
+  const sessionIdRef = useRef<string | null>(null);
+  const reachedRef = useRef<Set<string>>(new Set());
+  const [currentQid, setCurrentQid] = useState<string | null>(null);
 
   // Funnel events (view / start / reach). Fire-and-forget; the DB function
   // ignores drafts/closed forms and dedupes by hashed IP. Owner visits are
@@ -134,6 +142,7 @@ function PublicFormPage() {
 
   const recordStart = () => {
     if (!startedAtRef.current) startedAtRef.current = new Date().toISOString();
+    if (!sessionIdRef.current) sessionIdRef.current = newSessionId();
     trackEvent("start");
   };
 
@@ -207,6 +216,7 @@ function PublicFormPage() {
           answers?: Answers;
           followUps?: FollowUps;
           startedAt?: string;
+          sessionId?: string;
         };
         if (parsed?.answers && typeof parsed.answers === "object") {
           setAnswers(parsed.answers);
@@ -214,6 +224,7 @@ function PublicFormPage() {
             setFollowUps(parsed.followUps);
           }
           if (typeof parsed.startedAt === "string") startedAtRef.current = parsed.startedAt;
+          if (typeof parsed.sessionId === "string") sessionIdRef.current = parsed.sessionId;
         }
       }
     } catch {
@@ -227,7 +238,12 @@ function PublicFormPage() {
     try {
       localStorage.setItem(
         draftKey,
-        JSON.stringify({ answers, followUps, startedAt: startedAtRef.current }),
+        JSON.stringify({
+          answers,
+          followUps,
+          startedAt: startedAtRef.current,
+          sessionId: sessionIdRef.current,
+        }),
       );
     } catch {
       // Best-effort only.
@@ -284,7 +300,8 @@ function PublicFormPage() {
       );
       const { error } = await supabase.from("responses").insert({
         form_id: formId,
-        answers,
+        answers: answersOnPath(qs, answers),
+        session_id: sessionIdRef.current,
         started_at: startedAtRef.current,
         follow_ups: Object.keys(answeredFollowUps).length > 0 ? answeredFollowUps : null,
         meta:
@@ -330,8 +347,45 @@ function PublicFormPage() {
     },
   });
 
-  const questions = questionsQ.data ?? [];
-  const missingRequired = questions.filter((q) => q.required && !isAnswered(q, answers[q.id]));
+  const questions = useMemo(() => questionsQ.data ?? [], [questionsQ.data]);
+  const isClassic = form?.display_mode !== "conversational";
+  // Logic jumps apply to one-page forms too: only questions on the
+  // respondent's path are shown, and only those can block submission.
+  const visibleQuestions = useMemo(
+    () => computeVisiblePath(questions, answers).map((i) => questions[i]),
+    [questions, answers],
+  );
+  const missingRequired = visibleQuestions.filter(
+    (q) => q.required && !isAnswered(q, answers[q.id]),
+  );
+
+  // Save progress (debounced) once the respondent has started. Only for
+  // trackable visitors — owners and drafts are skipped like funnel events.
+  useEffect(() => {
+    if (submitted || !sessionIdRef.current || questions.length === 0) return;
+    const t = setTimeout(() => {
+      if (!trackableRef.current || !sessionIdRef.current) return;
+      let current = currentQid;
+      if (isClassic) {
+        const p = classicProgress(questions, answers);
+        current = p.current;
+        p.reached.forEach((id) => reachedRef.current.add(id));
+      } else if (current) {
+        reachedRef.current.add(current);
+      }
+      // Builders are lazy: .then() is what sends the request.
+      supabase
+        .rpc("save_response_progress", {
+          p_session_id: sessionIdRef.current,
+          p_form_id: formId,
+          p_answers: answersOnPath(questions, answers) as Json,
+          ...(current ? { p_current_question_id: current } : {}),
+          p_reached: [...reachedRef.current],
+        })
+        .then(() => {});
+    }, 800);
+    return () => clearTimeout(t);
+  }, [answers, currentQid, submitted, questions, isClassic, formId]);
   // Answer recall: "{name}" in a label shows the earlier answer (or a ?name= link value).
   const recallVars = buildRecallVars(questions, answers, metaRef.current?.hidden);
   const recall = (text: string) => recallText(text, recallVars);
@@ -524,7 +578,10 @@ function PublicFormPage() {
               recordStart();
               setAnswers((a) => ({ ...a, [qid]: v }));
             }}
-            onShowQuestion={(qid) => trackEvent("reach", qid)}
+            onShowQuestion={(qid) => {
+              trackEvent("reach", qid);
+              setCurrentQid(qid);
+            }}
             followUps={followUps}
             onFollowUpChange={(qid, entry) =>
               setFollowUps((f) => {
@@ -597,7 +654,7 @@ function PublicFormPage() {
           </p>
         )}
 
-        {questions.map((q, i) => {
+        {visibleQuestions.map((q, i) => {
           const missing = showErrors && q.required && !isAnswered(q, answers[q.id]);
           return (
             <div
@@ -687,5 +744,13 @@ function RedirectNotice({ url, auto }: { url: string; auto: boolean }) {
           : "Respondents are sent here automatically after 5 seconds."}
       </p>
     </div>
+  );
+}
+
+/** Random session id; falls back for very old browsers without randomUUID. */
+function newSessionId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
+    (Number(c) ^ ((Math.random() * 16) >> (Number(c) / 4))).toString(16),
   );
 }

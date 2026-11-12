@@ -304,6 +304,56 @@ export type Database = {
           },
         ]
       }
+      response_sessions: {
+        Row: {
+          answers: Json
+          completed_at: string | null
+          current_question_id: string | null
+          form_id: string
+          form_version: number
+          id: string
+          ip_hash: string
+          reached: string[]
+          response_id: string | null
+          started_at: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          completed_at?: string | null
+          current_question_id?: string | null
+          form_id: string
+          form_version?: number
+          id: string
+          ip_hash: string
+          reached?: string[]
+          response_id?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string | null
+          current_question_id?: string | null
+          form_id?: string
+          form_version?: number
+          id?: string
+          ip_hash?: string
+          reached?: string[]
+          response_id?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "response_sessions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       responses: {
         Row: {
           answers: Json
@@ -314,6 +364,7 @@ export type Database = {
           meta: Json | null
           outcome: string | null
           score: number | null
+          session_id: string | null
           started_at: string | null
           submitted_at: string
         }
@@ -326,6 +377,7 @@ export type Database = {
           meta?: Json | null
           outcome?: string | null
           score?: number | null
+          session_id?: string | null
           started_at?: string | null
           submitted_at?: string
         }
@@ -338,6 +390,7 @@ export type Database = {
           meta?: Json | null
           outcome?: string | null
           score?: number | null
+          session_id?: string | null
           started_at?: string | null
           submitted_at?: string
         }
@@ -483,6 +536,10 @@ export type Database = {
         Args: { p_days?: number; p_form_id: string; p_version?: number }
         Returns: Json
       }
+      get_form_dropoff: {
+        Args: { p_days?: number; p_form_id: string; p_version?: number }
+        Returns: Json
+      }
       get_form_analytics: {
         Args: { p_days?: number; p_form_id: string; p_version?: number }
         Returns: Json
@@ -497,6 +554,16 @@ export type Database = {
       }
       resolve_short_form_link: { Args: { p_code: string }; Returns: string }
       start_new_form_version: { Args: { p_form_id: string }; Returns: number }
+      save_response_progress: {
+        Args: {
+          p_answers: Json
+          p_current_question_id?: string
+          p_form_id: string
+          p_reached?: string[]
+          p_session_id: string
+        }
+        Returns: undefined
+      }
       save_form_editor: {
         Args: { p_form: Json; p_form_id: string; p_questions: Json }
         Returns: undefined

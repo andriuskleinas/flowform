@@ -225,3 +225,36 @@ export function validateAnswerLength(value: unknown): boolean {
     return value.every((v) => typeof v === "string" && v.length <= MAX_ANSWER_LENGTH);
   return true;
 }
+
+/**
+ * Answers to questions on the respondent's jump path only. A respondent who
+ * answered a later question and then changed an earlier answer to jump past
+ * it must not submit the now-skipped answer.
+ */
+export function answersOnPath<Q extends LogicCarrier>(questions: Q[], answers: Answers): Answers {
+  const onPath = new Set(computeVisiblePath(questions, answers).map((i) => questions[i].id));
+  return Object.fromEntries(Object.entries(answers).filter(([qid]) => onPath.has(qid)));
+}
+
+/**
+ * For a one-page (classic) form: the question the respondent is "on" — the
+ * first one on the path after the last answered one — plus every path
+ * question up to it. Used for partial-response drop-off, matching the
+ * conversational meaning of "the question they were looking at".
+ */
+export function classicProgress<Q extends LogicCarrier & { type: QuestionType }>(
+  questions: Q[],
+  answers: Answers,
+): { current: string | null; reached: string[] } {
+  const path = computeVisiblePath(questions, answers);
+  let last = -1;
+  path.forEach((qi, pos) => {
+    if (isAnswered(questions[qi], answers[questions[qi].id])) last = pos;
+  });
+  const curPos = Math.min(last + 1, path.length - 1);
+  if (curPos < 0) return { current: null, reached: [] };
+  return {
+    current: questions[path[curPos]].id,
+    reached: path.slice(0, curPos + 1).map((i) => questions[i].id),
+  };
+}

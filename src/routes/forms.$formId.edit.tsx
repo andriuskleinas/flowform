@@ -73,6 +73,7 @@ import {
   getRatingMax,
   logicEqual,
   questionOptionsEqual,
+  computeVisiblePath,
 } from "@/lib/form-utils";
 import { ConversationalForm } from "@/components/conversational-form";
 import { FormSettingsPanel } from "@/components/form-settings-panel";
@@ -1406,21 +1407,23 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 preview
               />
             ) : (
-              visibleDraftQuestions.map((q, i) => (
-                <div key={q.id} className="rounded-lg border border-hairline bg-card p-5">
-                  <p className="eyebrow mb-3">
-                    Question {i + 1}
-                    {!q.required && (
-                      <span className="ml-2 font-medium text-ink/35">· Optional</span>
-                    )}
-                  </p>
-                  <QuestionRender
-                    question={{ ...q, label: recallText(q.label, previewRecallVars) }}
-                    value={previewAnswers[q.id]}
-                    onChange={(v) => setPreviewAnswers((a) => ({ ...a, [q.id]: v }))}
-                  />
-                </div>
-              ))
+              computeVisiblePath(visibleDraftQuestions, previewAnswers)
+                .map((idx) => visibleDraftQuestions[idx])
+                .map((q, i) => (
+                  <div key={q.id} className="rounded-lg border border-hairline bg-card p-5">
+                    <p className="eyebrow mb-3">
+                      Question {i + 1}
+                      {!q.required && (
+                        <span className="ml-2 font-medium text-ink/35">· Optional</span>
+                      )}
+                    </p>
+                    <QuestionRender
+                      question={{ ...q, label: recallText(q.label, previewRecallVars) }}
+                      value={previewAnswers[q.id]}
+                      onChange={(v) => setPreviewAnswers((a) => ({ ...a, [q.id]: v }))}
+                    />
+                  </div>
+                ))
             )}
 
             {visibleDraftQuestions.length > 0 && draftForm.display_mode === "classic" && (
@@ -1710,7 +1713,7 @@ function SortableQuestionCard({
             <summary className="cursor-pointer text-xs font-semibold text-ink/70">
               Logic jumps{" "}
               <span className="font-normal text-ink/40">
-                — route respondents based on their answer (conversational mode)
+                — skip questions based on their answer
               </span>
             </summary>
             <div className="mt-3 space-y-2">
