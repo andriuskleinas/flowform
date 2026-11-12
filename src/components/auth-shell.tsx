@@ -5,6 +5,7 @@ import { ArrowLeft, Check, Eye, EyeOff, GitBranch, MessagesSquare, Sparkles } fr
 import { Logo } from "@/components/logo";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BuiltBy } from "@/components/built-by";
 
 type PanelCopy = { eyebrow: string; title: React.ReactNode };
 
@@ -75,7 +76,9 @@ export function AuthShell({
         </main>
 
         <footer className="flex flex-wrap items-center justify-between gap-2 px-6 py-6 text-xs text-ink/45 md:px-10">
-          <span>© {new Date().getFullYear()} Flowform</span>
+          <span>
+            © {new Date().getFullYear()} Flowform · <BuiltBy />
+          </span>
           <span className="flex gap-4">
             <Link to="/terms" className="hover:text-ink">
               Terms

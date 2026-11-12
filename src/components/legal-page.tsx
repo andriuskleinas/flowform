@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { BuiltBy } from "@/components/built-by";
 
 export function LegalPage({
   title,
@@ -38,7 +39,9 @@ export function LegalPage({
 
       <footer className="border-t border-hairline px-6 py-8 md:px-8">
         <div className="mx-auto flex max-w-3xl items-center justify-between text-sm text-ink/40">
-          <span>&copy; {new Date().getFullYear()} Flowform</span>
+          <span>
+            &copy; {new Date().getFullYear()} Flowform · <BuiltBy />
+          </span>
           <Link to="/" className="transition-colors hover:text-ink">
             flowformapp.vercel.app
           </Link>

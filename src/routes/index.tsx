@@ -29,6 +29,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { BuiltBy } from "@/components/built-by";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -1227,15 +1228,7 @@ function Index() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
             <Logo />
             <p className="text-sm text-ink/50">
-              Built by{" "}
-              <a
-                href="https://github.com/andriuskleinas"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-ink/75 underline decoration-ink/20 underline-offset-4 transition-colors hover:text-ink hover:decoration-ink/50"
-              >
-                Andrius Kleinas
-              </a>
+              <BuiltBy />
             </p>
           </div>
           <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink/55">
