@@ -133,6 +133,7 @@ export type Database = {
       forms: {
         Row: {
           category_id: string | null
+          copied_from: string | null
           created_at: string
           description: string | null
           display_mode: string
@@ -146,6 +147,7 @@ export type Database = {
         }
         Insert: {
           category_id?: string | null
+          copied_from?: string | null
           created_at?: string
           description?: string | null
           display_mode?: string
@@ -159,6 +161,7 @@ export type Database = {
         }
         Update: {
           category_id?: string | null
+          copied_from?: string | null
           created_at?: string
           description?: string | null
           display_mode?: string
@@ -385,6 +388,7 @@ export type Database = {
         Args: { p_invite_id: string }
         Returns: string
       }
+      copy_form: { Args: { p_form_id: string }; Returns: string }
       consume_ai_follow_up: {
         Args: { p_ticket: string }
         Returns: {

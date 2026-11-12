@@ -106,7 +106,9 @@ function EditFormPage() {
     );
   }
 
-  return <EditFormAuthed formId={formId} userId={user.id} />;
+  // Keyed by form: "Edit a copy" navigates editor → editor, and the copy must
+  // not inherit the original's draft state.
+  return <EditFormAuthed key={formId} formId={formId} userId={user.id} />;
 }
 
 type DraftQuestion = Question & { isNew?: boolean; isDeleted?: boolean };
@@ -174,7 +176,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       const { data, error } = await supabase
         .from("forms")
         .select(
-          "id, title, description, user_id, status, display_mode, thank_you_message, category_id, version",
+          "id, title, description, user_id, status, display_mode, thank_you_message, category_id, version, copied_from",
         )
         .eq("id", formId)
         .maybeSingle();
@@ -221,6 +223,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
+  // After a copy goes live: offer to close the survey it was copied from.
+  const [closeOriginal, setCloseOriginal] = useState<{ id: string; title: string } | null>(null);
   // AI question suggestions (moved here from /forms/new so it's available for
   // any form, and the editor is the single canonical builder).
   const [suggestions, setSuggestions] = useState<SuggestedQuestion[]>([]);
@@ -555,9 +559,23 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       qc.invalidateQueries({ queryKey: ["forms"] });
       qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
       qc.invalidateQueries({ queryKey: ["public-form", formId] });
+      void offerToCloseOriginal(next);
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Publishing a copy while its original is still live would leave two
+  // near-identical surveys collecting at once, so offer to close the original.
+  const offerToCloseOriginal = async (next: FormStatus) => {
+    const originalId = formQ.data?.copied_from;
+    if (next !== "published" || !originalId) return;
+    const { data } = await supabase
+      .from("forms")
+      .select("id, title, status")
+      .eq("id", originalId)
+      .maybeSingle();
+    if (data?.status === "published") setCloseOriginal({ id: data.id, title: data.title });
+  };
 
   // Category is organisational metadata, not survey content: it saves
   // immediately (outside the draft/Save flow) and stays editable on live forms.
@@ -619,7 +637,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     },
     onSuccess: async (next) => {
       setNewVersionOpen(false);
-      toast.success(`Version ${next} started — edit away, then publish it when ready`);
+      toast.success("Survey unlocked — make your changes, then publish the update");
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["form", formId] }),
         qc.invalidateQueries({ queryKey: ["version-response-count", formId] }),
@@ -631,6 +649,38 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     onError: (e: Error) => {
       setNewVersionOpen(false);
       toast.error(e.message || "Could not start a new version");
+    },
+  });
+
+  const copyForm = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("copy_form", { p_form_id: formId });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: async (newId) => {
+      toast.success("Copy created — edit it, then publish when ready");
+      qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
+      await navigate({ to: "/forms/$formId/edit", params: { formId: newId } });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not copy this survey"),
+  });
+
+  const closeOriginalForm = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("forms").update({ status: "closed" }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, id) => {
+      setCloseOriginal(null);
+      toast.success("Original survey closed");
+      qc.invalidateQueries({ queryKey: ["dashboard-forms"] });
+      qc.invalidateQueries({ queryKey: ["form", id] });
+      qc.invalidateQueries({ queryKey: ["public-form", id] });
+    },
+    onError: (e: Error) => {
+      setCloseOriginal(null);
+      toast.error(e.message || "Could not close the original survey");
     },
   });
 
@@ -803,7 +853,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               }
               className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand/90 transition-colors"
             >
-              {currentVersion > 1 ? `Publish version ${currentVersion}` : "Publish form"}
+              {currentVersion > 1 ? "Publish update" : "Publish form"}
             </button>
           )}
           {form.status === "published" && (
@@ -837,9 +887,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 title="Closed — the link shows a closed notice and no new responses are accepted."
                 className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-50 hover:bg-brand/90 transition-colors"
               >
-                {currentVersion > 1 && !versionFrozen
-                  ? `Publish version ${currentVersion}`
-                  : "Reopen form"}
+                {currentVersion > 1 && !versionFrozen ? "Publish update" : "Reopen form"}
               </button>
             </>
           )}
@@ -849,31 +897,59 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       {isLocked && (
         <div
           role="status"
-          className="mt-6 flex flex-wrap items-start gap-3 rounded-lg border border-brand/25 bg-accent px-4 py-3 text-sm text-ink"
+          className="mt-6 rounded-lg border border-brand/25 bg-accent px-4 py-3 text-sm text-ink"
         >
-          <Lock className="mt-0.5 size-4 shrink-0 text-brand" />
-          <p className="min-w-0 flex-1">
-            <span className="font-semibold">
-              {isLive
-                ? "This form is live, so it can't be edited."
-                : `Version ${currentVersion} has collected responses, so it's frozen.`}
-            </span>{" "}
-            <span className="text-ink/70">
-              {versionFrozen
-                ? `Changing questions now would mix answers to different surveys. Start version ${currentVersion + 1} to make changes — your ${versionResponsesQ.data} ${versionResponsesQ.data === 1 ? "response stays" : "responses stay"} attached to version ${currentVersion}, and you can compare the two on the results page.`
-                : "Changing questions while people are responding would mix answers to different versions. Close or unpublish the form (top right) to make changes."}
-            </span>
-          </p>
-          {versionFrozen && (
+          <div className="flex items-start gap-3">
+            <Lock className="mt-0.5 size-4 shrink-0 text-brand" />
+            <p className="min-w-0 flex-1">
+              <span className="font-semibold">
+                {versionFrozen
+                  ? `This survey has ${versionResponsesQ.data} ${versionResponsesQ.data === 1 ? "response" : "responses"}, so its questions are locked.`
+                  : "This survey is live, so it can't be edited."}
+              </span>{" "}
+              <span className="text-ink/70">
+                {versionFrozen
+                  ? "Changing them now would mix answers to different questions. Make your changes in a copy, or update this survey under the same link."
+                  : "Close or unpublish it (top right) to make changes, or edit a copy instead."}
+              </span>
+            </p>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 pl-7">
             <button
               type="button"
-              onClick={() => setNewVersionOpen(true)}
-              disabled={startNewVersion.isPending}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-brand px-3.5 py-1.5 text-sm font-semibold text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
+              onClick={() => copyForm.mutate()}
+              disabled={copyForm.isPending}
+              title="A new draft survey with the same questions and its own link"
+              className="inline-flex items-center gap-1.5 rounded-md bg-brand px-3.5 py-1.5 text-sm font-semibold text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
             >
-              <GitBranchPlus className="size-4" />
-              {startNewVersion.isPending ? "Starting…" : `Start version ${currentVersion + 1}`}
+              <CopyPlus className="size-4" />
+              {copyForm.isPending ? "Copying…" : "Edit a copy"}
             </button>
+            {versionFrozen && (
+              <button
+                type="button"
+                onClick={() => setNewVersionOpen(true)}
+                disabled={startNewVersion.isPending}
+                title="Keep the same link; new answers are tracked separately from earlier ones"
+                className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-card px-3.5 py-1.5 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
+              >
+                <GitBranchPlus className="size-4" />
+                {startNewVersion.isPending ? "Starting…" : "Update this survey"}
+              </button>
+            )}
+          </div>
+          {versionFrozen && (
+            <ul className="mt-2.5 space-y-0.5 pl-7 text-xs text-ink/55">
+              <li>
+                <span className="font-medium text-ink/75">Edit a copy</span> — a new survey with its
+                own link and results. Best for a new event, round or audience.
+              </li>
+              <li>
+                <span className="font-medium text-ink/75">Update this survey</span> — same link (QR
+                codes, embeds and emails keep working). Earlier answers are kept as v
+                {currentVersion} so you can compare.
+              </li>
+            </ul>
           )}
         </div>
       )}
@@ -950,12 +1026,14 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           </fieldset>
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-1.5">
-              <span
-                title={`Version ${currentVersion}`}
-                className="rounded-full border border-hairline px-2 py-0.5 font-mono text-xs font-medium text-ink/60"
-              >
-                v{currentVersion}
-              </span>
+              {currentVersion > 1 && (
+                <span
+                  title={`Updated ${currentVersion - 1} ${currentVersion === 2 ? "time" : "times"} under the same link`}
+                  className="rounded-full border border-hairline px-2 py-0.5 font-mono text-xs font-medium text-ink/60"
+                >
+                  v{currentVersion}
+                </span>
+              )}
               <StatusPill status={form.status as FormStatus} />
             </div>
             <CategoryField
@@ -986,10 +1064,10 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           <fieldset disabled={isLocked} className="min-w-0 disabled:opacity-70">
             {!isLocked && currentVersion > 1 && (
               <div className="mt-3 rounded-lg border border-hairline bg-surface px-4 py-3 text-sm text-ink/70">
-                You're drafting{" "}
-                <span className="font-semibold text-ink">version {currentVersion}</span>. Earlier
-                versions and their responses are kept as they were. Questions you keep stay
-                comparable across versions; deleted ones still show up in older results.
+                You're updating this survey (
+                <span className="font-semibold text-ink">v{currentVersion}</span>). Answers
+                collected before are kept as they were; questions you keep stay comparable, and
+                deleted ones still show up in earlier results.
               </div>
             )}
 
@@ -1266,15 +1344,26 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
 
       <ConfirmDialog
         open={newVersionOpen}
-        title={`Start version ${currentVersion + 1}?`}
+        title="Update this survey?"
         description={
-          isLive
-            ? `The form will close while you edit, so the link shows a closed notice until you publish version ${currentVersion + 1}. Version ${currentVersion} and its responses are kept for comparison.`
-            : `Version ${currentVersion} and its responses are kept for comparison. Your edits will go into version ${currentVersion + 1}, which starts collecting once you publish it.`
+          (isLive
+            ? "The survey closes while you edit, so its link shows a closed notice until you publish the update. "
+            : "Your edits go live under the same link when you publish. ") +
+          `The ${versionResponsesQ.data ?? 0} answers collected so far are kept as v${currentVersion}, and new answers are counted as v${currentVersion + 1} so you can compare them on the results page.`
         }
-        confirmLabel={`Start version ${currentVersion + 1}`}
+        confirmLabel="Update this survey"
         onConfirm={() => startNewVersion.mutate()}
         onCancel={() => setNewVersionOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={closeOriginal !== null}
+        title="Close the original survey?"
+        description={`“${closeOriginal?.title ?? ""}” is still live. Close it so new answers only go to this copy? Its link will show a closed notice and its results stay as they are.`}
+        confirmLabel="Close original"
+        cancelLabel="Keep both live"
+        onConfirm={() => closeOriginal && closeOriginalForm.mutate(closeOriginal.id)}
+        onCancel={() => setCloseOriginal(null)}
       />
 
       <ConfirmDialog
