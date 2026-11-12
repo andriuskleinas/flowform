@@ -1,6 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, GitBranch, RotateCcw } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  GitBranch,
+  MessagesSquare,
+  RotateCcw,
+  UserRound,
+} from "lucide-react";
 
 import { Logo } from "@/components/logo";
 
@@ -11,13 +19,13 @@ export const Route = createFileRoute("/demo")({
       {
         name: "description",
         content:
-          "Try a real Flowform: four questions, one at a time, in about thirty seconds. Nothing is stored.",
+          "Try a real Flowform: five questions, one at a time, in under a minute. It adapts, remembers and digs deeper. Nothing is stored.",
       },
       { property: "og:title", content: "Experience Flowform — Live demo" },
       {
         property: "og:description",
         content:
-          "Try a real Flowform: four questions, one at a time, in about thirty seconds. Nothing is stored.",
+          "Try a real Flowform: five questions, one at a time, in under a minute. It adapts, remembers and digs deeper. Nothing is stored.",
       },
     ],
   }),
@@ -54,7 +62,35 @@ const FOLLOW_UPS: Record<UseCase, { label: string; options: string[] }> = {
   },
 };
 
-const TOTAL_QUESTIONS = 4;
+const TOTAL_QUESTIONS = 5;
+
+// Follow-ups: in real forms Claude writes one when an answer is short or
+// vague. The demo has no server, so it picks a preset the same way.
+function isVague(answer: string): boolean {
+  const a = answer.trim().toLowerCase();
+  return a.split(/\s+/).length < 6 || /^(ok|okay|fine|good|bad|meh|idk|nothing|none|no)\b/.test(a);
+}
+
+function presetFollowUp(answer: string): string {
+  const a = answer.toLowerCase();
+  if (/long|forever|time|slow|minutes?/.test(a))
+    return "Roughly how long did it take before you gave up?";
+  if (/question|many|endless|repeat|same/.test(a))
+    return "How many questions feels like too many to you?";
+  if (/phone|mobile|tiny|zoom/.test(a)) return "What went wrong on your phone, exactly?";
+  if (/captcha|robot|login|account|sign/.test(a))
+    return "What would have made that step feel worth it?";
+  return "Could you tell me a bit more about what happened?";
+}
+
+// Owner's live-results view on the finish screen: illustrative counts plus
+// the visitor's own vote.
+const LIVE_BASE: Record<UseCase, number> = {
+  "Customer feedback": 41,
+  "Research & surveys": 27,
+  "Event registrations": 18,
+  "Just exploring": 23,
+};
 
 type Phase = "intro" | "run" | "done";
 
@@ -128,16 +164,24 @@ function DemoPage() {
   const [name, setName] = useState("");
   const [useCase, setUseCase] = useState<UseCase | null>(null);
   const [followUp, setFollowUp] = useState<string | null>(null);
+  const [annoyance, setAnnoyance] = useState("");
+  const [probe, setProbe] = useState<string | null>(null);
+  const [probeAnswer, setProbeAnswer] = useState("");
   const [rating, setRating] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const annoyRef = useRef<HTMLInputElement>(null);
+  const probeRef = useRef<HTMLInputElement>(null);
+  const firstName = name.trim().split(/\s+/)[0] ?? "";
 
   const followUpQ = useCase ? FOLLOW_UPS[useCase] : null;
 
   useEffect(() => {
-    if (phase === "run" && idx === 0) inputRef.current?.focus();
-  }, [phase, idx]);
+    if (phase !== "run") return;
+    if (idx === 0) inputRef.current?.focus();
+    if (idx === 3) (probe ? probeRef : annoyRef).current?.focus();
+  }, [phase, idx, probe]);
 
   function start() {
     startRef.current = Date.now();
@@ -153,6 +197,9 @@ function DemoPage() {
     setName("");
     setUseCase(null);
     setFollowUp(null);
+    setAnnoyance("");
+    setProbe(null);
+    setProbeAnswer("");
     setRating(null);
     setIdx(0);
     setPhase("intro");
@@ -169,7 +216,11 @@ function DemoPage() {
     if (idx === 0 && name.trim()) setIdx(1);
     else if (idx === 1 && useCase) setIdx(2);
     else if (idx === 2 && followUp) setIdx(3);
-    else if (idx === 3 && rating !== null) finish();
+    else if (idx === 3 && annoyance.trim()) {
+      // A short or vague answer gets one follow-up first; a detailed one doesn't.
+      if (!probe && isVague(annoyance)) setProbe(presetFollowUp(annoyance));
+      else setIdx(4);
+    } else if (idx === 4 && rating !== null) finish();
   }
 
   const stepAnswered =
@@ -179,7 +230,9 @@ function DemoPage() {
         ? useCase !== null
         : idx === 2
           ? followUp !== null
-          : rating !== null;
+          : idx === 3
+            ? annoyance.trim().length > 0
+            : rating !== null;
 
   function goBack() {
     if (idx > 0) setIdx((i) => i - 1);
@@ -196,6 +249,8 @@ function DemoPage() {
         return;
       }
       if (phase !== "run") return;
+      // Text inputs handle their own Enter.
+      if (e.target instanceof HTMLInputElement) return;
       if (idx > 0 && e.key === "Enter") {
         e.preventDefault();
         confirmStep();
@@ -209,7 +264,7 @@ function DemoPage() {
           if (idx === 1) pickUseCase(options[i]);
           else setFollowUp(options[i]);
         }
-      } else if (idx === 3 && /^[0-9]$/.test(e.key)) {
+      } else if (idx === 4 && /^[0-9]$/.test(e.key)) {
         e.preventDefault();
         setRating(e.key === "0" ? 10 : Number(e.key));
       }
@@ -251,14 +306,14 @@ function DemoPage() {
         {phase === "intro" && (
           <div className="motion-safe:animate-[demo-step-in_0.5s_ease-out_both]">
             <span className="inline-flex items-center gap-2 rounded-full bg-sky-tint px-3 py-1 text-sm font-medium text-sky">
-              Interactive demo · 4 questions · about 30 seconds
+              Interactive demo · 5 questions · under a minute
             </span>
             <h1 className="mt-6 font-display text-5xl leading-[1.02] text-balance md:text-6xl">
               This is a <em className="text-brand">Flowform.</em>
             </h1>
             <p className="mt-6 max-w-md text-lg text-ink/65">
-              One question at a time, like a conversation. Four questions, about thirty seconds —
-              and one of them adapts to your answers.
+              One question at a time, like a conversation. Five questions, under a minute. Watch it
+              remember your name, adapt to your answers and ask a follow-up when you’re brief.
             </p>
             <p className="mt-3 text-sm text-ink/45">
               Nothing is stored. It all happens in your browser.
@@ -283,7 +338,7 @@ function DemoPage() {
               <button
                 type="button"
                 onClick={goBack}
-                className="-ml-2 mb-6 inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-sm text-ink/55 transition-colors hover:bg-ink/5 hover:text-ink"
+                className="-ml-2 mb-6 flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-sm text-ink/55 transition-colors hover:bg-ink/5 hover:text-ink"
               >
                 <ArrowLeft className="size-4" />
                 Back
@@ -326,7 +381,12 @@ function DemoPage() {
 
             {idx === 1 && (
               <>
-                <h2 className="font-display text-3xl leading-[1.08] text-balance md:text-4xl">
+                {firstName && (
+                  <FeatureTag icon={UserRound}>
+                    Answer recall: your name, from question 1
+                  </FeatureTag>
+                )}
+                <h2 className="mt-5 font-display text-3xl leading-[1.08] text-balance md:text-4xl">
                   Nice to meet you{name.trim() ? `, ${name.trim().split(/\s+/)[0]}` : ""}. What
                   would you use Flowform for?
                 </h2>
@@ -341,10 +401,9 @@ function DemoPage() {
 
             {idx === 2 && followUpQ && (
               <>
-                <span className="inline-flex items-center gap-2 rounded-sm border border-dashed border-brand/40 px-2.5 py-1 font-mono text-[11px] text-brand">
-                  <GitBranch className="size-3.5" />
+                <FeatureTag icon={GitBranch}>
                   Logic jump: this question adapted to your answer
-                </span>
+                </FeatureTag>
                 <h2 className="mt-5 font-display text-3xl leading-[1.08] text-balance md:text-4xl">
                   {followUpQ.label}
                 </h2>
@@ -362,6 +421,60 @@ function DemoPage() {
             )}
 
             {idx === 3 && (
+              <>
+                <h2 className="font-display text-3xl leading-[1.08] text-balance md:text-4xl">
+                  What’s the most annoying thing a form has ever done to you?
+                </h2>
+                <input
+                  ref={annoyRef}
+                  value={annoyance}
+                  onChange={(e) => setAnnoyance(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmStep();
+                    }
+                  }}
+                  readOnly={!!probe}
+                  placeholder="Type your answer…"
+                  maxLength={200}
+                  className="mt-8 w-full border-b border-ink/20 bg-transparent pb-3 font-display text-2xl text-ink outline-none transition-colors placeholder:text-ink/25 focus:border-brand read-only:text-ink/60"
+                />
+                {probe ? (
+                  <div className="mt-8 rounded-lg border border-brand/25 bg-accent/60 p-5 motion-safe:animate-[demo-step-in_0.4s_ease-out_both]">
+                    <FeatureTag icon={MessagesSquare}>
+                      Follow-up: asked because your answer was short
+                    </FeatureTag>
+                    <p className="mt-3 text-lg font-medium text-ink">{probe}</p>
+                    <input
+                      ref={probeRef}
+                      value={probeAnswer}
+                      onChange={(e) => setProbeAnswer(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          confirmStep();
+                        }
+                      }}
+                      placeholder="Optional — add a little more…"
+                      maxLength={200}
+                      className="mt-3 w-full border-b border-ink/20 bg-transparent pb-2 text-lg text-ink outline-none transition-colors placeholder:text-ink/30 focus:border-brand"
+                    />
+                    <p className="mt-3 text-xs text-ink/50">
+                      In your forms, Claude writes these follow-ups on the spot. This demo runs
+                      without a server, so it uses a preset.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-ink/45">
+                    Tip: keep it short and see what happens.
+                  </p>
+                )}
+                <StepConfirm answered={stepAnswered} onConfirm={confirmStep} hint="press Enter ↵" />
+              </>
+            )}
+
+            {idx === 4 && (
               <>
                 <h2 className="font-display text-3xl leading-[1.08] text-balance md:text-4xl">
                   Last one — how does answering one question at a time feel?
@@ -410,7 +523,8 @@ function DemoPage() {
               </h1>
               <p className="mt-4 max-w-md text-lg text-ink/65">
                 {TOTAL_QUESTIONS} answers in {elapsed} second{elapsed === 1 ? "" : "s"}. No wall of
-                questions, and one of them adapted to you.
+                questions: it remembered your name, adapted to your answers and asked a follow-up
+                when one was short.
               </p>
             </div>
 
@@ -419,6 +533,8 @@ function DemoPage() {
                 { q: "Name", a: name.trim() || "—" },
                 { q: "Use case", a: useCase ?? "—" },
                 { q: followUpQ?.label ?? "Follow-up", a: followUp ?? "—", logic: true },
+                { q: "Most annoying form moment", a: annoyance.trim() || "—" },
+                ...(probe ? [{ q: probe, a: probeAnswer.trim() || "(skipped)" }] : []),
                 { q: "One-at-a-time feel", a: rating ? `${rating} / 10` : "—" },
               ].map(({ q, a, logic }) => (
                 <div key={q} className="flex items-baseline justify-between gap-6 py-4">
@@ -433,6 +549,8 @@ function DemoPage() {
             <p className="mt-3 font-mono text-[11px] text-ink/45">
               Your answers weren't stored — this demo runs entirely in your browser.
             </p>
+
+            {useCase && <OwnerView choice={useCase} />}
 
             <div className="mt-10 flex flex-wrap items-center gap-3">
               <Link
@@ -455,5 +573,89 @@ function DemoPage() {
         )}
       </main>
     </div>
+  );
+}
+
+/** Small label calling out which Flowform feature the visitor just saw. */
+function FeatureTag({
+  icon: Icon,
+  children,
+}: {
+  icon: typeof GitBranch;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-sm border border-dashed border-brand/40 px-2.5 py-1 font-mono text-[11px] text-brand">
+      <Icon className="size-3.5 shrink-0" />
+      {children}
+    </span>
+  );
+}
+
+/**
+ * The other side of the form: the owner's live results for the use-case
+ * question, with the visitor's vote added in and highlighted.
+ */
+function OwnerView({ choice }: { choice: UseCase }) {
+  const [counted, setCounted] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setCounted(true), 700);
+    return () => clearTimeout(t);
+  }, []);
+  const counts = USE_CASES.map((u) => LIVE_BASE[u] + (counted && u === choice ? 1 : 0));
+  const total = counts.reduce((a, b) => a + b, 0);
+  const max = Math.max(...counts);
+  return (
+    <section className="mt-12">
+      <h2 className="font-display text-2xl leading-tight text-ink">What the form’s owner sees</h2>
+      <p className="mt-2 max-w-md text-[15px] text-ink/60">
+        Answers show up on the results page the moment they arrive, so you can even put them on a
+        big screen as a live poll.
+      </p>
+      <div className="mt-6 overflow-hidden rounded-lg border border-hairline bg-card">
+        <div className="flex items-center justify-between gap-4 border-b border-hairline px-5 py-2.5 font-mono text-[11px] text-ink/45">
+          <span className="truncate">Live results · Example data plus your answer</span>
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-coral">
+            <span className="size-1.5 rounded-full bg-coral motion-safe:animate-pulse" />
+            LIVE
+          </span>
+        </div>
+        <div className="px-5 py-5">
+          <p className="text-sm font-medium text-ink">What would you use Flowform for?</p>
+          <ul className="mt-4 space-y-3">
+            {USE_CASES.map((u, i) => {
+              const mine = u === choice;
+              return (
+                <li key={u}>
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className={mine ? "font-medium text-ink" : "text-ink/70"}>
+                      {u}
+                      {mine && (
+                        <span className="ml-2 rounded-sm bg-brand px-1.5 py-px font-mono text-[10px] text-white">
+                          YOU
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-mono text-xs tabular-nums text-ink/55">{counts[i]}</span>
+                  </div>
+                  <div className="mt-1.5 h-2 rounded-sm bg-surface">
+                    <div
+                      className={`h-2 rounded-sm transition-[width] duration-700 ease-out ${
+                        mine ? "bg-brand" : counts[i] === max ? "bg-ink/45" : "bg-ink/20"
+                      }`}
+                      style={{ width: `${(counts[i] / total) * 100}%` }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <p className="border-t border-hairline bg-paper px-5 py-3 text-[13px] text-ink/60">
+          Also on the owner’s side: a Claude summary of open answers like yours, the exact question
+          where people give up, “Ask your results” in plain English, and CSV or PDF export.
+        </p>
+      </div>
+    </section>
   );
 }
