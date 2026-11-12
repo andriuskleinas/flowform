@@ -24,6 +24,7 @@ import { Route as ApiKeepaliveRouteImport } from './routes/api.keepalive'
 import { Route as FormsNewRouteImport } from './routes/forms.new'
 import { Route as FormsFormIdIndexRouteImport } from './routes/forms.$formId.index'
 import { Route as FormsFormIdEditRouteImport } from './routes/forms.$formId.edit'
+import { Route as FormsFormIdLiveRouteImport } from './routes/forms.$formId.live'
 import { Route as FormsFormIdResponsesRouteImport } from './routes/forms.$formId.responses'
 
 const IndexRoute = IndexRouteImport.update({
@@ -101,6 +102,11 @@ const FormsFormIdEditRoute = FormsFormIdEditRouteImport.update({
   path: '/forms/$formId/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FormsFormIdLiveRoute = FormsFormIdLiveRouteImport.update({
+  id: '/forms/$formId/live',
+  path: '/forms/$formId/live',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FormsFormIdResponsesRoute = FormsFormIdResponsesRouteImport.update({
   id: '/forms/$formId/responses',
   path: '/forms/$formId/responses',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/api/keepalive': typeof ApiKeepaliveRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
+  '/forms/$formId/live': typeof FormsFormIdLiveRoute
   '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
   '/forms/$formId/': typeof FormsFormIdIndexRoute
 }
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/api/keepalive': typeof ApiKeepaliveRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
+  '/forms/$formId/live': typeof FormsFormIdLiveRoute
   '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
   '/forms/$formId': typeof FormsFormIdIndexRoute
 }
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/api/keepalive': typeof ApiKeepaliveRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
+  '/forms/$formId/live': typeof FormsFormIdLiveRoute
   '/forms/$formId/responses': typeof FormsFormIdResponsesRoute
   '/forms/$formId/': typeof FormsFormIdIndexRoute
 }
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/api/keepalive'
     | '/forms/new'
     | '/forms/$formId/edit'
+    | '/forms/$formId/live'
     | '/forms/$formId/responses'
     | '/forms/$formId/'
   fileRoutesByTo: FileRoutesByTo
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/api/keepalive'
     | '/forms/new'
     | '/forms/$formId/edit'
+    | '/forms/$formId/live'
     | '/forms/$formId/responses'
     | '/forms/$formId'
   id:
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/api/keepalive'
     | '/forms/new'
     | '/forms/$formId/edit'
+    | '/forms/$formId/live'
     | '/forms/$formId/responses'
     | '/forms/$formId/'
   fileRoutesById: FileRoutesById
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   ApiKeepaliveRoute: typeof ApiKeepaliveRoute
   FormsNewRoute: typeof FormsNewRoute
   FormsFormIdEditRoute: typeof FormsFormIdEditRoute
+  FormsFormIdLiveRoute: typeof FormsFormIdLiveRoute
   FormsFormIdResponsesRoute: typeof FormsFormIdResponsesRoute
   FormsFormIdIndexRoute: typeof FormsFormIdIndexRoute
 }
@@ -345,6 +358,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FormsFormIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forms/$formId/live': {
+      id: '/forms/$formId/live'
+      path: '/forms/$formId/live'
+      fullPath: '/forms/$formId/live'
+      preLoaderRoute: typeof FormsFormIdLiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forms/$formId/responses': {
       id: '/forms/$formId/responses'
       path: '/forms/$formId/responses'
@@ -370,6 +390,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiKeepaliveRoute: ApiKeepaliveRoute,
   FormsNewRoute: FormsNewRoute,
   FormsFormIdEditRoute: FormsFormIdEditRoute,
+  FormsFormIdLiveRoute: FormsFormIdLiveRoute,
   FormsFormIdResponsesRoute: FormsFormIdResponsesRoute,
   FormsFormIdIndexRoute: FormsFormIdIndexRoute,
 }

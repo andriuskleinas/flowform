@@ -1,7 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  FileText,
+  Loader2,
+  Presentation,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -19,6 +27,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { exportResponsesCsv } from "@/lib/export-csv";
+import { exportResponsesPdf } from "@/lib/export-pdf";
 import { summarizeResponses, type ResponseSummary } from "@/lib/summarize-responses";
 import {
   getChoiceConfig,
@@ -75,7 +84,7 @@ function ResponsesPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [responseLimit, setResponseLimit] = useState(100);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
   const [days, setDays] = useState<RangeDays>(30);
   // null = every version together; a number scopes the whole page to it.
   const [version, setVersion] = useState<number | null>(null);
@@ -229,29 +238,53 @@ function ResponsesPage() {
             })()}
           </p>
         </div>
-        <button
-          type="button"
-          disabled={exporting || responses.length === 0}
-          onClick={async () => {
-            setExporting(true);
-            try {
-              const count = await exportResponsesCsv(formId, formQ.data!.title, questions, version);
-              toast.success(`Exported ${count} ${count === 1 ? "response" : "responses"} to CSV`);
-            } catch (e) {
-              toast.error(e instanceof Error ? e.message : "Export failed");
-            } finally {
-              setExporting(false);
-            }
-          }}
-          className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {exporting ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Download className="size-4" />
-          )}
-          {exporting ? "Exporting…" : "Export CSV"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/forms/$formId/live"
+            params={{ formId }}
+            title="Full-screen results that update as answers arrive — for talks and workshops"
+            className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:bg-brand/90"
+          >
+            <Presentation className="size-4" />
+            Present live
+          </Link>
+          {(["csv", "pdf"] as const).map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              disabled={exporting !== null || responses.length === 0}
+              title={
+                kind === "pdf"
+                  ? "A printable report: summary plus a chart or quotes for every question"
+                  : "Every response as a spreadsheet row"
+              }
+              onClick={async () => {
+                setExporting(kind);
+                try {
+                  const run = kind === "pdf" ? exportResponsesPdf : exportResponsesCsv;
+                  const count = await run(formId, formQ.data!.title, questions, version);
+                  toast.success(
+                    `Exported ${count} ${count === 1 ? "response" : "responses"} to ${kind.toUpperCase()}`,
+                  );
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Export failed");
+                } finally {
+                  setExporting(null);
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {exporting === kind ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : kind === "pdf" ? (
+                <FileText className="size-4" />
+              ) : (
+                <Download className="size-4" />
+              )}
+              {exporting === kind ? "Exporting…" : `Export ${kind.toUpperCase()}`}
+            </button>
+          ))}
+        </div>
       </header>
 
       {multiVersion && (
