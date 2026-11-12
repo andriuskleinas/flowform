@@ -49,10 +49,10 @@ No account needed for the [interactive demo](https://flowformapp.vercel.app/demo
 |---|---|---|
 | `01` | **Drag-and-drop builder** | 7 question types: short & long text, single/multi choice, dropdown, yes/no, NPS and rating scales. Start from a template or a blank form, with a live preview of what respondents see. |
 | `02` | **AI question drafting** | Give the form a title and goal and Claude (Sonnet 5.5) drafts five to eight questions, each with the right type and answer options. Add the ones you want with one click and edit anything. |
-| `03` | **Conditional logic** | Forward-only jump rules ("if they answer X, skip to…"), with path-aware validation so a required question a respondent never sees can't block them. |
+| `03` | **Conditional logic** | Forward-only jump rules ("if they answer X, skip to…") in both conversational and one-page forms, with path-aware validation so a required question a respondent never sees can't block them. |
 | `04` | **Conversational mode** | One question at a time with a progress bar, keyboard shortcuts (Enter to confirm, A–Z or Y/N to pick, 0–9 to score) and back-navigation. Or a **classic** all-on-one-page mode. |
-| `05` | **Drafts that persist** | Answers are saved locally so a respondent can come back and finish, with a guard against double submission. |
-| `06` | **Analytics dashboard** | A real funnel (opened → started → completed), completion rate, average time-to-fill, per-question drop-off and a response trend over 7/30/90 days. |
+| `05` | **Partial responses** | Answers are saved as they're given, before submit, so a respondent can come back and finish, and the owner sees exactly which question unfinished respondents left on. |
+| `06` | **Analytics dashboard** | A real funnel (opened → started → completed), completion rate, average time-to-fill, per-question drop-off from real sessions, a response trend over 7/30/90 days, and a spreadsheet-style table of individual responses. |
 | `07` | **AI response summaries** | Claude reads every open-text answer and returns the main themes (with how common each was), the overall sentiment and verbatim quotes, and says so when there's too little data to be confident. |
 | `08` | **Sharing & export** | Shareable link, QR code, embed snippet, native share and CSV export. |
 
@@ -122,9 +122,9 @@ flowchart LR
 
 ### Engineering highlights
 
-- **RLS is the security boundary, not the client.** Every table has row-level-security policies: a
-  user can only read and write their own forms, questions and responses, and public form filling is
-  scoped by policy. There is deliberately **no service-role key** in the app. The publishable key
+- **RLS is the security boundary, not the client.** Every table has row-level-security policies
+  scoped by workspace role (owner, admin, editor, viewer), public form filling is scoped by policy,
+  and a pgTAP suite in CI checks each role's access. There is deliberately **no service-role key** in the app. The publishable key
   plus RLS does all the work, so a leaked client bundle grants nothing.
 - **The Claude API key never reaches the client.** Question suggestions and response summaries run
   in server functions and read the key from server-side env only.
@@ -160,15 +160,23 @@ bun run dev            # http://localhost:8080
 Apply the SQL files in [`supabase/migrations/`](supabase/migrations) to your Supabase project, in
 order (`supabase db push` with the Supabase CLI does this).
 
-### Checks
+### Checks and tests
 
 ```bash
 bun run lint         # eslint
 bun run typecheck    # tsc --noEmit
 bun run build        # production build
+bun run test:db      # pgTAP: row-level security for owner / admin / editor / viewer / outsider / anon
+bun run test:e2e     # Playwright: create → publish → respond → analyse
 ```
 
-The same three steps run in [CI](.github/workflows/ci.yml) on every push and pull request.
+The two test suites run against a local Supabase stack (`supabase start`, needs Docker), never
+production. For the end-to-end tests export `E2E_SUPABASE_URL`, `E2E_SUPABASE_ANON_KEY` and
+`E2E_SUPABASE_SERVICE_ROLE_KEY` from `supabase status`.
+
+[CI](.github/workflows/ci.yml) runs everything on every push and pull request: lint, typecheck and
+build in one job; in another, a fresh Supabase stack replays every migration from scratch, then
+the pgTAP suite and the Playwright suite run against it.
 
 ## Project layout
 
@@ -180,6 +188,8 @@ src/lib/                    server functions (AI suggestions, summaries), form l
 src/styles.css              design tokens (colour, type, radius) and base styles
 src/integrations/supabase/  typed Supabase client
 supabase/migrations/        schema, RLS policies, RPCs, constraints, triggers
+supabase/tests/database/    pgTAP row-level-security tests
+e2e/                        Playwright end-to-end tests
 .github/workflows/          CI and Supabase keep-alive
 docs/screenshots/           README screenshots
 ```
