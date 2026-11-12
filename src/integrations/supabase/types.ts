@@ -140,6 +140,7 @@ export type Database = {
           status: string
           thank_you_message: string | null
           title: string
+          updated_at: string
           user_id: string
           version: number
         }
@@ -152,6 +153,7 @@ export type Database = {
           status?: string
           thank_you_message?: string | null
           title: string
+          updated_at?: string
           user_id: string
           version?: number
         }
@@ -164,6 +166,7 @@ export type Database = {
           status?: string
           thank_you_message?: string | null
           title?: string
+          updated_at?: string
           user_id?: string
           version?: number
         }
@@ -439,6 +442,7 @@ export type Database = {
           responses_90d: number
           status: string
           title: string
+          updated_at: string
           views_90d: number
         }[]
       }

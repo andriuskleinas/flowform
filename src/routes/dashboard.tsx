@@ -32,6 +32,7 @@ import { useCategories } from "@/lib/categories";
 import {
   UNCATEGORIZED,
   filterForms,
+  DEFAULT_SORT,
   parseDashboardSearch,
   sortForms,
   type ActivityFilter,
@@ -202,7 +203,7 @@ function DashboardAuthed({
 
   // ---- Sort + filters (URL search params) ------------------------------
   const search = Route.useSearch();
-  const sort: SortKey = search.sort ?? "newest";
+  const sort: SortKey = search.sort ?? DEFAULT_SORT;
   const statusFilter: StatusFilter = search.status ?? "all";
   const activity: ActivityFilter = search.activity ?? "any";
   const categoryFilter = search.cat ?? null;
@@ -496,7 +497,7 @@ function DashboardAuthed({
 
   const filtering =
     categoryFilter !== null || query.trim() !== "" || statusFilter !== "all" || activity !== "any";
-  const onSort = (next: SortKey) => setSearch({ sort: next === "newest" ? undefined : next });
+  const onSort = (next: SortKey) => setSearch({ sort: next === DEFAULT_SORT ? undefined : next });
 
   // One-line pulse under the title: the week at a glance.
   const liveCount = forms.filter((f) => f.status === "published").length;

@@ -24,13 +24,14 @@ import {
 import { CategoryTag } from "@/components/dashboard/category-dialog";
 import { timeAgo } from "@/lib/utils";
 import type { FormStatus } from "@/lib/form-utils";
-import { completionRate, formatRate, type SortKey } from "@/lib/dashboard-filters";
+import { DEFAULT_SORT, completionRate, formatRate, type SortKey } from "@/lib/dashboard-filters";
 
 export type DashboardForm = {
   id: string;
   title: string;
   description: string | null;
   created_at: string;
+  updated_at: string;
   status: FormStatus;
   category_id: string | null;
   category: string | null;
@@ -233,7 +234,7 @@ function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActio
         ) : (
           <span className="text-ink/30">No responses</span>
         )}
-        <div className="font-mono text-[11px] text-ink/35">created {timeAgo(f.created_at)}</div>
+        <div className="font-mono text-[11px] text-ink/35">updated {timeAgo(f.updated_at)}</div>
       </div>
 
       <div className="relative z-10 flex items-center justify-end gap-1">
@@ -280,7 +281,7 @@ function GridCard({ form: f, actions }: { form: DashboardForm; actions: FormActi
         <span className="truncate text-xs text-ink/45">
           {f.last_response_at
             ? `Last response ${timeAgo(f.last_response_at)}`
-            : `Created ${timeAgo(f.created_at)}`}
+            : `Updated ${timeAgo(f.updated_at)}`}
         </span>
         <div className="relative z-10 shrink-0">
           <PrimaryAction form={f} actions={actions} />
@@ -380,7 +381,7 @@ function SortHeader({
   const next = active ? sorts[(idx + 1) % sorts.length] : sorts[0];
   const ascending = sort === "fewest" || (sort === "title" && active);
   // When a single-sort column is clicked again, fall back to the default.
-  const target = active && sorts.length === 1 ? "newest" : next;
+  const target = active && sorts.length === 1 ? DEFAULT_SORT : next;
   return (
     <button
       type="button"

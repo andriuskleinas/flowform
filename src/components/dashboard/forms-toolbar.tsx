@@ -25,6 +25,7 @@ import type { ViewMode } from "@/components/dashboard/forms-view";
 import type { FormCategory } from "@/lib/categories";
 import {
   ACTIVITY_OPTIONS,
+  DEFAULT_SORT,
   SORT_OPTIONS,
   STATUS_OPTIONS,
   UNCATEGORIZED,
@@ -68,7 +69,7 @@ export function FormsToolbar({
 }) {
   const status: StatusFilter = search.status ?? "all";
   const activity: ActivityFilter = search.activity ?? "any";
-  const sort: SortKey = search.sort ?? "newest";
+  const sort: SortKey = search.sort ?? DEFAULT_SORT;
   const cat = search.cat ?? null;
   const query = search.q ?? "";
   const activeFilters = (cat ? 1 : 0) + (activity !== "any" ? 1 : 0);
@@ -243,7 +244,7 @@ export function FormsToolbar({
 
           <DropdownMenu>
             <DropdownMenuTrigger
-              className={`${control} ${sort !== "newest" || grouped ? engaged : idle}`}
+              className={`${control} ${sort !== DEFAULT_SORT || grouped ? engaged : idle}`}
             >
               <SlidersHorizontal className="size-3.5" />
               <span className="hidden sm:inline">Display</span>
@@ -255,7 +256,7 @@ export function FormsToolbar({
               <DropdownMenuRadioGroup
                 value={sort}
                 onValueChange={(v) =>
-                  setSearch({ sort: v === "newest" ? undefined : (v as SortKey) })
+                  setSearch({ sort: v === DEFAULT_SORT ? undefined : (v as SortKey) })
                 }
               >
                 {SORT_OPTIONS.map((o) => (

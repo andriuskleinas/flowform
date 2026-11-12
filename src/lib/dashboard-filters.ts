@@ -7,6 +7,7 @@ import type { FormStatus } from "@/lib/form-utils";
  */
 
 export const SORT_OPTIONS = [
+  { key: "updated", label: "Recently updated" },
   { key: "newest", label: "Newest" },
   { key: "oldest", label: "Oldest" },
   { key: "most", label: "Most responses" },
@@ -17,6 +18,8 @@ export const SORT_OPTIONS = [
   { key: "title", label: "Title A–Z" },
 ] as const;
 export type SortKey = (typeof SORT_OPTIONS)[number]["key"];
+/** Default order: last edited or published first. Omitted from the URL. */
+export const DEFAULT_SORT: SortKey = "updated";
 
 export const STATUS_OPTIONS = [
   { key: "all", label: "All" },
@@ -51,7 +54,7 @@ const pick = <T extends string>(v: unknown, allowed: readonly { key: T }[], fall
   typeof v === "string" && allowed.some((o) => o.key === v) ? (v as T) : fallback;
 
 export function parseDashboardSearch(s: Record<string, unknown>): DashboardSearch {
-  const sort = pick(s.sort, SORT_OPTIONS, "newest");
+  const sort = pick(s.sort, SORT_OPTIONS, DEFAULT_SORT);
   const status = pick(s.status, STATUS_OPTIONS, "all");
   const activity = pick(s.activity, ACTIVITY_OPTIONS, "any");
   const cat = typeof s.cat === "string" && s.cat.length <= 64 ? s.cat : undefined;
@@ -59,7 +62,7 @@ export function parseDashboardSearch(s: Record<string, unknown>): DashboardSearc
   const ws =
     typeof s.ws === "string" && /^[0-9a-f-]{36}$/i.test(s.ws) ? s.ws.toLowerCase() : undefined;
   return {
-    sort: sort === "newest" ? undefined : sort,
+    sort: sort === DEFAULT_SORT ? undefined : sort,
     status: status === "all" ? undefined : status,
     activity: activity === "any" ? undefined : activity,
     cat,
@@ -73,6 +76,7 @@ export type Rankable = {
   title: string;
   description: string | null;
   created_at: string;
+  updated_at: string;
   status: FormStatus;
   category_id: string | null;
   category: string | null;
@@ -130,9 +134,10 @@ export function filterForms<T extends Rankable>(
 const time = (iso: string | null) => (iso ? new Date(iso).getTime() : -Infinity);
 
 /** Stable sort; ties fall back to newest first so order never jitters. */
-export function sortForms<T extends Rankable>(forms: T[], sort: SortKey = "newest"): T[] {
+export function sortForms<T extends Rankable>(forms: T[], sort: SortKey = DEFAULT_SORT): T[] {
   const newest = (a: T, b: T) => time(b.created_at) - time(a.created_at);
   const by: Record<SortKey, (a: T, b: T) => number> = {
+    updated: (a, b) => time(b.updated_at) - time(a.updated_at) || newest(a, b),
     newest,
     oldest: (a, b) => -newest(a, b),
     most: (a, b) => b.response_count - a.response_count || newest(a, b),
