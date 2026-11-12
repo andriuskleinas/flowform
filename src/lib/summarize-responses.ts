@@ -20,7 +20,13 @@ export type ResponseSummary = {
 
 // ── Internal schemas ──────────────────────────────────────────────────────────
 
-const inputSchema = z.object({ formId: z.string().uuid() });
+const inputSchema = z.object({
+  formId: z.string().uuid(),
+  /** Limit to one survey version (see form versioning); omitted = all versions. */
+  version: z.number().int().positive().optional(),
+});
+
+type TextQuestion = { id: string; label: string };
 
 const RawSummarySchema = z.object({
   summary: z.string().min(1).max(2000),
@@ -54,6 +60,58 @@ function createUserScopedClient() {
   });
 }
 
+/**
+ * Open-text questions to summarize. The current version's live questions,
+ * plus (for "all versions") text questions that earlier versions asked and the
+ * current one dropped, from their snapshots. A single past version uses its
+ * own snapshot so labels match what those respondents saw.
+ */
+async function loadTextQuestions(
+  supabase: ReturnType<typeof createUserScopedClient>,
+  formId: string,
+  currentVersion: number,
+  version: number | undefined,
+): Promise<TextQuestion[]> {
+  const isText = (t: unknown) => t === "text" || t === "long_text";
+
+  const { data: snapshots, error: vErr } = await supabase
+    .from("form_versions")
+    .select("version, questions")
+    .eq("form_id", formId)
+    .order("version", { ascending: false });
+  if (vErr) throw vErr;
+  const fromSnapshot = (qs: unknown): TextQuestion[] =>
+    (Array.isArray(qs) ? (qs as { id: string; label: string; type: string }[]) : [])
+      .filter((q) => isText(q.type))
+      .map((q) => ({ id: q.id, label: q.label }));
+
+  if (version != null && version !== currentVersion) {
+    const snap = snapshots?.find((v) => v.version === version);
+    return snap ? fromSnapshot(snap.questions) : [];
+  }
+
+  const { data: live, error: qErr } = await supabase
+    .from("questions")
+    .select("id, label, type, position")
+    .eq("form_id", formId)
+    .in("type", ["text", "long_text"])
+    .order("position", { ascending: true });
+  if (qErr) throw qErr;
+  const current = (live ?? []).map((q) => ({ id: q.id, label: q.label }));
+  if (version != null) return current;
+
+  const seen = new Set(current.map((q) => q.id));
+  const retired: TextQuestion[] = [];
+  for (const snap of snapshots ?? []) {
+    for (const q of fromSnapshot(snap.questions)) {
+      if (seen.has(q.id)) continue;
+      seen.add(q.id);
+      retired.push(q);
+    }
+  }
+  return [...current, ...retired];
+}
+
 // ── Server function ───────────────────────────────────────────────────────────
 
 export const summarizeResponses = createServerFn({ method: "POST" })
@@ -69,27 +127,27 @@ export const summarizeResponses = createServerFn({ method: "POST" })
     // "not found" rather than someone else's data.
     const { data: form, error: formErr } = await supabase
       .from("forms")
-      .select("id, title")
+      .select("id, title, version")
       .eq("id", data.formId)
       .maybeSingle();
     if (formErr) throw formErr;
     if (!form) throw new Error("Form not found.");
 
-    const { data: questions, error: qErr } = await supabase
-      .from("questions")
-      .select("id, label, type, position")
-      .eq("form_id", data.formId)
-      .in("type", ["text", "long_text"])
-      .order("position", { ascending: true });
-    if (qErr) throw qErr;
-    if (!questions || questions.length === 0) {
-      throw new Error("This form has no open-text questions to summarize.");
+    const questions = await loadTextQuestions(supabase, data.formId, form.version, data.version);
+    if (questions.length === 0) {
+      throw new Error(
+        data.version != null
+          ? `Version ${data.version} has no open-text questions to summarize.`
+          : "This form has no open-text questions to summarize.",
+      );
     }
 
-    const { data: responses, error: rErr } = await supabase
+    let responsesQuery = supabase
       .from("responses")
       .select("answers, follow_ups")
-      .eq("form_id", data.formId)
+      .eq("form_id", data.formId);
+    if (data.version != null) responsesQuery = responsesQuery.eq("form_version", data.version);
+    const { data: responses, error: rErr } = await responsesQuery
       .order("submitted_at", { ascending: false })
       .limit(1000);
     if (rErr) throw rErr;

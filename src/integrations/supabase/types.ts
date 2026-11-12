@@ -467,6 +467,7 @@ export type Database = {
         Args: { p_form_id: string; p_kind: string; p_question_id?: string }
         Returns: undefined
       }
+      resolve_short_form_link: { Args: { p_code: string }; Returns: string }
       start_new_form_version: { Args: { p_form_id: string }; Returns: number }
       save_form_editor: {
         Args: { p_form: Json; p_form_id: string; p_questions: Json }

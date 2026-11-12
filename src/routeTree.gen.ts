@@ -21,6 +21,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiKeepaliveRouteImport } from './routes/api.keepalive'
+import { Route as FCodeRouteImport } from './routes/f.$code'
 import { Route as FormsNewRouteImport } from './routes/forms.new'
 import { Route as FormsFormIdIndexRouteImport } from './routes/forms.$formId.index'
 import { Route as FormsFormIdEditRouteImport } from './routes/forms.$formId.edit'
@@ -87,6 +88,11 @@ const ApiKeepaliveRoute = ApiKeepaliveRouteImport.update({
   path: '/api/keepalive',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FCodeRoute = FCodeRouteImport.update({
+  id: '/f/$code',
+  path: '/f/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FormsNewRoute = FormsNewRouteImport.update({
   id: '/forms/new',
   path: '/forms/new',
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/api/keepalive': typeof ApiKeepaliveRoute
+  '/f/$code': typeof FCodeRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
   '/forms/$formId/live': typeof FormsFormIdLiveRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/api/keepalive': typeof ApiKeepaliveRoute
+  '/f/$code': typeof FCodeRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
   '/forms/$formId/live': typeof FormsFormIdLiveRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/api/keepalive': typeof ApiKeepaliveRoute
+  '/f/$code': typeof FCodeRoute
   '/forms/new': typeof FormsNewRoute
   '/forms/$formId/edit': typeof FormsFormIdEditRoute
   '/forms/$formId/live': typeof FormsFormIdLiveRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/api/keepalive'
+    | '/f/$code'
     | '/forms/new'
     | '/forms/$formId/edit'
     | '/forms/$formId/live'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/api/keepalive'
+    | '/f/$code'
     | '/forms/new'
     | '/forms/$formId/edit'
     | '/forms/$formId/live'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/api/keepalive'
+    | '/f/$code'
     | '/forms/new'
     | '/forms/$formId/edit'
     | '/forms/$formId/live'
@@ -244,6 +256,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   ApiKeepaliveRoute: typeof ApiKeepaliveRoute
+  FCodeRoute: typeof FCodeRoute
   FormsNewRoute: typeof FormsNewRoute
   FormsFormIdEditRoute: typeof FormsFormIdEditRoute
   FormsFormIdLiveRoute: typeof FormsFormIdLiveRoute
@@ -337,6 +350,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiKeepaliveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/f/$code': {
+      id: '/f/$code'
+      path: '/f/$code'
+      fullPath: '/f/$code'
+      preLoaderRoute: typeof FCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forms/new': {
       id: '/forms/new'
       path: '/forms/new'
@@ -388,6 +408,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   ApiKeepaliveRoute: ApiKeepaliveRoute,
+  FCodeRoute: FCodeRoute,
   FormsNewRoute: FormsNewRoute,
   FormsFormIdEditRoute: FormsFormIdEditRoute,
   FormsFormIdLiveRoute: FormsFormIdLiveRoute,

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Download,
@@ -354,9 +354,17 @@ function Overview({
   onVersionChange: (v: number | null) => void;
 }) {
   const [summary, setSummary] = useState<ResponseSummary | null>(null);
+  // A summary describes one scope; switching versions clears it.
+  useEffect(() => setSummary(null), [version]);
+  // Latest scope, so a summary that finishes after a version switch is dropped.
+  const versionRef = useRef(version);
+  versionRef.current = version;
   const summarize = useMutation({
-    mutationFn: async () => summarizeResponses({ data: { formId } }),
-    onSuccess: setSummary,
+    mutationFn: async (scope: number | null) =>
+      summarizeResponses({ data: { formId, ...(scope != null ? { version: scope } : {}) } }),
+    onSuccess: (result, scope) => {
+      if (scope === versionRef.current) setSummary(result);
+    },
     onError: (e: Error) => toast.error(e.message || "Could not summarize responses"),
   });
   const hasTextQuestions = questions.some((q) => q.type === "text" || q.type === "long_text");
@@ -515,12 +523,18 @@ function Overview({
                 </span>
               </h3>
               <p className="mt-0.5 text-xs text-ink/55">
-                Themes, sentiment and representative quotes from your text answers.
+                Themes, sentiment and representative quotes from your text answers
+                {version != null
+                  ? ` in v${version}`
+                  : versions.length > 0
+                    ? " across all versions"
+                    : ""}
+                .
               </p>
             </div>
             <button
               type="button"
-              onClick={() => summarize.mutate()}
+              onClick={() => summarize.mutate(version)}
               disabled={summarize.isPending || totals.responses === 0}
               className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-card px-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/35 disabled:cursor-not-allowed disabled:opacity-50"
             >

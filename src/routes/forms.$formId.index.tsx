@@ -61,6 +61,7 @@ type FormRow = {
   status: FormStatus;
   display_mode: DisplayMode;
   thank_you_message: string | null;
+  version: number;
 };
 
 type TrackKind = "view" | "start" | "reach";
@@ -114,48 +115,6 @@ function PublicFormPage() {
     trackEvent("start");
   };
 
-  const draftKey = `flowform:draft:${formId}`;
-  const submittedKey = `flowform:submitted:${formId}`;
-  // Don't persist until the stored draft (if any) has been restored,
-  // otherwise the initial empty state would overwrite it.
-  const restoredRef = useRef(false);
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(submittedKey)) setAlreadySubmitted(true);
-      const raw = localStorage.getItem(draftKey);
-      if (raw) {
-        const parsed = JSON.parse(raw) as {
-          answers?: Answers;
-          followUps?: FollowUps;
-          startedAt?: string;
-        };
-        if (parsed?.answers && typeof parsed.answers === "object") {
-          setAnswers(parsed.answers);
-          if (parsed.followUps && typeof parsed.followUps === "object") {
-            setFollowUps(parsed.followUps);
-          }
-          if (typeof parsed.startedAt === "string") startedAtRef.current = parsed.startedAt;
-        }
-      }
-    } catch {
-      // Storage unavailable (private mode) or corrupt draft — start fresh.
-    }
-    restoredRef.current = true;
-  }, [draftKey, submittedKey]);
-
-  useEffect(() => {
-    if (!restoredRef.current || submitted || Object.keys(answers).length === 0) return;
-    try {
-      localStorage.setItem(
-        draftKey,
-        JSON.stringify({ answers, followUps, startedAt: startedAtRef.current }),
-      );
-    } catch {
-      // Best-effort only.
-    }
-  }, [answers, followUps, draftKey, submitted]);
-
   // Claim a rate-limited ticket, then let the server function ask Claude.
   // Anything slow or failing resolves to null so the respondent just moves on.
   const requestFollowUp = async (question: Question, answer: string) => {
@@ -179,7 +138,7 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, user_id, status, display_mode, thank_you_message")
+        .select("id, title, description, user_id, status, display_mode, thank_you_message, version")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -199,6 +158,55 @@ function PublicFormPage() {
       return (data ?? []) as Question[];
     },
   });
+
+  // Per-version keys: after "Update this survey" (v2+), people who answered
+  // the earlier version may answer again and must not get its stale draft.
+  // v1 keeps the original keys so existing flags still apply.
+  const formVersion = formQ.data?.version;
+  const keySuffix = formVersion && formVersion > 1 ? `:v${formVersion}` : "";
+  const draftKey = `flowform:draft:${formId}${keySuffix}`;
+  const submittedKey = `flowform:submitted:${formId}${keySuffix}`;
+  // Don't persist until the stored draft (if any) has been restored,
+  // otherwise the initial empty state would overwrite it.
+  const restoredRef = useRef(false);
+
+  useEffect(() => {
+    // Wait for the form so the keys carry the right version.
+    if (formVersion == null) return;
+    try {
+      if (localStorage.getItem(submittedKey)) setAlreadySubmitted(true);
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          answers?: Answers;
+          followUps?: FollowUps;
+          startedAt?: string;
+        };
+        if (parsed?.answers && typeof parsed.answers === "object") {
+          setAnswers(parsed.answers);
+          if (parsed.followUps && typeof parsed.followUps === "object") {
+            setFollowUps(parsed.followUps);
+          }
+          if (typeof parsed.startedAt === "string") startedAtRef.current = parsed.startedAt;
+        }
+      }
+    } catch {
+      // Storage unavailable (private mode) or corrupt draft — start fresh.
+    }
+    restoredRef.current = true;
+  }, [draftKey, submittedKey, formVersion]);
+
+  useEffect(() => {
+    if (!restoredRef.current || submitted || Object.keys(answers).length === 0) return;
+    try {
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({ answers, followUps, startedAt: startedAtRef.current }),
+      );
+    } catch {
+      // Best-effort only.
+    }
+  }, [answers, followUps, draftKey, submitted]);
 
   // Arm tracking + record the view once the form and auth state are known.
   // Wait for auth to resolve, then skip the owner so their own visits stay out

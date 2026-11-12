@@ -2,7 +2,19 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Lock,
+  LockOpen,
+  Maximize2,
+  Minimize2,
+  Pause,
+  Play,
+  X,
+} from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -58,6 +70,10 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [pulse, setPulse] = useState(0);
   const [origin, setOrigin] = useState("");
+  // Hide the running total (e.g. while a vote is open, to avoid herding).
+  const [showCount, setShowCount] = useState(true);
+  // Pin the current question: no auto-advance, arrows and dots disabled.
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => setOrigin(window.location.origin), []);
 
@@ -163,12 +179,12 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
     [total],
   );
 
-  // Auto-advance for an unattended screen.
+  // Auto-advance for an unattended screen (never while pinned to a question).
   useEffect(() => {
-    if (!playing || total < 2) return;
+    if (!playing || locked || total < 2) return;
     const t = setInterval(() => go(1), AUTO_ADVANCE_MS);
     return () => clearInterval(t);
-  }, [playing, total, go]);
+  }, [playing, locked, total, go]);
 
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen();
@@ -185,17 +201,38 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select")) return;
-      if (["ArrowRight", "PageDown"].includes(e.key)) go(1);
-      else if (["ArrowLeft", "PageUp"].includes(e.key)) go(-1);
-      else if (e.key === " ") {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (["ArrowRight", "PageDown"].includes(e.key)) {
+        if (!locked) go(1);
+      } else if (["ArrowLeft", "PageUp"].includes(e.key)) {
+        if (!locked) go(-1);
+      } else if (e.key === " ") {
         e.preventDefault();
         setPlaying((p) => !p);
-      } else if (e.key.toLowerCase() === "f") toggleFullscreen();
-      else return;
+      } else if (key === "f") toggleFullscreen();
+      else if (key === "c") setShowCount((v) => !v);
+      else if (key === "l") setLocked((v) => !v);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [go, toggleFullscreen]);
+  }, [go, locked, toggleFullscreen]);
+
+  // Short /f/<code> link for the join card, used only when it resolves
+  // unambiguously to this survey; otherwise fall back to the full URL.
+  const shortCode = formId.slice(0, 8).toLowerCase();
+  const shortLinkQ = useQuery({
+    queryKey: ["live-short-link", formId, formQ.data?.status],
+    enabled: formQ.data?.status === "published",
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("resolve_short_form_link", {
+        p_code: shortCode,
+      });
+      if (error) return false;
+      return data === formId;
+    },
+  });
 
   const countsByQuestion = useMemo(() => {
     const m = new Map<string, Map<string, number>>();
@@ -225,7 +262,11 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
 
   const form = formQ.data;
   const responses = analyticsQ.data?.totals.responses ?? 0;
-  const formUrl = origin ? `${origin}/forms/${form.id}` : "";
+  const formUrl = !origin
+    ? ""
+    : shortLinkQ.data
+      ? `${origin}/f/${shortCode}`
+      : `${origin}/forms/${form.id}`;
   const accepting = form.status === "published";
 
   return (
@@ -239,11 +280,30 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
         </div>
         <div className="flex items-center gap-1">
           <IconButton
-            label={playing ? "Pause auto-advance (Space)" : "Auto-advance (Space)"}
-            onClick={() => setPlaying((p) => !p)}
+            label={showCount ? "Hide response count (C)" : "Show response count (C)"}
+            pressed={!showCount}
+            onClick={() => setShowCount((v) => !v)}
           >
-            {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+            {showCount ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
           </IconButton>
+          {total > 1 && (
+            <IconButton
+              label={locked ? "Unlock question (L)" : "Stay on this question (L)"}
+              pressed={locked}
+              onClick={() => setLocked((v) => !v)}
+            >
+              {locked ? <Lock className="size-4" /> : <LockOpen className="size-4" />}
+            </IconButton>
+          )}
+          {total > 1 && !locked && (
+            <IconButton
+              label={playing ? "Pause auto-advance (Space)" : "Auto-advance (Space)"}
+              pressed={playing}
+              onClick={() => setPlaying((p) => !p)}
+            >
+              {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+            </IconButton>
+          )}
           <IconButton
             label={isFullscreen ? "Exit full screen (F)" : "Full screen (F)"}
             onClick={toggleFullscreen}
@@ -282,7 +342,7 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
               {current?.label ?? "This survey has no questions yet"}
             </h2>
           </div>
-          <ResponseCounter count={responses} pulse={pulse} />
+          {showCount && <ResponseCounter count={responses} pulse={pulse} />}
         </div>
 
         <div className="mt-8 flex-1 md:mt-12 md:pr-56">
@@ -297,7 +357,16 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
         </div>
 
         {/* Slide controls */}
-        {total > 1 && (
+        {total > 1 && locked && (
+          <button
+            type="button"
+            onClick={() => setLocked(false)}
+            className="mt-8 inline-flex items-center gap-1.5 self-start rounded-full border border-hairline px-3 py-1 font-mono text-[11px] uppercase tracking-wide text-ink/50 hover:text-ink"
+          >
+            <Lock className="size-3" /> Staying on this question · L to unlock
+          </button>
+        )}
+        {total > 1 && !locked && (
           <nav className="mt-8 flex items-center gap-3" aria-label="Questions">
             <IconButton label="Previous question (←)" onClick={() => go(-1)}>
               <ChevronLeft className="size-5" />
@@ -394,10 +463,13 @@ function ResponseCounter({ count, pulse }: { count: number; pulse: number }) {
 function IconButton({
   label,
   onClick,
+  pressed,
   children,
 }: {
   label: string;
   onClick: () => void;
+  /** For toggles: rendered as aria-pressed and highlighted while on. */
+  pressed?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -405,8 +477,12 @@ function IconButton({
       type="button"
       onClick={onClick}
       aria-label={label}
+      aria-pressed={pressed}
       title={label}
-      className="inline-flex size-9 items-center justify-center rounded-md text-ink/60 hover:bg-ink/5 hover:text-ink"
+      className={
+        "inline-flex size-9 items-center justify-center rounded-md hover:bg-ink/5 hover:text-ink " +
+        (pressed ? "bg-ink/[0.07] text-ink" : "text-ink/60")
+      }
     >
       {children}
     </button>
