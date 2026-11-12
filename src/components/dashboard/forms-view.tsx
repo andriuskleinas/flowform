@@ -9,6 +9,7 @@ import {
   CopyPlus,
   MoreHorizontal,
   Pencil,
+  Presentation,
   Send,
   Share2,
   Tag,
@@ -23,27 +24,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CategoryTag } from "@/components/dashboard/category-dialog";
+import { StatusLabel } from "@/components/status-pill";
+import type { DashboardForm } from "@/lib/dashboard-forms";
 import { timeAgo } from "@/lib/utils";
 import type { FormStatus } from "@/lib/form-utils";
 import { DEFAULT_SORT, completionRate, formatRate, type SortKey } from "@/lib/dashboard-filters";
 
-export type DashboardForm = {
-  id: string;
-  title: string;
-  description: string | null;
-  created_at: string;
-  updated_at: string;
-  status: FormStatus;
-  category_id: string | null;
-  category: string | null;
-  category_color: string | null;
-  response_count: number;
-  question_count: number;
-  last_response_at: string | null;
-  responses_7d: number;
-  responses_90d: number;
-  views_90d: number;
-};
+export type { DashboardForm };
 
 export type ViewMode = "list" | "grid" | "board";
 
@@ -71,7 +58,8 @@ const titleHref = (a: FormActionHandlers) =>
   a.canEdit ? ("/forms/$formId/edit" as const) : ("/forms/$formId/responses" as const);
 
 /** Shared column template so the header and every row line up. */
-const COLS = "md:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_7.5rem_10rem]";
+const COLS =
+  "md:grid-cols-[minmax(0,1fr)_6rem_6rem_10rem] xl:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_7.5rem_10rem]";
 
 export function FormsView({
   forms,
@@ -123,7 +111,10 @@ export function FormsView({
             align="right"
             title="Responses ÷ views, last 90 days"
           />
-          <SortHeader label="Last response" sorts={["recent"]} sort={sort} onSort={onSort} />
+          {/* Narrower screens drop this column so titles keep their room. */}
+          <div className="hidden xl:block">
+            <SortHeader label="Last response" sorts={["recent"]} sort={sort} onSort={onSort} />
+          </div>
           <span className="sr-only">Actions</span>
         </div>
       )}
@@ -279,7 +270,7 @@ function BoardCard({
       }
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="line-clamp-2 min-w-0 text-sm font-medium leading-snug">
+        <h3 className="line-clamp-2 min-w-0 text-sm font-medium leading-snug tracking-normal">
           <Link
             to={titleHref(actions)}
             params={{ formId: f.id }}
@@ -321,22 +312,6 @@ function BoardCard({
 }
 
 /* ------------------------------- Pieces ---------------------------------- */
-
-const STATUS: Record<FormStatus, { label: string; dot: string; text: string }> = {
-  published: { label: "Live", dot: "bg-mint", text: "text-mint" },
-  closed: { label: "Closed", dot: "bg-sun", text: "text-sun" },
-  draft: { label: "Draft", dot: "bg-ink/30", text: "text-ink/55" },
-};
-
-function StatusLabel({ status }: { status: FormStatus }) {
-  const s = STATUS[status] ?? STATUS.draft;
-  return (
-    <span className={`inline-flex items-center gap-1.5 font-medium ${s.text}`}>
-      <span aria-hidden className={`size-1.5 rounded-full ${s.dot}`} />
-      {s.label}
-    </span>
-  );
-}
 
 function CategoryButton({
   form: f,
@@ -380,7 +355,7 @@ function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActio
       className={`group relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 py-3.5 transition-colors hover:bg-surface ${COLS}`}
     >
       <div className="min-w-0">
-        <h3 className="truncate text-sm font-medium">
+        <h3 className="truncate text-sm font-medium tracking-normal">
           <Link to={titleHref(actions)} params={{ formId: f.id }} className={stretchedLink}>
             {f.title}
           </Link>
@@ -416,7 +391,7 @@ function ListRow({ form: f, actions }: { form: DashboardForm; actions: FormActio
         </div>
       </div>
 
-      <div className="hidden text-xs text-ink/55 md:block">
+      <div className="hidden text-xs text-ink/55 xl:block">
         {f.last_response_at ? (
           timeAgo(f.last_response_at)
         ) : (
@@ -437,7 +412,7 @@ function GridCard({ form: f, actions }: { form: DashboardForm; actions: FormActi
   const hasResponses = f.response_count > 0;
   return (
     <li className="group relative flex min-w-0 flex-col rounded-xl border border-hairline bg-card transition-[border-color,box-shadow] focus-within:border-ink/30 hover:border-ink/20 hover:shadow-[0_1px_2px_rgb(0_0_0/0.04),0_4px_16px_-4px_rgb(0_0_0/0.08)]">
-      <div className="flex flex-1 flex-col px-5 pb-4 pt-4">
+      <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
         <div className="flex h-7 items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2.5 text-xs">
             <StatusLabel status={f.status} />
@@ -448,24 +423,24 @@ function GridCard({ form: f, actions }: { form: DashboardForm; actions: FormActi
           </div>
         </div>
 
-        <h3 className="mt-2 line-clamp-2 text-base font-medium leading-snug tracking-[-0.005em]">
+        <h3 className="mt-1.5 line-clamp-2 text-[15px] font-medium leading-snug tracking-normal">
           <Link to={titleHref(actions)} params={{ formId: f.id }} className={stretchedLink}>
             {f.title}
           </Link>
         </h3>
         {f.description && (
-          <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-ink/55">
+          <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-ink/55">
             {f.description}
           </p>
         )}
 
         {/* Body sits at the bottom so metrics line up across a row. */}
-        <div className="mt-auto pt-5">
+        <div className="mt-auto pt-4">
           {hasResponses ? <CardMetrics form={f} /> : <CardWaiting form={f} />}
         </div>
       </div>
 
-      <div className="flex h-12 items-center justify-between gap-3 border-t border-hairline pl-5 pr-3">
+      <div className="flex h-11 items-center justify-between gap-3 border-t border-hairline pl-4 pr-2.5">
         <span className="truncate text-xs text-ink/45">
           {f.last_response_at
             ? `Last response ${timeAgo(f.last_response_at)}`
@@ -486,7 +461,7 @@ function CardMetrics({ form: f }: { form: DashboardForm }) {
     <div>
       <div className="flex items-end justify-between gap-3">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[26px] font-medium leading-none tracking-tight">
+          <span className="text-2xl font-medium leading-none tracking-tight">
             <ResponsesLink form={f} />
           </span>
           <span className="text-xs text-ink/50">
@@ -501,7 +476,7 @@ function CardMetrics({ form: f }: { form: DashboardForm }) {
           <span className="font-mono text-[11px] text-ink/35">none this week</span>
         )}
       </div>
-      <div className="mt-4" title="Responses ÷ views, last 90 days">
+      <div className="mt-3" title="Responses ÷ views, last 90 days">
         <div className="flex items-baseline justify-between text-[11px]">
           <span className="text-ink/50">Conversion</span>
           <span className={"font-mono tabular-nums " + (rate === null ? "text-ink/35" : "")}>
@@ -533,7 +508,7 @@ function CardWaiting({ form: f }: { form: DashboardForm }) {
         ? { text: "Waiting for the first response", sub: q }
         : { text: "Closed without responses", sub: q };
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-surface px-3.5 py-3">
+    <div className="flex items-center gap-3 rounded-lg bg-surface px-3 py-2.5">
       <span
         aria-hidden
         className={
@@ -654,6 +629,14 @@ function FormMenu({ form: f, actions }: { form: DashboardForm; actions: FormActi
           <DropdownMenuItem onClick={() => actions.onShare(f)}>
             <Share2 className="size-4" />
             {isDraft ? "Publish and share" : "Share link"}
+          </DropdownMenuItem>
+        )}
+        {f.status === "published" && (
+          <DropdownMenuItem asChild>
+            <Link to="/forms/$formId/live" params={{ formId: f.id }}>
+              <Presentation className="size-4" />
+              Present live
+            </Link>
           </DropdownMenuItem>
         )}
         {actions.canEdit && (

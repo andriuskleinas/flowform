@@ -1,18 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Check,
-  Copy,
-  Link2,
-  Loader2,
-  Palette,
-  Plus,
-  Trophy,
-  Upload,
-  Variable,
-  X,
-} from "lucide-react";
+import { Check, ChevronDown, Copy, Link2, Loader2, Plus, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -31,20 +20,19 @@ import {
   type FormSettings,
   type QuizOutcome,
 } from "@/lib/form-settings";
+import { cn } from "@/lib/utils";
 
-type Tab = "branding" | "after" | "tracking" | "quiz";
-
-const TABS: { id: Tab; label: string; icon: typeof Palette }[] = [
-  { id: "branding", label: "Branding", icon: Palette },
-  { id: "after", label: "After submit", icon: Check },
-  { id: "tracking", label: "Hidden fields & UTM", icon: Variable },
-  { id: "quiz", label: "Quiz mode", icon: Trophy },
-];
+type SectionId = "branding" | "after" | "tracking" | "quiz";
 
 /**
- * Form-level settings in the editor: per-form branding, the post-submit
- * redirect, hidden fields / tracked links, and quiz outcomes. Everything lands
- * in forms.settings through the editor's normal Save.
+ * Form-level settings in the editor, as one labelled list: category, per-form
+ * branding, what happens after submit, hidden fields / tracked links, and quiz
+ * outcomes. Each row says what it holds (or what is set) and opens in place.
+ *
+ * It sits beside the questions on wide screens and fills the page on narrow
+ * ones, so its layouts follow the panel's own width (container queries), not
+ * the viewport's. Everything except the category lands in forms.settings
+ * through the editor's normal Save.
  */
 export function FormSettingsPanel({
   value,
@@ -54,6 +42,10 @@ export function FormSettingsPanel({
   maxQuizScore,
   scoredQuestionCount,
   disabled,
+  category,
+  thankYouField,
+  hasThankYou,
+  footer,
 }: {
   value: FormSettings;
   onChange: (next: FormSettings) => void;
@@ -62,8 +54,22 @@ export function FormSettingsPanel({
   maxQuizScore: number;
   scoredQuestionCount: number;
   disabled?: boolean;
+  /** The category picker. It saves on its own and stays editable on live forms. */
+  category?: React.ReactNode;
+  /** The thank-you message field; the editor owns its draft state. */
+  thankYouField?: React.ReactNode;
+  hasThankYou?: boolean;
+  /** Rendered under the list, e.g. the danger zone. */
+  footer?: React.ReactNode;
 }) {
-  const [tab, setTab] = useState<Tab>("branding");
+  const [open, setOpen] = useState<Set<SectionId>>(new Set());
+  const toggle = (id: SectionId) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const set = (patch: Partial<FormSettings>) => onChange({ ...value, ...patch });
   const theme = value.theme ?? {};
 
@@ -71,46 +77,53 @@ export function FormSettingsPanel({
     ensureFontLoaded(theme.font);
   }, [theme.font]);
 
-  return (
-    <section className="mt-6 rounded-lg border border-hairline bg-card">
-      <div
-        role="tablist"
-        aria-label="Form settings"
-        className="flex gap-1 overflow-x-auto border-b border-hairline px-2 pt-2"
-      >
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          const active = tab === t.id;
-          const on =
-            (t.id === "branding" &&
-              !!(theme.accent || theme.cover_url || (theme.font && theme.font !== "roboto"))) ||
-            (t.id === "after" && !!value.redirect_url) ||
-            (t.id === "tracking" && (value.hidden_fields?.length ?? 0) > 0) ||
-            (t.id === "quiz" && !!value.quiz?.enabled);
-          return (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTab(t.id)}
-              className={
-                "inline-flex shrink-0 items-center gap-1.5 rounded-t-md border-b-2 px-3 py-2 text-sm font-medium transition-colors " +
-                (active ? "border-brand text-ink" : "border-transparent text-ink/55 hover:text-ink")
-              }
-            >
-              <Icon className="size-3.5" aria-hidden />
-              {t.label}
-              {on && <span className="size-1.5 rounded-full bg-brand" aria-label="(on)" />}
-            </button>
-          );
-        })}
-      </div>
+  // Each row reads as a description until something is set, then as a status.
+  const customFont = theme.font && theme.font !== "roboto" ? theme.font : null;
+  const brandingSet = [
+    theme.accent ? "Custom colour" : null,
+    customFont
+      ? (FONT_CHOICES.find((f) => f.value === customFont)?.label ?? "").replace(/\s*\(.*\)$/, "")
+      : null,
+    theme.cover_url ? "Cover image" : null,
+  ].filter(Boolean);
+  const afterSet = [
+    hasThankYou ? "Custom message" : null,
+    value.redirect_url ? "Redirect" : null,
+  ].filter(Boolean);
+  const hiddenCount = value.hidden_fields?.length ?? 0;
+  const quizOn = !!value.quiz?.enabled;
 
-      <fieldset disabled={disabled} className="p-4 disabled:opacity-70">
-        {tab === "branding" && (
-          <div className="grid gap-5 md:grid-cols-[1fr_240px]">
-            <div className="space-y-4">
+  return (
+    <section aria-labelledby="form-settings-heading" className="@container min-w-0">
+      <h2 id="form-settings-heading" className="text-sm font-medium tracking-normal text-ink">
+        Form settings
+      </h2>
+      <p className="mt-0.5 text-xs text-ink/55">These apply to the whole form.</p>
+
+      <div className="mt-3 overflow-hidden rounded-lg border border-hairline bg-card">
+        {category && (
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-hairline px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium leading-snug text-ink">Category</p>
+              <p className="mt-0.5 text-xs leading-snug text-ink/50">
+                Groups forms on your dashboard.
+              </p>
+            </div>
+            {category}
+          </div>
+        )}
+
+        <SettingsSection
+          id="branding"
+          label="Branding"
+          summary={brandingSet.join(" · ") || "Colour, font and cover image"}
+          active={brandingSet.length > 0}
+          open={open.has("branding")}
+          onToggle={() => toggle("branding")}
+          disabled={disabled}
+        >
+          <div className="grid gap-5 @2xl:grid-cols-[1fr_240px]">
+            <div className="min-w-0 space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">Accent colour</Label>
                 <div className="flex flex-wrap items-center gap-2">
@@ -169,13 +182,14 @@ export function FormSettingsPanel({
                 <Label htmlFor="settings-cover" className="text-xs">
                   Cover image <span className="font-normal text-ink/40">(optional)</span>
                 </Label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Input
                     id="settings-cover"
                     value={theme.cover_url ?? ""}
                     onChange={(e) => set({ theme: { ...theme, cover_url: e.target.value } })}
                     placeholder="Upload, or paste an https:// image link"
                     autoComplete="off"
+                    className="h-9 min-w-40 flex-1 px-3 py-1"
                   />
                   <CoverUploadButton
                     formId={formId}
@@ -240,49 +254,152 @@ export function FormSettingsPanel({
               </div>
             </div>
           </div>
-        )}
+        </SettingsSection>
 
-        {tab === "after" && (
-          <div className="max-w-xl space-y-1.5">
-            <Label htmlFor="settings-redirect" className="text-xs">
-              Redirect after submit <span className="font-normal text-ink/40">(optional)</span>
-            </Label>
-            <Input
-              id="settings-redirect"
-              value={value.redirect_url ?? ""}
-              onChange={(e) => set({ redirect_url: e.target.value })}
-              placeholder="https://yoursite.com/thanks"
-              autoComplete="off"
-            />
-            {value.redirect_url && !isSafeUrl(value.redirect_url) ? (
-              <p className="text-xs text-destructive">Use a full http:// or https:// link.</p>
-            ) : (
-              <p className="text-xs text-ink/45">
-                Respondents see your thank-you message (and quiz result), then continue to this page
-                after 5 seconds.
-              </p>
-            )}
+        <SettingsSection
+          id="after"
+          label="After submit"
+          summary={afterSet.join(" · ") || "Thank-you message and redirect"}
+          active={afterSet.length > 0}
+          open={open.has("after")}
+          onToggle={() => toggle("after")}
+          disabled={disabled}
+        >
+          <div className="max-w-xl space-y-4">
+            {thankYouField}
+            <div className="space-y-1.5">
+              <Label htmlFor="settings-redirect" className="text-xs">
+                Redirect after submit <span className="font-normal text-ink/40">(optional)</span>
+              </Label>
+              <Input
+                id="settings-redirect"
+                value={value.redirect_url ?? ""}
+                onChange={(e) => set({ redirect_url: e.target.value })}
+                placeholder="https://yoursite.com/thanks"
+                autoComplete="off"
+                className="h-9 px-3 py-1"
+              />
+              {value.redirect_url && !isSafeUrl(value.redirect_url) ? (
+                <p className="text-xs text-destructive">Use a full http:// or https:// link.</p>
+              ) : (
+                <p className="text-xs text-ink/45">
+                  Respondents see your thank-you message (and quiz result), then continue to this
+                  page after 5 seconds.
+                </p>
+              )}
+            </div>
           </div>
-        )}
+        </SettingsSection>
 
-        {tab === "tracking" && (
+        <SettingsSection
+          id="tracking"
+          label="Hidden fields & UTM"
+          summary={
+            hiddenCount > 0
+              ? `${hiddenCount} hidden ${hiddenCount === 1 ? "field" : "fields"}`
+              : "Carry data in the link, tag sources"
+          }
+          active={hiddenCount > 0}
+          open={open.has("tracking")}
+          onToggle={() => toggle("tracking")}
+          disabled={disabled}
+        >
           <TrackingTab
             formId={formId}
             fields={value.hidden_fields ?? []}
             onFields={(hidden_fields) => set({ hidden_fields })}
           />
-        )}
+        </SettingsSection>
 
-        {tab === "quiz" && (
+        <SettingsSection
+          id="quiz"
+          label="Quiz mode"
+          summary={
+            quizOn
+              ? `On · ${scoredQuestionCount} scored · best score ${maxQuizScore}`
+              : "Score answers and show an outcome"
+          }
+          active={quizOn}
+          open={open.has("quiz")}
+          onToggle={() => toggle("quiz")}
+          disabled={disabled}
+        >
           <QuizTab
             value={value.quiz ?? { enabled: false, show_score: true, outcomes: [] }}
             onChange={(quiz) => set({ quiz })}
             maxScore={maxQuizScore}
             scoredQuestionCount={scoredQuestionCount}
           />
-        )}
-      </fieldset>
+        </SettingsSection>
+      </div>
+
+      {footer}
     </section>
+  );
+}
+
+/**
+ * One row of the settings list. The header stays clickable on a locked form so
+ * its settings can still be read; only the fields inside are disabled.
+ */
+function SettingsSection({
+  id,
+  label,
+  summary,
+  active,
+  open,
+  onToggle,
+  disabled,
+  children,
+}: {
+  id: SectionId;
+  label: string;
+  summary: string;
+  /** Something in this section is set. */
+  active: boolean;
+  open: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-b border-hairline last:border-b-0">
+      <h3 className="text-sm font-normal tracking-normal">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={`form-settings-${id}`}
+          onClick={onToggle}
+          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left outline-none transition-colors hover:bg-ink/[0.03] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40"
+        >
+          <span className="min-w-0">
+            <span className="block text-sm font-medium leading-snug text-ink">{label}</span>
+            <span
+              className={cn(
+                "mt-0.5 flex items-center gap-1.5 text-xs leading-snug",
+                active ? "text-ink/75" : "text-ink/50",
+              )}
+            >
+              {active && <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-brand" />}
+              <span className="truncate">{summary}</span>
+            </span>
+          </span>
+          <ChevronDown
+            aria-hidden
+            className={cn("size-4 shrink-0 text-ink/40 transition-transform", open && "rotate-180")}
+          />
+        </button>
+      </h3>
+      {/* Kept mounted while closed so half-typed values survive a collapse. */}
+      <fieldset
+        id={`form-settings-${id}`}
+        hidden={!open}
+        disabled={disabled}
+        className="min-w-0 border-t border-hairline px-4 py-4 disabled:opacity-70"
+      >
+        {children}
+      </fieldset>
+    </div>
   );
 }
 
@@ -319,8 +436,8 @@ function TrackingTab({
   const link = `${origin}/forms/${formId}${params.toString() ? `?${params.toString()}` : ""}`;
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <div className="space-y-2">
+    <div className="grid gap-6 @2xl:grid-cols-2">
+      <div className="min-w-0 space-y-2">
         <Label className="text-xs">Hidden fields</Label>
         <p className="text-xs text-ink/50">
           Values you put in the link (<span className="font-mono">?name=Ana&amp;plan=pro</span>) are
@@ -357,7 +474,7 @@ function TrackingTab({
               }
             }}
             placeholder="e.g. name, plan, order_id"
-            className="font-mono text-sm"
+            className="h-9 px-3 py-1 font-mono text-sm"
             autoComplete="off"
           />
           <button
@@ -377,7 +494,7 @@ function TrackingTab({
         </p>
       </div>
 
-      <div className="space-y-2 rounded-lg bg-surface p-3">
+      <div className="min-w-0 space-y-2 rounded-lg bg-surface p-3">
         <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink/70">
           <Link2 className="size-3.5" /> Tracked link builder
         </p>
@@ -513,15 +630,15 @@ function QuizTab({
       {value.enabled && (
         <>
           <p className="text-xs text-ink/55">
-            Give points to answers on each choice question (below, under{" "}
-            <span className="font-semibold">Points</span>).{" "}
+            Open <span className="font-semibold">Points</span> on each choice question to score its
+            answers.{" "}
             {scoredQuestionCount > 0 ? (
               <>
                 {scoredQuestionCount} {scoredQuestionCount === 1 ? "question is" : "questions are"}{" "}
                 scored · best possible score <span className="font-semibold">{maxScore}</span>.
               </>
             ) : (
-              <span className="text-amber-700">No question has points yet.</span>
+              <span className="text-sun">No question has points yet.</span>
             )}{" "}
             Respondents get the outcome with the highest minimum score they reach.
           </p>
@@ -529,7 +646,7 @@ function QuizTab({
             {sorted.map((o) => (
               <li key={o.id} className="rounded-lg border border-hairline bg-surface/60 p-3">
                 <div className="flex flex-wrap items-start gap-3">
-                  <div className="w-28 space-y-1">
+                  <div className="w-20 space-y-1">
                     <Label className="text-[11px] text-ink/50">From score</Label>
                     <Input
                       type="number"
@@ -540,7 +657,7 @@ function QuizTab({
                       className="h-8 font-mono text-sm"
                     />
                   </div>
-                  <div className="min-w-48 flex-1 space-y-1">
+                  <div className="min-w-32 flex-1 space-y-1">
                     <Label className="text-[11px] text-ink/50">Outcome title</Label>
                     <Input
                       value={o.title}

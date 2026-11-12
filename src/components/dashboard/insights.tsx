@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, FilePen, Moon, Sparkles, TrendingDown } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
-import type { DashboardForm } from "@/components/dashboard/forms-view";
+import type { DashboardForm } from "@/lib/dashboard-forms";
 import { completionRate, type DashboardSearch } from "@/lib/dashboard-filters";
 
 const DAY = 86_400_000;
@@ -10,10 +10,9 @@ const LOW_CONVERSION = 0.3;
 
 type Tone = "positive" | "warning" | "neutral";
 
-type Insight = {
+export type Insight = {
   id: string;
   tone: Tone;
-  icon: typeof Sparkles;
   title: string;
   detail: string;
   action:
@@ -28,7 +27,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  * Turns the dashboard rows into a short, prioritised list of things worth
  * doing next. Pure derivation — no extra queries. Returns at most `limit`.
  */
-function deriveInsights(
+export function deriveInsights(
   forms: DashboardForm[],
   { canEdit = true, limit = 3, now = Date.now() } = {},
 ): Insight[] {
@@ -41,7 +40,6 @@ function deriveInsights(
     out.push({
       id: "momentum",
       tone: "positive",
-      icon: Sparkles,
       title: `“${hot.title}” is picking up`,
       detail: `${plural(hot.responses_7d, "response")} in the last 7 days.`,
       action: { kind: "results", label: "See results", formId: hot.id },
@@ -59,7 +57,6 @@ function deriveInsights(
     out.push({
       id: "conversion",
       tone: "warning",
-      icon: TrendingDown,
       title: `“${leaky.f.title}” loses most visitors`,
       detail: `Only ${Math.round(leaky.rate * 100)}% of ${leaky.f.views_90d} views became responses. Check where people drop off.`,
       action: { kind: "results", label: "Find the drop-off", formId: leaky.f.id },
@@ -76,7 +73,6 @@ function deriveInsights(
     out.push({
       id: "quiet",
       tone: "neutral",
-      icon: Moon,
       title: `${plural(quiet.length, "live form")} ${quiet.length === 1 ? "has" : "have"} gone quiet`,
       detail: "No responses in 30+ days. Share the link again, or close what’s no longer needed.",
       action: { kind: "filter", label: "Review", search: { status: undefined, activity: "quiet" } },
@@ -91,7 +87,6 @@ function deriveInsights(
     out.push({
       id: "drafts",
       tone: "neutral",
-      icon: FilePen,
       title: `“${ready[0].title}” is ready to publish`,
       detail: `${plural(ready[0].question_count, "question")} written, not live yet.`,
       action: { kind: "edit", label: "Open draft", formId: ready[0].id },
@@ -100,7 +95,6 @@ function deriveInsights(
     out.push({
       id: "drafts",
       tone: "neutral",
-      icon: FilePen,
       title: `${plural(drafts.length, "draft")} not published`,
       detail:
         ready.length === drafts.length
@@ -118,78 +112,76 @@ function deriveInsights(
 }
 
 const TONE: Record<Tone, string> = {
-  positive: "bg-mint-tint text-mint",
-  warning: "bg-coral-tint text-coral",
-  neutral: "bg-ink/[0.05] text-ink/60",
+  positive: "bg-mint",
+  warning: "bg-coral",
+  neutral: "bg-ink/30",
 };
 
+/**
+ * "Next steps": up to three things worth doing, each with one action.
+ * A plain list in one card — a coloured dot carries the tone, the words do
+ * the rest.
+ */
 export function DashboardInsights({
-  forms,
-  canEdit,
+  insights,
   onFilter,
 }: {
-  forms: DashboardForm[];
-  canEdit: boolean;
+  insights: Insight[];
   onFilter: (search: Partial<DashboardSearch>) => void;
 }) {
-  const insights = deriveInsights(forms, { canEdit });
   if (insights.length === 0) return null;
 
+  const actionCls =
+    "mt-1.5 inline-flex items-center gap-1 rounded text-xs font-medium text-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-brand/40";
+
   return (
-    <section aria-labelledby="insights-heading">
-      <h2 id="insights-heading" className="sr-only">
-        Suggested next steps
+    <section
+      aria-labelledby="insights-heading"
+      className="flex min-w-0 flex-col rounded-xl border border-hairline bg-card"
+    >
+      <h2 id="insights-heading" className="px-5 py-3 text-[15px] font-medium tracking-normal">
+        Next steps
       </h2>
-      <ul className="grid gap-3 md:grid-cols-3">
-        {insights.map((i) => {
-          const Icon = i.icon;
-          const actionCls =
-            "mt-auto inline-flex items-center gap-1 pt-3 text-xs font-medium text-brand outline-none hover:underline focus-visible:underline";
-          return (
-            <li key={i.id} className="flex flex-col rounded-xl border border-hairline bg-card p-4">
-              <div className="flex items-start gap-3">
-                <span
-                  className={`flex size-7 shrink-0 items-center justify-center rounded-md ${TONE[i.tone]}`}
+      <ul className="grid flex-1 border-t border-hairline sm:grid-cols-3 xl:grid-cols-1">
+        {insights.map((i, n) => (
+          <li
+            key={i.id}
+            className={
+              "flex gap-3 border-hairline px-5 py-3.5 " +
+              (n > 0 ? "border-t sm:border-l sm:border-t-0 xl:border-l-0 xl:border-t" : "")
+            }
+          >
+            <span
+              aria-hidden
+              className={`mt-[7px] size-1.5 shrink-0 rounded-full ${TONE[i.tone]}`}
+            />
+            <div className="min-w-0">
+              <p className="line-clamp-2 text-[13px] font-medium leading-snug">{i.title}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-ink/55">{i.detail}</p>
+              {i.action.kind === "filter" ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onFilter((i.action as { search: Partial<DashboardSearch> }).search)
+                  }
+                  className={actionCls}
                 >
-                  <Icon className="size-3.5" aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <p className="line-clamp-2 text-sm font-medium leading-snug">{i.title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-ink/55">{i.detail}</p>
-                </div>
-              </div>
-              <div className="pl-10">
-                {i.action.kind === "filter" ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onFilter((i.action as { search: Partial<DashboardSearch> }).search)
-                    }
-                    className={actionCls}
-                  >
-                    {i.action.label} <ArrowRight className="size-3" />
-                  </button>
-                ) : i.action.kind === "results" ? (
-                  <Link
-                    to="/forms/$formId/responses"
-                    params={{ formId: i.action.formId }}
-                    className={actionCls}
-                  >
-                    {i.action.label} <ArrowRight className="size-3" />
-                  </Link>
-                ) : (
-                  <Link
-                    to="/forms/$formId/edit"
-                    params={{ formId: i.action.formId }}
-                    className={actionCls}
-                  >
-                    {i.action.label} <ArrowRight className="size-3" />
-                  </Link>
-                )}
-              </div>
-            </li>
-          );
-        })}
+                  {i.action.label} <ArrowRight className="size-3" />
+                </button>
+              ) : (
+                <Link
+                  to={
+                    i.action.kind === "results" ? "/forms/$formId/responses" : "/forms/$formId/edit"
+                  }
+                  params={{ formId: i.action.formId }}
+                  className={actionCls}
+                >
+                  {i.action.label} <ArrowRight className="size-3" />
+                </Link>
+              )}
+            </div>
+          </li>
+        ))}
       </ul>
     </section>
   );

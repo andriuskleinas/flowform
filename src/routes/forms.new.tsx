@@ -1,15 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Loader2, Plus } from "lucide-react";
+import { ArrowRight, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { DEFAULT_FORM_TITLE, type QuestionType, type QuestionOptions } from "@/lib/form-utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CategoryField } from "@/components/dashboard/category-dialog";
-import { Logo } from "@/components/logo";
+import { AppShell, AppShellSkeleton, PageHeader } from "@/components/app-shell";
+import { isSigningOut } from "@/lib/sign-out";
 import { permissions, useWorkspaceRole, useWorkspaces, workspaceName } from "@/lib/workspace";
 
 export const Route = createFileRoute("/forms/new")({
@@ -143,21 +143,16 @@ function NewFormPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login", search: { redirect: "/forms/new" } });
+    if (!loading && !user && !isSigningOut())
+      navigate({ to: "/login", search: { redirect: "/forms/new" } });
   }, [loading, user, navigate]);
 
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen bg-surface p-10">
-        <Skeleton className="h-10 w-64" />
-      </div>
-    );
-  }
+  if (loading || !user) return <AppShellSkeleton width="md" />;
 
-  return <NewFormAuthed userId={user.id} />;
+  return <NewFormAuthed userId={user.id} email={user.email ?? ""} />;
 }
 
-function NewFormAuthed({ userId }: { userId: string }) {
+function NewFormAuthed({ userId, email }: { userId: string; email: string }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { ws } = Route.useSearch();
@@ -221,71 +216,49 @@ function NewFormAuthed({ userId }: { userId: string }) {
 
   const busy = createForm.isPending;
 
-  if (roleLoading) {
-    return (
-      <div className="min-h-screen bg-surface p-10">
-        <Skeleton className="h-10 w-64" />
-      </div>
-    );
-  }
+  if (roleLoading) return <AppShellSkeleton width="md" />;
   if (!permissions(role).canEdit) {
     return (
-      <div className="min-h-screen bg-surface text-ink">
-        <main className="mx-auto max-w-xl px-6 py-24 text-center">
-          <h1 className="font-display text-3xl">You can’t create forms here</h1>
-          <p className="mt-3 text-ink/60">
+      <AppShell userId={userId} email={email} width="md">
+        <div className="mx-auto max-w-xl py-16 text-center">
+          <h1 className="font-display text-[26px] leading-tight">You can’t create forms here</h1>
+          <p className="mt-3 text-sm text-ink/60">
             {role === "viewer"
               ? "You’re a viewer in this workspace. Ask an admin for editor access."
               : "You don’t have access to this workspace."}
           </p>
-          <Link to="/dashboard" className="mt-6 inline-block text-brand underline">
-            Back to dashboard
+          <Link
+            to="/dashboard"
+            className="mt-6 inline-block text-sm font-medium text-brand hover:underline"
+          >
+            Back to forms
           </Link>
-        </main>
-      </div>
+        </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-surface text-ink">
-      <header className="border-b border-hairline">
-        <nav className="mx-auto flex max-w-4xl items-center justify-between px-6 py-6 md:px-8">
-          <Link to="/" className="flex items-center gap-2">
-            <Logo />
-          </Link>
-          <Link
-            to="/dashboard"
-            search={isOwn ? {} : { ws: ownerId }}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 transition-colors hover:text-ink"
-          >
-            <ArrowLeft className="size-4" />
-            Dashboard
-          </Link>
-        </nav>
-      </header>
-
-      <main className="mx-auto max-w-4xl px-6 pb-24 pt-10 md:px-8 md:pt-14">
-        <div className="max-w-2xl">
-          <h1 className="font-display text-4xl md:text-5xl">Create a new form</h1>
-          <p className="mt-3 text-base text-ink/60 md:text-lg">
-            Start blank or from a template. Questions, logic and Claude’s drafts come next, in the
-            editor.
+    <AppShell userId={userId} email={email} ownerId={ownerId} width="md">
+      <div className="max-w-3xl">
+        <PageHeader
+          title="New form"
+          description="Start blank or from a template. Questions, logic and Claude’s drafts come next, in the editor."
+        />
+        {!isOwn && workspace && (
+          <p className="mt-3 inline-flex rounded-full border border-hairline bg-card px-3 py-1 text-xs text-ink/70">
+            Creating in {workspaceName(workspace)}
           </p>
-          {!isOwn && workspace && (
-            <p className="mt-3 inline-flex rounded-full border border-hairline bg-card px-3 py-1 text-xs text-ink/70">
-              Creating in {workspaceName(workspace)}
-            </p>
-          )}
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-ink/60">Category</span>
-            <CategoryField
-              userId={ownerId}
-              value={categoryId}
-              onChange={setCategoryId}
-              pending={busy}
-            />
-            <span className="text-xs text-ink/40">optional</span>
-          </div>
+        )}
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-ink/60">Category</span>
+          <CategoryField
+            userId={ownerId}
+            value={categoryId}
+            onChange={setCategoryId}
+            pending={busy}
+          />
+          <span className="text-xs text-ink/40">optional</span>
         </div>
 
         {/* Blank */}
@@ -293,10 +266,10 @@ function NewFormAuthed({ userId }: { userId: string }) {
           type="button"
           onClick={() => start("blank", null)}
           disabled={busy}
-          className="group mt-8 flex w-full items-center justify-between gap-4 rounded-2xl border border-hairline bg-card p-5 text-left transition-all hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="group mt-7 flex w-full items-center justify-between gap-4 rounded-xl border border-hairline bg-card p-4 text-left outline-none transition-colors hover:border-ink/30 focus-visible:ring-2 focus-visible:ring-brand/40 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <div className="flex items-center gap-4">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-md border border-hairline bg-surface text-ink/60">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-hairline bg-surface text-ink/60">
               {pendingId === "blank" ? (
                 <Loader2 className="size-5 animate-spin" />
               ) : (
@@ -304,7 +277,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
               )}
             </span>
             <div>
-              <p className="text-base font-semibold text-ink">Blank form</p>
+              <p className="text-[15px] font-medium text-ink">Blank form</p>
               <p className="mt-0.5 text-sm text-ink/50">An empty page. Brave.</p>
             </div>
           </div>
@@ -312,7 +285,7 @@ function NewFormAuthed({ userId }: { userId: string }) {
         </button>
 
         {/* Templates */}
-        <h2 className="mt-10 text-[15px] font-medium tracking-normal text-ink">
+        <h2 className="mt-9 text-[15px] font-medium tracking-normal text-ink">
           Or start from a template
         </h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -322,23 +295,22 @@ function NewFormAuthed({ userId }: { userId: string }) {
               type="button"
               onClick={() => start(t.id, t)}
               disabled={busy}
-              className="relative flex flex-col rounded-2xl border border-hairline bg-card p-5 text-left transition-all hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-60"
+              className="relative flex flex-col rounded-xl border border-hairline bg-card p-4 text-left outline-none transition-colors hover:border-ink/30 focus-visible:ring-2 focus-visible:ring-brand/40 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <span className="font-mono text-[11px] text-brand">
-                {String(TEMPLATES.indexOf(t) + 1).padStart(2, "0")}
-              </span>
-              <p className="mt-3 text-sm font-semibold text-ink">{t.name}</p>
-              <p className="mt-0.5 text-xs text-ink/50">{t.blurb}</p>
-              <p className="mt-3 text-xs font-medium text-ink/40">{t.questions.length} questions</p>
+              <p className="text-sm font-medium text-ink">{t.name}</p>
+              <p className="mt-0.5 text-xs text-ink/55">{t.blurb}</p>
+              <p className="mt-4 font-mono text-[11px] text-ink/45">
+                {t.questions.length} questions
+              </p>
               {pendingId === t.id && (
-                <span className="absolute inset-0 flex items-center justify-center rounded-2xl bg-card/70">
+                <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-card/70">
                   <Loader2 className="size-5 animate-spin text-brand" />
                 </span>
               )}
             </button>
           ))}
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

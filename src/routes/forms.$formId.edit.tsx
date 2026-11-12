@@ -2,7 +2,6 @@ import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
-  ArrowLeft,
   ArrowDown,
   ArrowUp,
   CopyPlus,
@@ -15,7 +14,6 @@ import {
   Share2,
   Trash2,
   X,
-  Sparkles,
 } from "lucide-react";
 import {
   Dialog,
@@ -95,13 +93,15 @@ import {
   type FormSettings,
 } from "@/lib/form-settings";
 import { Switch } from "@/components/ui/switch";
-import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DeleteFormDialog } from "@/components/delete-form-dialog";
 import { permissions, useWorkspaceRole } from "@/lib/workspace";
 import { ShareFormDialog } from "@/components/share-form-dialog";
-import { Shell } from "@/components/shell";
+import { AppShell, AppShellSkeleton } from "@/components/app-shell";
+import { FormHeader, actionPrimary, actionSecondary } from "@/components/form-header";
+import { isSigningOut } from "@/lib/sign-out";
 import { CategoryField } from "@/components/dashboard/category-dialog";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/forms/$formId/edit")({
   component: EditFormPage,
@@ -113,21 +113,15 @@ function EditFormPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user)
+    if (!loading && !user && !isSigningOut())
       navigate({ to: "/login", search: { redirect: `/forms/${formId}/edit` } });
   }, [loading, user, navigate, formId]);
 
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen bg-surface p-10">
-        <Skeleton className="h-10 w-64" />
-      </div>
-    );
-  }
+  if (loading || !user) return <AppShellSkeleton />;
 
   // Keyed by form: "Edit a copy" navigates editor → editor, and the copy must
   // not inherit the original's draft state.
-  return <EditFormAuthed key={formId} formId={formId} userId={user.id} />;
+  return <EditFormAuthed key={formId} formId={formId} userId={user.id} email={user.email ?? ""} />;
 }
 
 type DraftQuestion = Question & { isNew?: boolean; isDeleted?: boolean };
@@ -199,7 +193,15 @@ function toSnapshot(
   };
 }
 
-function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) {
+function EditFormAuthed({
+  formId,
+  userId,
+  email,
+}: {
+  formId: string;
+  userId: string;
+  email: string;
+}) {
   const qc = useQueryClient();
   const navigate = useNavigate();
 
@@ -261,6 +263,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   const [discardOpen, setDiscardOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  // Below xl the questions and the form settings are two views of this page.
+  const [pane, setPane] = useState<"questions" | "settings">("questions");
   const [newVersionOpen, setNewVersionOpen] = useState(false);
   // After a copy goes live: offer to close the survey it was copied from.
   const [closeOriginal, setCloseOriginal] = useState<{ id: string; title: string } | null>(null);
@@ -798,18 +802,14 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   );
 
   if (!formQ.isError && (!ready || (formQ.data && !snapshot) || (formQ.data && roleLoading))) {
-    return (
-      <Shell>
-        <Skeleton className="h-10 w-64" />
-      </Shell>
-    );
+    return <AppShellSkeleton />;
   }
 
   const form = formQ.data;
   if (form && role === "viewer") {
     return (
-      <Shell>
-        <h1 className="text-2xl font-semibold">View-only access</h1>
+      <AppShell userId={userId} email={email} ownerId={form.user_id}>
+        <h1 className="font-display text-[26px] leading-tight">View-only access</h1>
         <p className="mt-2 max-w-md text-ink/60">
           You’re a viewer in this workspace, so you can’t edit “{form.title}”. Its responses and
           analytics are open to you.
@@ -827,21 +827,26 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             search={dashboardSearch}
             className="inline-flex h-9 items-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-ink hover:border-ink/25"
           >
-            Back to dashboard
+            Back to forms
           </Link>
         </div>
-      </Shell>
+      </AppShell>
     );
   }
   if (!form || !can.canEdit) {
     return (
-      <Shell>
-        <h1 className="text-2xl font-semibold">Form not found</h1>
-        <p className="mt-2 text-ink/60">It may have been deleted, or you don’t have access.</p>
-        <Link to="/dashboard" className="mt-6 inline-block text-brand underline">
-          Back to dashboard
+      <AppShell userId={userId} email={email}>
+        <h1 className="font-display text-[26px] leading-tight">Form not found</h1>
+        <p className="mt-2 text-sm text-ink/60">
+          It may have been deleted, or you don’t have access.
+        </p>
+        <Link
+          to="/dashboard"
+          className="mt-6 inline-block text-sm font-medium text-brand hover:underline"
+        >
+          Back to forms
         </Link>
-      </Shell>
+      </AppShell>
     );
   }
 
@@ -873,112 +878,118 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     reorderDraft([...nextVisible, ...deleted]);
   };
 
-  return (
-    <Shell>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link
-          to="/dashboard"
-          search={dashboardSearch}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 hover:text-ink"
+  const headerActions = (
+    <>
+      {isDirty && !isLocked && (
+        <span className="mr-1 inline-flex items-center gap-1.5 text-xs text-ink/55">
+          <span aria-hidden className="size-1.5 rounded-full bg-sun" />
+          Unsaved changes
+        </span>
+      )}
+      {form.status === "published" && (
+        <button type="button" onClick={() => setShareOpen(true)} className={actionSecondary}>
+          <Share2 className="size-3.5" /> Share
+        </button>
+      )}
+      <button type="button" onClick={() => setPreviewOpen(true)} className={actionSecondary}>
+        <Eye className="size-3.5" /> Preview
+      </button>
+      {isDirty && !isLocked && (
+        <button
+          type="button"
+          onClick={() => setDiscardOpen(true)}
+          disabled={saveAll.isPending}
+          className={actionSecondary}
         >
-          <ArrowLeft className="size-4" /> Back to dashboard
-        </Link>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {form.status === "published" && (
-            <button
-              type="button"
-              onClick={() => setShareOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
-            >
-              <Share2 className="size-4" /> Share
-            </button>
-          )}
+          Discard
+        </button>
+      )}
+      {!isLocked && (
+        <button
+          type="button"
+          onClick={() => saveAll.mutate()}
+          disabled={!isDirty || saveAll.isPending}
+          className={form.status === "draft" ? actionSecondary : actionPrimary}
+        >
+          {saveAll.isPending ? "Saving…" : "Save"}
+        </button>
+      )}
+      {form.status === "draft" && (
+        <button
+          type="button"
+          onClick={() => setStatus.mutate("published")}
+          disabled={setStatus.isPending || visibleDraftQuestions.length === 0 || isDirty}
+          title={
+            isDirty
+              ? "Save your changes first"
+              : visibleDraftQuestions.length === 0
+                ? "Add at least one question first"
+                : undefined
+          }
+          className={actionPrimary}
+        >
+          {currentVersion > 1 ? "Publish update" : "Publish form"}
+        </button>
+      )}
+      {form.status === "published" && (
+        <>
           <button
             type="button"
-            onClick={() => setPreviewOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
+            onClick={() => setStatus.mutate("closed")}
+            disabled={setStatus.isPending}
+            title="Stop taking responses. The link stays up and shows a closed notice."
+            className={actionSecondary}
           >
-            <Eye className="size-4" /> Preview
+            Close form
           </button>
-          {isDirty && !isLocked && (
-            <button
-              type="button"
-              onClick={() => setDiscardOpen(true)}
-              disabled={saveAll.isPending}
-              className="inline-flex items-center gap-1.5 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
-            >
-              Discard
-            </button>
-          )}
-          {!isLocked && (
-            <button
-              type="button"
-              onClick={() => saveAll.mutate()}
-              disabled={!isDirty || saveAll.isPending}
-              className="inline-flex items-center gap-1.5 rounded-md bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand/90 transition-colors"
-            >
-              {saveAll.isPending ? "Saving…" : "Save"}
-            </button>
-          )}
-          {form.status === "draft" && (
-            <button
-              type="button"
-              onClick={() => setStatus.mutate("published")}
-              disabled={setStatus.isPending || visibleDraftQuestions.length === 0 || isDirty}
-              title={
-                isDirty
-                  ? "Save your changes first"
-                  : visibleDraftQuestions.length === 0
-                    ? "Add at least one question first"
-                    : undefined
-              }
-              className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand/90 transition-colors"
-            >
-              {currentVersion > 1 ? "Publish update" : "Publish form"}
-            </button>
-          )}
-          {form.status === "published" && (
-            <>
-              <button
-                type="button"
-                onClick={() => setStatus.mutate("closed")}
-                disabled={setStatus.isPending}
-                title="Stop taking responses. The link stays up and shows a closed notice."
-                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
-              >
-                Close form
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatus.mutate("draft")}
-                disabled={setStatus.isPending}
-                title="Take the form offline. The link shows an unpublished notice."
-                className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-50"
-              >
-                Unpublish
-              </button>
-            </>
-          )}
-          {form.status === "closed" && (
-            <>
-              <button
-                type="button"
-                onClick={() => setStatus.mutate("published")}
-                disabled={setStatus.isPending || isDirty}
-                title="Closed. The link shows a closed notice and takes no new responses."
-                className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-50 hover:bg-brand/90 transition-colors"
-              >
-                {currentVersion > 1 && !versionFrozen ? "Publish update" : "Reopen form"}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+          <button
+            type="button"
+            onClick={() => setStatus.mutate("draft")}
+            disabled={setStatus.isPending}
+            title="Take the form offline. The link shows an unpublished notice."
+            className={actionSecondary}
+          >
+            Unpublish
+          </button>
+        </>
+      )}
+      {form.status === "closed" && (
+        <button
+          type="button"
+          onClick={() => setStatus.mutate("published")}
+          disabled={setStatus.isPending || isDirty}
+          title="Closed. The link shows a closed notice and takes no new responses."
+          className={actionPrimary}
+        >
+          {currentVersion > 1 && !versionFrozen ? "Publish update" : "Reopen form"}
+        </button>
+      )}
+    </>
+  );
 
+  return (
+    <AppShell
+      userId={userId}
+      email={email}
+      ownerId={form.user_id}
+      header={
+        <FormHeader
+          formId={formId}
+          title={form.title || DEFAULT_FORM_TITLE}
+          status={form.status as FormStatus}
+          version={currentVersion}
+          ownerSearch={dashboardSearch}
+          active="build"
+          canEdit
+          responseCount={responseCountQ.data}
+          actions={headerActions}
+        />
+      }
+    >
       {isLocked && (
         <div
           role="status"
-          className="mt-6 rounded-lg border border-brand/25 bg-accent px-4 py-3 text-sm text-ink"
+          className="rounded-lg border border-brand/25 bg-accent px-4 py-3 text-sm text-ink"
         >
           <div className="flex items-start gap-3">
             <Lock className="mt-0.5 size-4 shrink-0 text-brand" />
@@ -1035,18 +1046,63 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         </div>
       )}
 
-      <header className="mt-6 rounded-lg border border-hairline bg-card p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <fieldset disabled={isLocked} className="flex-1 min-w-0 space-y-3 disabled:opacity-70">
+      {/* Two columns on wide screens. Below xl they become two views with a
+          switch, so settings never sit under a long list of questions. */}
+      <div
+        role="group"
+        aria-label="Editor view"
+        className={cn(
+          "inline-flex rounded-md border border-hairline bg-card p-0.5 xl:hidden",
+          isLocked && "mt-5",
+        )}
+      >
+        {(
+          [
+            ["questions", "Questions"],
+            ["settings", "Form settings"],
+          ] as const
+        ).map(([view, label]) => (
+          <button
+            key={view}
+            type="button"
+            aria-pressed={pane === view}
+            onClick={() => setPane(view)}
+            className={cn(
+              "inline-flex h-7 items-center gap-1.5 rounded px-3 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
+              pane === view ? "bg-ink text-paper" : "text-ink/55 hover:text-ink",
+            )}
+          >
+            {label}
+            {view === "questions" && (
+              <span className="font-mono text-[11px] font-normal opacity-60">
+                {visibleDraftQuestions.length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div
+        className={cn(
+          "mt-5 xl:grid xl:grid-cols-[minmax(0,1fr)_21rem] xl:items-start xl:gap-8",
+          isLocked ? "xl:mt-6" : "xl:mt-0",
+        )}
+      >
+        <div className={cn("min-w-0", pane !== "questions" && "hidden xl:block")}>
+          <fieldset
+            disabled={isLocked}
+            className="min-w-0 space-y-3 rounded-lg border border-hairline bg-card p-4 disabled:opacity-70 sm:p-5"
+          >
             <div className="space-y-1.5">
               <Label htmlFor="form-title-edit" className="text-xs">
                 Title
               </Label>
               <DebouncedInput
+                id="form-title-edit"
                 value={draftForm.title}
                 onChange={(v) => setDraftForm((f) => ({ ...f, title: v }))}
                 placeholder="Name your form"
-                className="font-display text-2xl md:text-3xl"
+                className="font-display py-3 text-xl md:text-2xl"
               />
             </div>
             <div className="space-y-1.5">
@@ -1054,230 +1110,196 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 Description <span className="font-normal text-ink/40">(optional)</span>
               </Label>
               <DebouncedTextarea
+                id="form-description-edit"
                 value={draftForm.description ?? ""}
                 onChange={(v) => setDraftForm((f) => ({ ...f, description: v === "" ? null : v }))}
                 placeholder="What’s this form for?"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="form-thanks-edit" className="text-xs">
-                Thank-you message{" "}
-                <span className="font-normal text-ink/40">(optional, shown after submitting)</span>
-              </Label>
-              <DebouncedTextarea
-                value={draftForm.thank_you_message ?? ""}
-                onChange={(v) =>
-                  setDraftForm((f) => ({ ...f, thank_you_message: v === "" ? null : v }))
-                }
-                placeholder="Thanks. Your response was recorded."
                 rows={2}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Respondent experience</Label>
-              <div className="flex gap-2">
-                {(
-                  [
-                    ["conversational", "Conversational", "One question at a time"],
-                    ["classic", "Classic", "All questions on one page"],
-                  ] as const
-                ).map(([mode, label, hint]) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    title={hint}
-                    onClick={() => setDraftForm((f) => ({ ...f, display_mode: mode }))}
-                    className={
-                      "rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors " +
-                      (draftForm.display_mode === mode
-                        ? "border-brand bg-accent text-brand"
-                        : "border-ink/15 bg-card text-ink/60 hover:bg-ink/5")
-                    }
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-ink/40">
-                {draftForm.display_mode === "conversational"
-                  ? "One question at a time, with a progress bar. Logic jumps apply."
-                  : "Every question on one page."}
-              </p>
-            </div>
           </fieldset>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-1.5">
-              {currentVersion > 1 && (
-                <span
-                  title={`Updated ${currentVersion - 1} ${currentVersion === 2 ? "time" : "times"} under the same link`}
-                  className="rounded-full border border-hairline px-2 py-0.5 font-mono text-xs font-medium text-ink/60"
+
+          <section aria-labelledby="questions-heading" className="mt-8">
+            <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+              <div>
+                <h2
+                  id="questions-heading"
+                  className="flex items-baseline gap-2 text-lg font-semibold tracking-normal"
                 >
-                  v{currentVersion}
-                </span>
-              )}
-              <StatusPill status={form.status as FormStatus} />
-            </div>
-            <CategoryField
-              userId={form.user_id}
-              value={form.category_id ?? null}
-              onChange={(id) => setCategory.mutate(id)}
-              pending={setCategory.isPending}
-            />
-            {isDirty && (
-              <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                Unsaved changes
-              </span>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <FormSettingsPanel
-        value={draftForm.settings}
-        onChange={setDraftSettings}
-        formId={formId}
-        formTitle={draftForm.title}
-        maxQuizScore={maxScore(visibleDraftQuestions)}
-        scoredQuestionCount={
-          visibleDraftQuestions.filter((q) => q.points && SCORABLE_TYPES.includes(q.type)).length
-        }
-        disabled={isLocked}
-      />
-
-      <div className="mt-8">
-        <section>
-          <h2 className="text-lg font-semibold">Questions</h2>
-          {!isLocked && (
-            <p className="mt-1 text-xs text-ink/50">
-              Drag to reorder. Click <span className="font-semibold">Save</span> to keep your
-              changes.
-            </p>
-          )}
-
-          <fieldset disabled={isLocked} className="min-w-0 disabled:opacity-70">
-            {!isLocked && currentVersion > 1 && (
-              <div className="mt-3 rounded-lg border border-hairline bg-surface px-4 py-3 text-sm text-ink/70">
-                You’re updating this form (
-                <span className="font-semibold text-ink">v{currentVersion}</span>). Earlier answers
-                stay as they were. Questions you keep stay comparable, and deleted ones still show
-                in earlier results.
+                  Questions
+                  <span className="font-mono text-xs font-normal text-ink/45">
+                    {visibleDraftQuestions.length}
+                  </span>
+                </h2>
+                {!isLocked && (
+                  <p className="mt-1 text-xs text-ink/50">
+                    Drag to reorder. Click <span className="font-semibold">Save</span> to keep your
+                    changes.
+                  </p>
+                )}
               </div>
-            )}
-
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={visibleDraftQuestions.map((q) => q.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <ul className="mt-4 space-y-4">
-                  {visibleDraftQuestions.map((q, i) => (
-                    <SortableQuestionCard
-                      key={q.id}
-                      question={q}
-                      index={i}
-                      total={visibleDraftQuestions.length}
-                      jumpTargets={visibleDraftQuestions
-                        .map((t, ti) => ({
-                          id: t.id,
-                          label: t.label,
-                          number: ti + 1,
-                          isNew: !!t.isNew,
-                        }))
-                        .slice(i + 1)
-                        .filter((t) => !t.isNew)}
-                      onChangeLabel={(label) => setDraftLabel(q.id, label)}
-                      onChangeOptions={(options) => setDraftOptions(q.id, options)}
-                      onChangeType={(type) => setDraftType(q.id, type)}
-                      onChangeRequired={(required) => setDraftRequired(q.id, required)}
-                      conversational={draftForm.display_mode === "conversational"}
-                      onChangeAiFollowUp={(on) => setDraftAiFollowUp(q.id, on)}
-                      onChangeLogic={(logic) => setDraftLogic(q.id, logic)}
-                      recallVars={[
-                        ...visibleDraftQuestions
-                          .slice(0, i)
-                          .filter((t) => t.recall_key)
-                          .map((t) => ({
-                            key: t.recall_key as string,
-                            hint: `Answer to “${t.label.slice(0, 40)}”`,
-                          })),
-                        ...(draftForm.settings.hidden_fields ?? []).map((f) => ({
-                          key: f,
-                          hint: "Hidden field from the link",
-                        })),
-                      ]}
-                      takenKeys={visibleDraftQuestions
-                        .filter((t) => t.id !== q.id && t.recall_key)
-                        .map((t) => t.recall_key as string)}
-                      onChangeRecallKey={(k) => setDraftRecallKey(q.id, k)}
-                      quizEnabled={!!draftForm.settings.quiz?.enabled}
-                      onChangePoints={(pts) => setDraftPoints(q.id, pts)}
-                      onDuplicate={() => duplicateDraftQuestion(q.id)}
-                      onDelete={() => removeDraftQuestion(q.id)}
-                      onMoveUp={() => moveBy(q.id, -1)}
-                      onMoveDown={() => moveBy(q.id, 1)}
-                    />
-                  ))}
-                </ul>
-              </SortableContext>
-            </DndContext>
-          </fieldset>
-
-          {!isLocked && (
-            <>
-              <div className="mt-6">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground hover:bg-brand/90 transition-colors"
-                    >
-                      <Plus className="size-4" /> Add question
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((t) => (
-                      <DropdownMenuItem key={t} onClick={() => addDraftQuestion(t)}>
-                        {QUESTION_TYPE_LABELS[t]}
-                      </DropdownMenuItem>
+              <fieldset disabled={isLocked} className="min-w-0 disabled:opacity-70">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 sm:justify-end">
+                  <span id="display-mode-label" className="text-xs text-ink/55">
+                    Respondent experience
+                  </span>
+                  <div
+                    role="group"
+                    aria-labelledby="display-mode-label"
+                    className="inline-flex rounded-md border border-hairline bg-card p-0.5"
+                  >
+                    {(
+                      [
+                        ["conversational", "Conversational", "One question at a time"],
+                        ["classic", "Classic", "All questions on one page"],
+                      ] as const
+                    ).map(([mode, label, hint]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        title={hint}
+                        aria-pressed={draftForm.display_mode === mode}
+                        onClick={() => setDraftForm((f) => ({ ...f, display_mode: mode }))}
+                        className={cn(
+                          "inline-flex h-7 items-center rounded px-2.5 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
+                          draftForm.display_mode === mode
+                            ? "bg-accent text-accent-foreground"
+                            : "text-ink/55 hover:text-ink",
+                        )}
+                      >
+                        {label}
+                      </button>
                     ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              {/* AI suggestions */}
-              <div className="mt-8 rounded-lg border border-hairline bg-card p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="flex items-center gap-2 text-sm font-medium text-ink">
-                      Suggest questions
-                      <span className="rounded-sm border border-brand/25 bg-accent px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-brand">
-                        Claude
-                      </span>
-                    </h3>
-                    <p className="mt-0.5 text-xs text-ink/55">
-                      Claude drafts questions from your title and description.
-                    </p>
                   </div>
+                </div>
+                <p className="mt-1.5 text-xs text-ink/40 sm:text-right">
+                  {draftForm.display_mode === "conversational"
+                    ? "One question at a time, with a progress bar. Logic jumps apply."
+                    : "Every question on one page."}
+                </p>
+              </fieldset>
+            </div>
+
+            <fieldset disabled={isLocked} className="min-w-0 disabled:opacity-70">
+              {!isLocked && currentVersion > 1 && (
+                <div className="mt-3 rounded-lg border border-hairline bg-surface px-4 py-3 text-sm text-ink/70">
+                  You’re updating this form (
+                  <span className="font-semibold text-ink">v{currentVersion}</span>). Earlier
+                  answers stay as they were. Questions you keep stay comparable, and deleted ones
+                  still show in earlier results.
+                </div>
+              )}
+
+              {visibleDraftQuestions.length === 0 && (
+                <p className="mt-4 rounded-lg border border-dashed border-ink/15 px-5 py-8 text-center text-sm text-ink/55">
+                  No questions yet.
+                  {!isLocked && " Add one, or let Claude draft a few from your title."}
+                </p>
+              )}
+
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={visibleDraftQuestions.map((q) => q.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <ul className="mt-4 space-y-3">
+                    {visibleDraftQuestions.map((q, i) => (
+                      <SortableQuestionCard
+                        key={q.id}
+                        question={q}
+                        index={i}
+                        total={visibleDraftQuestions.length}
+                        jumpTargets={visibleDraftQuestions
+                          .map((t, ti) => ({
+                            id: t.id,
+                            label: t.label,
+                            number: ti + 1,
+                            isNew: !!t.isNew,
+                          }))
+                          .slice(i + 1)
+                          .filter((t) => !t.isNew)}
+                        onChangeLabel={(label) => setDraftLabel(q.id, label)}
+                        onChangeOptions={(options) => setDraftOptions(q.id, options)}
+                        onChangeType={(type) => setDraftType(q.id, type)}
+                        onChangeRequired={(required) => setDraftRequired(q.id, required)}
+                        conversational={draftForm.display_mode === "conversational"}
+                        onChangeAiFollowUp={(on) => setDraftAiFollowUp(q.id, on)}
+                        onChangeLogic={(logic) => setDraftLogic(q.id, logic)}
+                        recallVars={[
+                          ...visibleDraftQuestions
+                            .slice(0, i)
+                            .filter((t) => t.recall_key)
+                            .map((t) => ({
+                              key: t.recall_key as string,
+                              hint: `Answer to “${t.label.slice(0, 40)}”`,
+                            })),
+                          ...(draftForm.settings.hidden_fields ?? []).map((f) => ({
+                            key: f,
+                            hint: "Hidden field from the link",
+                          })),
+                        ]}
+                        takenKeys={visibleDraftQuestions
+                          .filter((t) => t.id !== q.id && t.recall_key)
+                          .map((t) => t.recall_key as string)}
+                        onChangeRecallKey={(k) => setDraftRecallKey(q.id, k)}
+                        quizEnabled={!!draftForm.settings.quiz?.enabled}
+                        onChangePoints={(pts) => setDraftPoints(q.id, pts)}
+                        onDuplicate={() => duplicateDraftQuestion(q.id)}
+                        onDelete={() => removeDraftQuestion(q.id)}
+                        onMoveUp={() => moveBy(q.id, -1)}
+                        onMoveDown={() => moveBy(q.id, 1)}
+                      />
+                    ))}
+                  </ul>
+                </SortableContext>
+              </DndContext>
+            </fieldset>
+
+            {!isLocked && (
+              <div className="mt-5">
+                {/* The two ways to get a question, side by side. */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button type="button" className={cn(actionPrimary, "h-9 px-4")}>
+                        <Plus className="size-4" /> Add question
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((t) => (
+                        <DropdownMenuItem key={t} onClick={() => addDraftQuestion(t)}>
+                          {QUESTION_TYPE_LABELS[t]}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <button
                     type="button"
                     onClick={handleSuggest}
                     disabled={isSuggesting || !draftForm.title.trim()}
                     title={!draftForm.title.trim() ? "Add a title first" : undefined}
-                    className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-card px-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/35 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={cn(actionSecondary, "h-9 px-3.5")}
                   >
                     {isSuggesting ? (
                       <>
                         <Loader2 className="size-4 animate-spin" /> Drafting…
                       </>
                     ) : (
-                      "Draft questions"
+                      <>
+                        Suggest questions <ClaudeTag />
+                      </>
                     )}
                   </button>
                 </div>
+                <p className="mt-2 text-xs text-ink/50">
+                  {draftForm.title.trim()
+                    ? "Claude drafts questions from your title and description."
+                    : "Add a title and Claude can draft questions from it."}
+                </p>
 
                 {suggestError && (
                   <p className="mt-3 rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -1286,70 +1308,128 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                 )}
 
                 {suggestions.length > 0 && (
-                  <ul className="mt-4 divide-y divide-hairline border-y border-hairline">
-                    {suggestions.map((s) => {
-                      const added = addedSuggestionIds.has(s.id);
-                      return (
-                        <li key={s.id} className="flex items-start justify-between gap-3 py-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium leading-snug text-ink">{s.label}</p>
-                            <p className="mt-1 font-mono text-[10px] uppercase tracking-wide text-ink/45">
-                              {s.type === "rating"
-                                ? `Rating scale (1–${getRatingMax(s.options)})`
-                                : QUESTION_TYPE_LABELS[s.type]}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              scrollAnchorRef.current = {
-                                el: e.currentTarget,
-                                top: e.currentTarget.getBoundingClientRect().top,
-                              };
-                              addSuggestion(s);
-                            }}
-                            disabled={added}
-                            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ink/15 bg-card px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/35 disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
-                          >
-                            {added ? (
-                              "Added"
-                            ) : (
-                              <>
-                                <Plus className="size-3" /> Add
-                              </>
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <div className="mt-4 rounded-lg border border-hairline bg-card">
+                    <div className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-2.5">
+                      <h3 className="flex items-center gap-2 text-sm font-medium tracking-normal text-ink">
+                        Drafts <ClaudeTag />
+                      </h3>
+                      <span className="font-mono text-[11px] text-ink/45">
+                        {addedSuggestionIds.size} of {suggestions.length} added
+                      </span>
+                    </div>
+                    <ul className="divide-y divide-hairline px-4">
+                      {suggestions.map((s) => {
+                        const added = addedSuggestionIds.has(s.id);
+                        return (
+                          <li key={s.id} className="flex items-start justify-between gap-3 py-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium leading-snug text-ink">{s.label}</p>
+                              <p className="mt-1 font-mono text-[10px] uppercase tracking-wide text-ink/45">
+                                {s.type === "rating"
+                                  ? `Rating scale (1–${getRatingMax(s.options)})`
+                                  : QUESTION_TYPE_LABELS[s.type]}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                scrollAnchorRef.current = {
+                                  el: e.currentTarget,
+                                  top: e.currentTarget.getBoundingClientRect().top,
+                                };
+                                addSuggestion(s);
+                              }}
+                              disabled={added}
+                              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ink/15 bg-card px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/35 disabled:cursor-default disabled:border-ink/5 disabled:text-ink/30"
+                            >
+                              {added ? (
+                                "Added"
+                              ) : (
+                                <>
+                                  <Plus className="size-3" /> Add
+                                </>
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 )}
               </div>
-            </>
-          )}
-        </section>
-
-        {can.canDelete && (
-          <section className="mt-12 rounded-lg border border-destructive/20 bg-destructive/[0.03] p-5">
-            <h2 className="text-sm font-semibold text-destructive">Danger zone</h2>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-ink/60">
-                Permanently delete this form
-                {(responseCountQ.data ?? 0) > 0
-                  ? ` and its ${responseCountQ.data} ${responseCountQ.data === 1 ? "response" : "responses"}`
-                  : ""}
-                .
-              </p>
-              <button
-                type="button"
-                onClick={() => setDeleteOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-card px-4 py-2 text-sm font-semibold text-destructive hover:bg-destructive/5"
-              >
-                <Trash2 className="size-4" /> Delete form
-              </button>
-            </div>
+            )}
           </section>
-        )}
+        </div>
+
+        {/* Stays in reach while the questions scroll. */}
+        <div
+          className={cn(
+            "min-w-0 xl:sticky xl:top-28 xl:max-h-[calc(100vh-8.5rem)] xl:overflow-y-auto",
+            pane !== "settings" && "hidden xl:block",
+          )}
+        >
+          <FormSettingsPanel
+            value={draftForm.settings}
+            onChange={setDraftSettings}
+            formId={formId}
+            formTitle={draftForm.title}
+            maxQuizScore={maxScore(visibleDraftQuestions)}
+            scoredQuestionCount={
+              visibleDraftQuestions.filter((q) => q.points && SCORABLE_TYPES.includes(q.type))
+                .length
+            }
+            disabled={isLocked}
+            category={
+              <CategoryField
+                userId={form.user_id}
+                value={form.category_id ?? null}
+                onChange={(id) => setCategory.mutate(id)}
+                pending={setCategory.isPending}
+              />
+            }
+            hasThankYou={!!draftForm.thank_you_message?.trim()}
+            thankYouField={
+              <div className="space-y-1.5">
+                <Label htmlFor="form-thanks-edit" className="text-xs">
+                  Thank-you message <span className="font-normal text-ink/40">(optional)</span>
+                </Label>
+                <DebouncedTextarea
+                  id="form-thanks-edit"
+                  value={draftForm.thank_you_message ?? ""}
+                  onChange={(v) =>
+                    setDraftForm((f) => ({ ...f, thank_you_message: v === "" ? null : v }))
+                  }
+                  placeholder="Thanks. Your response was recorded."
+                  rows={2}
+                />
+                <p className="text-xs text-ink/45">Shown after someone submits.</p>
+              </div>
+            }
+            footer={
+              can.canDelete ? (
+                <div className="mt-6 rounded-lg border border-destructive/20 bg-destructive/[0.03] p-4">
+                  <h3 className="text-sm font-semibold tracking-normal text-destructive">
+                    Danger zone
+                  </h3>
+                  <p className="mt-1 text-xs text-ink/60">
+                    Permanently delete this form
+                    {(responseCountQ.data ?? 0) > 0
+                      ? ` and its ${responseCountQ.data} ${responseCountQ.data === 1 ? "response" : "responses"}`
+                      : ""}
+                    .
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteOpen(true)}
+                    className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-md border border-destructive/30 bg-card px-3 text-[13px] font-medium text-destructive outline-none hover:bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive/30"
+                  >
+                    <Trash2 className="size-3.5" /> Delete form
+                  </button>
+                </div>
+              ) : null
+            }
+          />
+        </div>
       </div>
 
       <DeleteFormDialog
@@ -1491,7 +1571,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         onConfirm={() => blocker.proceed?.()}
         onCancel={() => blocker.reset?.()}
       />
-    </Shell>
+    </AppShell>
   );
 }
 
@@ -1551,8 +1631,48 @@ function SortableQuestionCard({
     opacity: isDragging ? 0.6 : 1,
   };
 
+  const cfg = getChoiceConfig(question.options);
+  const jumpEligible =
+    question.type === "dropdown" ||
+    question.type === "yes_no" ||
+    (question.type === "multiple_choice" && !cfg.multi);
+  const jumpChoices = !jumpEligible ? [] : question.type === "yes_no" ? ["Yes", "No"] : cfg.choices;
+  const jumps = question.logic?.jumps ?? {};
+  const jumpCount = Object.keys(jumps).length;
+  const setJump = (choice: string, target: string) => {
+    const next = { ...jumps };
+    if (target === "") delete next[choice];
+    else next[choice] = target;
+    onChangeLogic(Object.keys(next).length > 0 ? { jumps: next } : null);
+  };
+  const followUpEligible = question.type === "text" || question.type === "long_text";
+  const scorable = SCORABLE_TYPES.includes(question.type);
+  const pointsAvailable = quizEnabled && scorable;
+  const hasPoints = !!question.points && Object.keys(question.points).length > 0;
+  const questionMax = maxScore([question]);
+
+  // Which settings are open. Until the user toggles one, rules that already
+  // exist stay in view (a locked form can't open anything), and Points opens
+  // on every scorable question while Quiz mode is on.
+  const [hadJumps] = useState(jumpCount > 0);
+  const [toggled, setToggled] = useState<Partial<Record<SettingId, boolean>>>({});
+  const openByDefault: Record<SettingId, boolean> = {
+    logic: hadJumps && jumpEligible,
+    recall: false,
+    followup: false,
+    points: pointsAvailable,
+  };
+  const isOpen = (id: SettingId) => toggled[id] ?? openByDefault[id];
+  const togglePanel = (id: SettingId) =>
+    setToggled((t) => ({ ...t, [id]: !(t[id] ?? openByDefault[id]) }));
+  const panelId = (id: SettingId) => `q-${question.id}-${id}`;
+
   return (
-    <li ref={setNodeRef} style={style} className="rounded-lg border border-hairline bg-card p-5">
+    <li
+      ref={setNodeRef}
+      style={style}
+      className="rounded-lg border border-hairline bg-card p-4 sm:p-5"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <button
@@ -1617,7 +1737,7 @@ function SortableQuestionCard({
             );
             if (unknown.length === 0) return null;
             return (
-              <p className="text-[11px] text-amber-700">
+              <p className="text-[11px] text-sun">
                 {unknown.map((k) => `{${k}}`).join(", ")} doesn’t match an earlier answer or hidden
                 field, so it will be left out.
               </p>
@@ -1689,109 +1809,268 @@ function SortableQuestionCard({
         </div>
       )}
 
-      {(() => {
-        const cfg = getChoiceConfig(question.options);
-        const jumpEligible =
-          question.type === "dropdown" ||
-          question.type === "yes_no" ||
-          (question.type === "multiple_choice" && !cfg.multi);
-        if (!jumpEligible) return null;
-        const choices = question.type === "yes_no" ? ["Yes", "No"] : cfg.choices;
-        if (choices.length === 0) return null;
-        const jumps = question.logic?.jumps ?? {};
-        const setJump = (choice: string, target: string) => {
-          const next = { ...jumps };
-          if (target === "") delete next[choice];
-          else next[choice] = target;
-          onChangeLogic(Object.keys(next).length > 0 ? { jumps: next } : null);
-        };
-        return (
-          <details
-            className="mt-4 rounded-xl bg-surface/60 p-3"
-            open={Object.keys(jumps).length > 0}
-          >
-            <summary className="cursor-pointer text-xs font-semibold text-ink/70">
-              Logic jumps{" "}
-              <span className="font-normal text-ink/40">skip questions based on the answer</span>
-            </summary>
-            <div className="mt-3 space-y-2">
-              {choices.map((choice) => (
-                <div key={choice} className="flex items-center gap-2 text-sm">
-                  <span className="min-w-0 flex-1 truncate text-ink/70">
-                    If <span className="font-semibold text-ink">"{choice}"</span>
-                  </span>
-                  <select
-                    value={jumps[choice] ?? ""}
-                    onChange={(e) => setJump(choice, e.target.value)}
-                    className="w-52 rounded-md border border-input bg-card px-2 py-1.5 text-xs shadow-sm"
-                  >
-                    <option value="">→ Next question</option>
-                    {jumpTargets.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        → Q{t.number}: {t.label.slice(0, 40)}
-                      </option>
-                    ))}
-                    <option value={JUMP_TO_END}>→ End of form</option>
-                  </select>
-                </div>
-              ))}
-              <p className="text-xs text-ink/40">
-                Jumps go forward only. Newly added questions become targets after saving.
-              </p>
-            </div>
-          </details>
-        );
-      })()}
-
-      {quizEnabled && SCORABLE_TYPES.includes(question.type) && (
-        <PointsEditor
-          choices={scoringChoices(question)}
-          points={question.points ?? null}
-          onChange={onChangePoints}
-        />
-      )}
-
-      <div className="mt-4 flex items-center gap-2 border-t border-hairline pt-3">
-        <Switch
-          id={`q-${question.id}-required`}
-          checked={question.required}
-          onCheckedChange={onChangeRequired}
-        />
-        <Label htmlFor={`q-${question.id}-required`} className="text-xs font-normal">
-          Required
-        </Label>
-        {(question.type === "text" || question.type === "long_text") && (
-          <>
-            <span className="mx-2 h-4 w-px bg-hairline" aria-hidden />
+      <div className="mt-4 border-t border-hairline pt-3">
+        <p className="text-xs font-medium text-ink/45">Question settings</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <div className="mr-2 flex items-center gap-2">
             <Switch
-              id={`q-${question.id}-ai-follow-up`}
-              checked={!!question.ai_follow_up}
-              onCheckedChange={onChangeAiFollowUp}
+              id={`q-${question.id}-required`}
+              checked={question.required}
+              onCheckedChange={onChangeRequired}
             />
-            <Label
-              htmlFor={`q-${question.id}-ai-follow-up`}
-              className="inline-flex items-center gap-1 text-xs font-normal"
-            >
-              <Sparkles className="size-3.5 text-brand" aria-hidden />
-              AI follow-up
+            <Label htmlFor={`q-${question.id}-required`} className="text-xs font-normal">
+              Required
             </Label>
-          </>
+          </div>
+          <SettingToggle
+            label="Logic jumps"
+            status={jumpCount > 0 ? String(jumpCount) : null}
+            available={jumpEligible}
+            open={isOpen("logic")}
+            controls={panelId("logic")}
+            onClick={() => togglePanel("logic")}
+          />
+          <SettingToggle
+            label="Recall"
+            status={question.recall_key ? `{${question.recall_key}}` : null}
+            available
+            open={isOpen("recall")}
+            controls={panelId("recall")}
+            onClick={() => togglePanel("recall")}
+          />
+          <SettingToggle
+            label="AI follow-up"
+            claude
+            status={question.ai_follow_up ? "On" : null}
+            available={followUpEligible}
+            open={isOpen("followup")}
+            controls={panelId("followup")}
+            onClick={() => togglePanel("followup")}
+          />
+          <SettingToggle
+            label="Points"
+            status={
+              pointsAvailable && hasPoints ? (questionMax > 0 ? `${questionMax} pts` : "Set") : null
+            }
+            available={pointsAvailable}
+            open={isOpen("points")}
+            controls={panelId("points")}
+            onClick={() => togglePanel("points")}
+          />
+        </div>
+
+        {isOpen("logic") && (
+          <SettingPanel
+            id={panelId("logic")}
+            title="Logic jumps"
+            hint="Skip questions based on the answer."
+          >
+            {!jumpEligible ? (
+              <p className="text-xs text-ink/55">
+                Jumps work on dropdown, Yes / No and single-choice questions. Change the type to use
+                them.
+              </p>
+            ) : jumpChoices.length === 0 ? (
+              <p className="text-xs text-ink/55">Add an option first.</p>
+            ) : (
+              <div className="space-y-2">
+                {jumpChoices.map((choice) => (
+                  <div
+                    key={choice}
+                    className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-ink/70">
+                      If <span className="font-semibold text-ink">"{choice}"</span>
+                    </span>
+                    <select
+                      value={jumps[choice] ?? ""}
+                      onChange={(e) => setJump(choice, e.target.value)}
+                      className="w-full rounded-md border border-input bg-card px-2 py-1.5 text-xs shadow-sm sm:w-52"
+                    >
+                      <option value="">→ Next question</option>
+                      {jumpTargets.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          → Q{t.number}: {t.label.slice(0, 40)}
+                        </option>
+                      ))}
+                      <option value={JUMP_TO_END}>→ End of form</option>
+                    </select>
+                  </div>
+                ))}
+                <p className="text-xs text-ink/40">
+                  Jumps go forward only. Newly added questions become targets after saving.
+                </p>
+              </div>
+            )}
+          </SettingPanel>
         )}
-        <RecallKeyField
-          questionId={question.id}
-          value={question.recall_key ?? null}
-          taken={takenKeys}
-          onChange={onChangeRecallKey}
-        />
+
+        {isOpen("recall") && (
+          <SettingPanel
+            id={panelId("recall")}
+            title="Recall"
+            hint="Name this answer to reuse it in later questions."
+          >
+            <RecallKeyField
+              questionId={question.id}
+              value={question.recall_key ?? null}
+              taken={takenKeys}
+              onChange={onChangeRecallKey}
+            />
+            <p className="mt-2 text-xs text-ink/50">
+              {question.recall_key ? (
+                <>
+                  Write <span className="font-mono">{`{${question.recall_key}}`}</span> in any later
+                  question and it becomes this answer.
+                </>
+              ) : (
+                <>
+                  Call it <span className="font-mono">name</span>, then a later question can say
+                  “Thanks, <span className="font-mono">{"{name}"}</span>.”
+                </>
+              )}
+            </p>
+          </SettingPanel>
+        )}
+
+        {isOpen("followup") && (
+          <SettingPanel
+            id={panelId("followup")}
+            title="AI follow-up"
+            hint="Claude asks one more question when an answer is thin."
+          >
+            {!followUpEligible ? (
+              <p className="text-xs text-ink/55">
+                Follow-ups work on short answer and long answer questions. Change the type to use
+                them.
+              </p>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id={`q-${question.id}-ai-follow-up`}
+                    checked={!!question.ai_follow_up}
+                    onCheckedChange={onChangeAiFollowUp}
+                  />
+                  <Label htmlFor={`q-${question.id}-ai-follow-up`} className="text-xs font-normal">
+                    Ask a follow-up on this question
+                  </Label>
+                </div>
+                <p className="mt-2 text-xs text-ink/50">
+                  {conversational
+                    ? "When an answer is short or vague, Claude asks one optional follow-up question before moving on."
+                    : "Follow-ups only work in Conversational mode. Switch Respondent experience to use them."}
+                </p>
+              </>
+            )}
+          </SettingPanel>
+        )}
+
+        {isOpen("points") && (
+          <SettingPanel id={panelId("points")} title="Points" hint="Quiz score for each answer.">
+            {!quizEnabled ? (
+              <p className="text-xs text-ink/55">
+                Points belong to Quiz mode. Turn it on under Form settings, then score each answer
+                here.
+              </p>
+            ) : !scorable ? (
+              <p className="text-xs text-ink/55">
+                Points work on multiple choice, dropdown and Yes / No questions. Change the type to
+                use them.
+              </p>
+            ) : scoringChoices(question).length === 0 ? (
+              <p className="text-xs text-ink/55">Add an option first.</p>
+            ) : (
+              <PointsEditor
+                choices={scoringChoices(question)}
+                points={question.points ?? null}
+                onChange={onChangePoints}
+              />
+            )}
+          </SettingPanel>
+        )}
       </div>
-      {!!question.ai_follow_up && (
-        <p className="mt-2 text-xs text-ink/50">
-          {conversational
-            ? "When an answer is short or vague, Claude asks one optional follow-up question before moving on."
-            : "Follow-ups only work in one-question-at-a-time mode. Switch the display mode to use them."}
-        </p>
-      )}
     </li>
+  );
+}
+
+/* ---------------------------- Question settings ---------------------------- */
+
+type SettingId = "logic" | "recall" | "followup" | "points";
+
+/** The small mono tag that marks work Claude does. */
+function ClaudeTag() {
+  return (
+    <span className="rounded-sm border border-brand/25 bg-accent px-1.5 py-px font-mono text-[10px] font-normal uppercase tracking-wide text-brand">
+      Claude
+    </span>
+  );
+}
+
+/**
+ * One entry in a question's settings row. Every question shows the same four,
+ * in the same order; one that doesn't apply is dimmed and, when opened, says
+ * what it needs. `status` shows what is set without opening it.
+ */
+function SettingToggle({
+  label,
+  status,
+  available,
+  open,
+  controls,
+  onClick,
+  claude,
+}: {
+  label: string;
+  status: string | null;
+  available: boolean;
+  open: boolean;
+  controls: string;
+  onClick: () => void;
+  claude?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      aria-expanded={open}
+      aria-controls={controls}
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border px-2.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
+        open
+          ? "border-brand bg-accent font-medium text-accent-foreground"
+          : status
+            ? "border-ink/25 bg-card font-medium text-ink hover:border-ink/45"
+            : available
+              ? "border-hairline bg-card text-ink/65 hover:border-ink/25 hover:text-ink"
+              : "border-hairline text-ink/40 hover:text-ink/65",
+      )}
+    >
+      {label}
+      {claude && <ClaudeTag />}
+      {status && <span className="truncate font-mono text-[11px] font-normal">{status}</span>}
+    </button>
+  );
+}
+
+function SettingPanel({
+  id,
+  title,
+  hint,
+  children,
+}: {
+  id: string;
+  title: string;
+  hint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div id={id} className="mt-3 rounded-lg border border-hairline bg-surface/60 p-3">
+      <p className="text-xs font-semibold text-ink/75">
+        {title} <span className="font-normal text-ink/45">{hint}</span>
+      </p>
+      <div className="mt-2.5">{children}</div>
+    </div>
   );
 }
 
@@ -1827,7 +2106,7 @@ function RecallKeyField({
     onChange(key);
   };
   return (
-    <div className="ml-auto flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5">
       <Label htmlFor={`q-${questionId}-recall`} className="text-xs font-normal text-ink/55">
         Recall as
       </Label>
@@ -1877,25 +2156,20 @@ function PointsEditor({
     onChange(Object.keys(next).length > 0 ? next : null);
   };
   return (
-    <div className="mt-4 rounded-xl bg-brand/5 p-3">
-      <p className="text-xs font-semibold text-ink/70">
-        Points <span className="font-normal text-ink/45">— quiz score for each answer</span>
-      </p>
-      <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-        {choices.map((c) => (
-          <label key={c} className="flex items-center gap-2 text-sm">
-            <span className="min-w-0 flex-1 truncate text-ink/70">{c}</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              value={points?.[c] ?? ""}
-              placeholder="0"
-              onChange={(e) => set(c, e.target.value)}
-              className="h-8 w-20 rounded-md border border-input bg-card px-2 text-right font-mono text-sm shadow-sm"
-            />
-          </label>
-        ))}
-      </div>
+    <div className="grid gap-1.5 sm:grid-cols-2">
+      {choices.map((c) => (
+        <label key={c} className="flex items-center gap-2 text-sm">
+          <span className="min-w-0 flex-1 truncate text-ink/70">{c}</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={points?.[c] ?? ""}
+            placeholder="0"
+            onChange={(e) => set(c, e.target.value)}
+            className="h-8 w-20 rounded-md border border-input bg-card px-2 text-right font-mono text-sm shadow-sm"
+          />
+        </label>
+      ))}
     </div>
   );
 }
@@ -1942,12 +2216,14 @@ function useDebouncedLocal(value: string, onChange: (v: string) => void, delay =
 }
 
 function DebouncedInput({
+  id,
   value,
   onChange,
   placeholder,
   delay,
   className,
 }: {
+  id?: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
@@ -1957,6 +2233,7 @@ function DebouncedInput({
   const { local, onLocalChange, flush } = useDebouncedLocal(value, onChange, delay);
   return (
     <Input
+      id={id}
       value={local}
       placeholder={placeholder}
       className={className}
@@ -1970,12 +2247,14 @@ function DebouncedInput({
 }
 
 function DebouncedTextarea({
+  id,
   value,
   onChange,
   placeholder,
   delay,
   rows = 3,
 }: {
+  id?: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
@@ -1985,6 +2264,7 @@ function DebouncedTextarea({
   const { local, onLocalChange, flush } = useDebouncedLocal(value, onChange, delay);
   return (
     <Textarea
+      id={id}
       value={local}
       placeholder={placeholder}
       rows={rows}

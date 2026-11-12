@@ -2,13 +2,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
   Download,
   FileText,
   Loader2,
   Presentation,
   RefreshCw,
   Rows3,
+  Share2,
   Sparkles,
   Table2,
   X,
@@ -43,8 +43,12 @@ import {
   type FollowUps,
 } from "@/lib/form-utils";
 import { useAuth } from "@/hooks/use-auth";
-import { useWorkspaceRole } from "@/lib/workspace";
-import { Shell } from "@/components/shell";
+import { permissions, useWorkspaceRole } from "@/lib/workspace";
+import { AppShell, AppShellSkeleton } from "@/components/app-shell";
+import { FormHeader, actionSecondary } from "@/components/form-header";
+import { ShareFormDialog } from "@/components/share-form-dialog";
+import { isSigningOut } from "@/lib/sign-out";
+import type { FormStatus } from "@/lib/form-utils";
 import { ClientOnly } from "@/components/client-only";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -118,6 +122,7 @@ function ResponsesPage() {
   // null = every version together; a number scopes the whole page to it.
   const [version, setVersion] = useState<number | null>(null);
   const [tab, setTab] = useState("overview");
+  const [shareOpen, setShareOpen] = useState(false);
   // Individual responses as cards or a spreadsheet-style table (remembered).
   const [layout, setLayoutState] = useState<"cards" | "table">(() => {
     try {
@@ -147,7 +152,7 @@ function ResponsesPage() {
   useEffect(() => setAskFilter(null), [version]);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isSigningOut()) {
       navigate({ to: "/login", search: { redirect: `/forms/${formId}/responses` } });
     }
   }, [loading, user, navigate, formId]);
@@ -161,7 +166,7 @@ function ResponsesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, user_id, settings")
+        .select("id, title, user_id, settings, status, version")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -269,24 +274,26 @@ function ResponsesPage() {
 
   const { role, isLoading: roleLoading } = useWorkspaceRole(user?.id ?? "", formQ.data?.user_id);
 
-  if (loading || formQ.isLoading || (formQ.data && roleLoading)) {
-    return (
-      <Shell width="md">
-        <Skeleton className="h-10 w-64" />
-      </Shell>
-    );
+  if (loading || !user || formQ.isLoading || (formQ.data && roleLoading)) {
+    return <AppShellSkeleton width="md" />;
   }
 
   // Any workspace member (viewer and up) may read responses; a published
   // form row alone is publicly readable, so the role is the real gate.
   if (!formQ.data || !role) {
     return (
-      <Shell width="md">
-        <h1 className="font-display text-3xl">Form not found</h1>
-        <Link to="/dashboard" className="mt-6 inline-block text-brand underline">
-          Back to dashboard
+      <AppShell userId={user.id} email={user.email ?? ""} width="md">
+        <h1 className="font-display text-[26px] leading-tight">Form not found</h1>
+        <p className="mt-2 text-sm text-ink/60">
+          It may have been deleted, or you don’t have access.
+        </p>
+        <Link
+          to="/dashboard"
+          className="mt-6 inline-block text-sm font-medium text-brand hover:underline"
+        >
+          Back to forms
         </Link>
-      </Shell>
+      </AppShell>
     );
   }
 
@@ -322,23 +329,82 @@ function ResponsesPage() {
   const hasMore = rawResponses.length > responseLimit;
   const responses = hasMore ? rawResponses.slice(0, responseLimit) : rawResponses;
 
-  return (
-    <Shell width="md">
-      <Link
-        to="/dashboard"
-        search={formQ.data.user_id !== user?.id ? { ws: formQ.data.user_id } : {}}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 hover:text-ink"
-      >
-        <ArrowLeft className="size-4" /> Back to dashboard
-      </Link>
+  const totalResponses = analyticsQ.data?.totals.responses ?? responses.length;
+  const status = formQ.data.status as FormStatus;
 
-      <header className="mt-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl md:text-4xl">{formQ.data.title}</h1>
-          <p className="mt-1 text-ink/60">
+  const headerActions = (
+    <>
+      {status === "published" && (
+        <button type="button" onClick={() => setShareOpen(true)} className={actionSecondary}>
+          <Share2 className="size-3.5" /> Share
+        </button>
+      )}
+      {(["csv", "pdf"] as const).map((kind) => (
+        <button
+          key={kind}
+          type="button"
+          disabled={exporting !== null || responses.length === 0}
+          title={
+            kind === "pdf"
+              ? "A printable report with a chart or quotes for every question"
+              : "Every response as a spreadsheet row"
+          }
+          onClick={async () => {
+            setExporting(kind);
+            try {
+              const run = kind === "pdf" ? exportResponsesPdf : exportResponsesCsv;
+              const count = await run(formId, formQ.data!.title, questions, version);
+              toast.success(
+                `Exported ${count} ${count === 1 ? "response" : "responses"} to ${kind.toUpperCase()}`,
+              );
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Export failed. Try again.");
+            } finally {
+              setExporting(null);
+            }
+          }}
+          className={actionSecondary}
+        >
+          {exporting === kind ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : kind === "pdf" ? (
+            <FileText className="size-3.5" />
+          ) : (
+            <Download className="size-3.5" />
+          )}
+          {exporting === kind ? "Exporting…" : `Export ${kind.toUpperCase()}`}
+        </button>
+      ))}
+    </>
+  );
+
+  return (
+    <AppShell
+      userId={user.id}
+      email={user.email ?? ""}
+      ownerId={formQ.data.user_id}
+      width="md"
+      header={
+        <FormHeader
+          formId={formId}
+          title={formQ.data.title}
+          status={status}
+          version={formQ.data.version}
+          ownerSearch={formQ.data.user_id !== user.id ? { ws: formQ.data.user_id } : {}}
+          active="results"
+          canEdit={permissions(role).canEdit}
+          responseCount={totalResponses}
+          actions={headerActions}
+          width="md"
+        />
+      }
+    >
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-[26px] leading-tight md:text-[28px]">Results</h1>
+          <p className="mt-1.5 text-sm text-ink/60">
             {(() => {
-              const total = analyticsQ.data?.totals.responses ?? responses.length;
-              const label = `${total} ${total === 1 ? "response" : "responses"}`;
+              const label = `${totalResponses} ${totalResponses === 1 ? "response" : "responses"}`;
               if (!multiVersion) return label;
               return version != null
                 ? `${label} · version ${version}`
@@ -346,53 +412,15 @@ function ResponsesPage() {
             })()}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to="/forms/$formId/live"
-            params={{ formId }}
-            title="Full-screen results that update as answers arrive. Made for talks and workshops."
-            className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:bg-brand/90"
-          >
-            <Presentation className="size-4" />
-            Present live
-          </Link>
-          {(["csv", "pdf"] as const).map((kind) => (
-            <button
-              key={kind}
-              type="button"
-              disabled={exporting !== null || responses.length === 0}
-              title={
-                kind === "pdf"
-                  ? "A printable report with a chart or quotes for every question"
-                  : "Every response as a spreadsheet row"
-              }
-              onClick={async () => {
-                setExporting(kind);
-                try {
-                  const run = kind === "pdf" ? exportResponsesPdf : exportResponsesCsv;
-                  const count = await run(formId, formQ.data!.title, questions, version);
-                  toast.success(
-                    `Exported ${count} ${count === 1 ? "response" : "responses"} to ${kind.toUpperCase()}`,
-                  );
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Export failed. Try again.");
-                } finally {
-                  setExporting(null);
-                }
-              }}
-              className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-card px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {exporting === kind ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : kind === "pdf" ? (
-                <FileText className="size-4" />
-              ) : (
-                <Download className="size-4" />
-              )}
-              {exporting === kind ? "Exporting…" : `Export ${kind.toUpperCase()}`}
-            </button>
-          ))}
-        </div>
+        <Link
+          to="/forms/$formId/live"
+          params={{ formId }}
+          title="Full-screen results that update as answers arrive. Made for talks and workshops."
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-3.5 text-[13px] font-medium text-brand-foreground outline-none transition-colors hover:bg-brand/90 focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+        >
+          <Presentation className="size-4" />
+          Present live
+        </Link>
       </header>
 
       {multiVersion && (
@@ -523,7 +551,13 @@ function ResponsesPage() {
           )}
         </TabsContent>
       </Tabs>
-    </Shell>
+      <ShareFormDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        formId={formId}
+        formTitle={formQ.data.title}
+      />
+    </AppShell>
   );
 }
 
@@ -1398,11 +1432,11 @@ function FollowUpView({ followUp, compact = false }: { followUp: FollowUp; compa
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="bg-card px-5 py-4">
-      <p className="font-mono text-[10px] uppercase tracking-wide text-ink/45">{label}</p>
-      <p className="mt-1.5 font-mono text-2xl font-medium tabular-nums tracking-tight text-ink">
+      <p className="text-xs text-ink/55">{label}</p>
+      <p className="mt-0.5 text-2xl font-medium leading-tight tabular-nums tracking-tight text-ink">
         {value}
       </p>
-      {hint && <p className="mt-1 text-xs text-ink/45">{hint}</p>}
+      {hint && <p className="mt-0.5 font-mono text-[11px] text-ink/45">{hint}</p>}
     </div>
   );
 }

@@ -1,18 +1,35 @@
 import type { FormStatus } from "@/lib/form-utils";
 
-const STYLES: Record<FormStatus, { label: string; dot: string; text: string }> = {
-  published: { label: "Live", dot: "bg-emerald-500", text: "text-emerald-800" },
-  closed: { label: "Closed", dot: "bg-amber-500", text: "text-amber-800" },
-  draft: { label: "Draft", dot: "bg-ink/30", text: "text-ink/60" },
+/**
+ * The one definition of how a form's status looks. Every list, card and
+ * header uses these, so "Live" is the same green dot everywhere, in both
+ * themes.
+ */
+export const STATUS_STYLE: Record<FormStatus, { label: string; dot: string; text: string }> = {
+  published: { label: "Live", dot: "bg-mint", text: "text-mint" },
+  closed: { label: "Closed", dot: "bg-sun", text: "text-sun" },
+  draft: { label: "Draft", dot: "bg-ink/30", text: "text-ink/55" },
 };
 
+/** Dot + word, for dense places: list rows, cards, the command palette. */
+export function StatusLabel({ status }: { status: FormStatus }) {
+  const s = STATUS_STYLE[status] ?? STATUS_STYLE.draft;
+  return (
+    <span className={`inline-flex items-center gap-1.5 font-medium ${s.text}`}>
+      <span aria-hidden className={`size-1.5 rounded-full ${s.dot}`} />
+      {s.label}
+    </span>
+  );
+}
+
+/** Bordered chip, for page headers where the status stands alone. */
 export function StatusPill({ status }: { status: FormStatus }) {
-  const s = STYLES[status] ?? STYLES.draft;
+  const s = STATUS_STYLE[status] ?? STATUS_STYLE.draft;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-sm border border-hairline bg-card px-2 py-0.5 font-mono text-[11px] font-medium uppercase tracking-wide ${s.text}`}
+      className={`inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full border border-hairline bg-card px-2 text-[11px] font-medium ${s.text}`}
     >
-      <span className={`size-1.5 rounded-full ${s.dot}`} />
+      <span aria-hidden className={`size-1.5 rounded-full ${s.dot}`} />
       {s.label}
     </span>
   );

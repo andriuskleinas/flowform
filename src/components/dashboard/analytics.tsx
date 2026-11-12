@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 type DashboardSummary = {
   days: number;
@@ -36,12 +37,16 @@ function parseDay(day: string) {
 const dayFmt = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
 
 /**
- * Workspace performance: the headline numbers for the chosen period, a
- * responses-over-time chart and the view → start → submit funnel. Everything
- * comes from one `get_dashboard_summary` round-trip (server-side aggregation).
+ * Workspace overview: the four headline numbers for the chosen period next to
+ * a responses-over-time chart (or the view → start → submit funnel). One
+ * `get_dashboard_summary` round-trip, aggregated server-side.
+ *
+ * Deliberately short: the forms list is why people open this page, so the
+ * overview has to leave room for it above the fold.
  */
 export function DashboardAnalytics({ ownerId }: { ownerId: string }) {
   const [days, setDays] = useState<number>(30);
+  const [chart, setChart] = useState<"trend" | "funnel">("trend");
   const range = RANGES.find((r) => r.days === days) ?? RANGES[1];
 
   const { data, isLoading, isError, isFetching } = useQuery({
@@ -78,105 +83,98 @@ export function DashboardAnalytics({ ownerId }: { ownerId: string }) {
   const abandoned = Math.max(0, starts - responses);
   const abandonRate = starts >= MIN_VIEWS ? abandoned / starts : null;
 
+  const kpis = [
+    {
+      label: "Responses",
+      value: fmt.format(responses),
+      hint: "Submitted forms in this period",
+      footer: data && <Delta current={responses} previous={data.responses_prev_window} />,
+    },
+    {
+      label: "Views",
+      value: fmt.format(views),
+      hint: "Times a live form was opened",
+      footer: <span className="text-ink/45">{fmt.format(starts)} started</span>,
+    },
+    {
+      label: "Conversion",
+      value: conversion === null ? "—" : pct(conversion),
+      hint: "Responses ÷ views",
+      footer: (
+        <span className="text-ink/45">
+          {conversion === null ? `needs ${MIN_VIEWS}+ views` : "of visitors submit"}
+        </span>
+      ),
+    },
+    {
+      label: "Drop-off",
+      value: abandonRate === null ? "—" : pct(abandonRate),
+      hint: "Started answering but never submitted",
+      footer: (
+        <span className="text-ink/45">
+          {abandonRate === null ? "too few starts yet" : `${fmt.format(abandoned)} left mid-form`}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <section
-      aria-labelledby="performance-heading"
-      className="rounded-xl border border-hairline bg-card"
+      aria-labelledby="overview-heading"
+      className="flex min-w-0 flex-col rounded-xl border border-hairline bg-card"
     >
-      <header className="flex flex-wrap items-center justify-between gap-3 px-5 pb-1 pt-4 md:px-6">
-        <div>
-          <h2 id="performance-heading" className="text-[15px] font-medium">
-            Performance
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 py-3">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2.5">
+          <h2 id="overview-heading" className="text-[15px] font-medium tracking-normal">
+            Overview
           </h2>
-          <p className="mt-0.5 text-xs text-ink/50">All forms · {range.long}</p>
+          <p className="text-xs text-ink/50">
+            All forms · {range.long}
+            {data ? ` · ${fmt.format(data.total_responses)} all-time` : ""}
+          </p>
         </div>
-        <div
-          role="radiogroup"
-          aria-label="Time range"
-          className="inline-flex rounded-md border border-hairline bg-surface p-0.5"
-        >
-          {RANGES.map((r) => (
-            <button
-              key={r.days}
-              type="button"
-              role="radio"
-              aria-checked={days === r.days}
-              onClick={() => setDays(r.days)}
-              className={
-                "min-w-10 rounded px-2.5 py-1 font-mono text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 " +
-                (days === r.days ? "bg-card text-ink shadow-sm" : "text-ink/50 hover:text-ink")
-              }
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Time range"
+          value={String(days)}
+          onChange={(v) => setDays(Number(v))}
+          options={RANGES.map((r) => ({ value: String(r.days), label: r.label }))}
+          mono
+        />
       </header>
 
-      <dl className="grid grid-cols-2 gap-y-5 px-5 py-5 md:grid-cols-4 md:px-6">
-        <Kpi
-          label="Responses"
-          loading={isLoading}
-          value={fmt.format(responses)}
-          hint="Submitted forms in this period"
-          footer={data && <Delta current={responses} previous={data.responses_prev_window} />}
-        />
-        <Kpi
-          label="Views"
-          loading={isLoading}
-          value={fmt.format(views)}
-          hint="Times a live form was opened"
-          footer={<span className="text-ink/45">{fmt.format(starts)} started</span>}
-        />
-        <Kpi
-          label="Conversion"
-          loading={isLoading}
-          value={conversion === null ? "—" : pct(conversion)}
-          hint="Responses ÷ views"
-          footer={
-            <span className="text-ink/45">
-              {conversion === null ? `needs ${MIN_VIEWS}+ views` : "of visitors submit"}
-            </span>
-          }
-        />
-        <Kpi
-          label="Drop-off"
-          loading={isLoading}
-          value={abandonRate === null ? "—" : pct(abandonRate)}
-          hint="Started answering but never submitted"
-          footer={
-            <span className="text-ink/45">
-              {abandonRate === null
-                ? "not enough starts yet"
-                : `${fmt.format(abandoned)} left mid-form`}
-            </span>
-          }
-        />
-      </dl>
+      <div className="grid flex-1 border-t border-hairline md:grid-cols-[minmax(0,21rem)_minmax(0,1fr)]">
+        <dl className="grid grid-cols-2">
+          {kpis.map((k, i) => (
+            <Kpi
+              key={k.label}
+              {...k}
+              loading={isLoading}
+              className={cn(i % 2 === 1 && "border-l", i >= 2 && "border-t")}
+            />
+          ))}
+        </dl>
 
-      <div className="grid border-t border-hairline lg:grid-cols-[minmax(0,1fr)_17rem]">
-        <div className="px-5 pb-5 pt-4 md:px-6">
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 className="text-xs font-medium text-ink/60">
-              Responses {data && data.daily.length > 45 ? "per week" : "per day"}
+        <div className="flex min-w-0 flex-col border-t border-hairline px-5 pb-4 pt-3.5 md:border-l md:border-t-0">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-xs font-medium tracking-normal text-ink/60">
+              {chart === "funnel"
+                ? "From view to response"
+                : `Responses ${data && data.daily.length > 45 ? "per week" : "per day"}`}
             </h3>
-            {data && (
-              <span className="font-mono text-[11px] text-ink/45">
-                {fmt.format(data.total_responses)} all-time
-              </span>
-            )}
+            <Segmented
+              label="Chart"
+              value={chart}
+              onChange={(v) => setChart(v as "trend" | "funnel")}
+              options={[
+                { value: "trend", label: "Trend" },
+                { value: "funnel", label: "Funnel" },
+              ]}
+            />
           </div>
           {isLoading || !data ? (
-            <Skeleton className="mt-4 h-36 w-full" />
-          ) : (
+            <Skeleton className="mt-4 h-32 w-full" />
+          ) : chart === "trend" ? (
             <ResponsesChart daily={data.daily} dimmed={isFetching} />
-          )}
-        </div>
-
-        <div className="border-t border-hairline px-5 pb-5 pt-4 md:px-6 lg:border-l lg:border-t-0">
-          <h3 className="text-xs font-medium text-ink/60">Funnel</h3>
-          {isLoading || !data ? (
-            <Skeleton className="mt-4 h-36 w-full" />
           ) : (
             <Funnel
               views={views}
@@ -190,33 +188,77 @@ export function DashboardAnalytics({ ownerId }: { ownerId: string }) {
   );
 }
 
+/** Small segmented control: time ranges, chart type. */
+function Segmented({
+  label,
+  value,
+  onChange,
+  options,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  mono?: boolean;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="inline-flex shrink-0 rounded-md border border-hairline bg-surface p-0.5"
+    >
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          role="radio"
+          aria-checked={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "rounded px-2 py-0.5 text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
+            mono && "min-w-9 font-mono",
+            value === o.value ? "bg-card text-ink shadow-sm" : "text-ink/50 hover:text-ink",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Kpi({
   label,
   value,
   hint,
   footer,
   loading,
+  className,
 }: {
   label: string;
   value: string;
   hint: string;
   footer?: React.ReactNode;
   loading?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="min-w-0 pr-4">
+    <div
+      className={cn("flex min-w-0 flex-col justify-center border-hairline px-5 py-3.5", className)}
+    >
       <dt className="text-xs text-ink/55" title={hint}>
         {label}
       </dt>
       <dd>
         {loading ? (
-          <Skeleton className="mt-2 h-8 w-20" />
+          <Skeleton className="mt-1.5 h-7 w-16" />
         ) : (
-          <p className="mt-1 text-[28px] font-medium leading-tight tabular-nums tracking-tight">
+          <p className="mt-0.5 text-2xl font-medium leading-tight tabular-nums tracking-tight">
             {value}
           </p>
         )}
-        <div className="mt-1 h-4 truncate font-mono text-[11px]">{!loading && footer}</div>
+        <div className="mt-0.5 h-4 truncate font-mono text-[11px]">{!loading && footer}</div>
       </dd>
     </div>
   );
@@ -225,17 +267,18 @@ function Kpi({
 function Delta({ current, previous }: { current: number; previous: number }) {
   if (previous === 0) {
     return (
-      <span className="text-ink/45">
-        {current === 0 ? "none last period either" : "none in previous period"}
-      </span>
+      <span className="text-ink/45">{current === 0 ? "none before either" : "none before"}</span>
     );
   }
   const change = Math.round(((current - previous) / previous) * 100);
-  if (change === 0) return <span className="text-ink/45">same as previous period</span>;
+  if (change === 0) return <span className="text-ink/45">same as before</span>;
   const up = change > 0;
   const Icon = up ? ArrowUpRight : ArrowDownRight;
   return (
-    <span className={"inline-flex items-center gap-0.5 " + (up ? "text-mint" : "text-coral")}>
+    <span
+      className={"inline-flex items-center gap-0.5 " + (up ? "text-mint" : "text-coral")}
+      title="Compared with the period before this one"
+    >
       <Icon className="size-3" aria-hidden />
       {up ? "+" : ""}
       {change}%<span className="ml-1 text-ink/45">vs previous</span>
@@ -288,7 +331,7 @@ function ResponsesChart({
   const tickIdx = [0, Math.floor((buckets.length - 1) / 2), buckets.length - 1];
 
   return (
-    <div className={"mt-3 transition-opacity " + (dimmed ? "opacity-60" : "")}>
+    <div className={"mt-2 flex flex-1 flex-col transition-opacity " + (dimmed ? "opacity-60" : "")}>
       <div className="flex h-5 items-baseline gap-2 font-mono text-[11px]">
         {shown ? (
           <>
@@ -304,14 +347,14 @@ function ResponsesChart({
         )}
       </div>
 
-      <div className="relative mt-1 flex gap-2">
+      <div className="relative mt-1 flex min-h-24 flex-1 gap-2">
         {/* y-axis */}
-        <div className="flex h-32 w-6 shrink-0 flex-col justify-between text-right font-mono text-[10px] leading-none text-ink/35">
+        <div className="flex w-6 shrink-0 flex-col justify-between text-right font-mono text-[10px] leading-none text-ink/35">
           <span>{ceiling}</span>
           <span>{ceiling / 2}</span>
           <span>0</span>
         </div>
-        <div className="relative h-32 min-w-0 flex-1">
+        <div className="relative min-w-0 flex-1">
           {/* gridlines */}
           <div aria-hidden className="absolute inset-0 flex flex-col justify-between">
             <div className="border-t border-dashed border-hairline" />
@@ -380,7 +423,7 @@ function Funnel({
   const base = Math.max(views, 1);
 
   return (
-    <ol className="mt-4 space-y-4">
+    <ol className="mt-3 space-y-3">
       {steps.map((s) => (
         <li key={s.label}>
           <div className="flex items-baseline justify-between gap-2 text-xs">
@@ -394,7 +437,7 @@ function Funnel({
               )}
             </span>
           </div>
-          <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-ink/[0.06]">
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]">
             <div
               className="h-full rounded-full bg-brand transition-[width] duration-500"
               style={{ width: `${Math.min(100, (s.value / base) * 100)}%` }}
@@ -402,8 +445,8 @@ function Funnel({
           </div>
         </li>
       ))}
-      <li className="pt-1 text-[11px] leading-relaxed text-ink/45">
-        Percentages show how many moved on from the step before.
+      <li className="text-[11px] leading-relaxed text-ink/45">
+        Percentages: how many moved on from the step before.
       </li>
     </ol>
   );

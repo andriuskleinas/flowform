@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -10,8 +9,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Logo } from "@/components/logo";
-import { UserMenu } from "@/components/user-menu";
+import { AppShell, AppShellSkeleton } from "@/components/app-shell";
+import { isSigningOut } from "@/lib/sign-out";
 import { ProfileSection, btnPrimary } from "@/components/profile/section";
 import { AppearanceSection } from "@/components/profile/appearance-section";
 import { PendingInvitations, RoleBadge, TeamSection } from "@/components/profile/team-section";
@@ -59,21 +58,12 @@ function ProfilePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isSigningOut()) {
       navigate({ to: "/login", search: { redirect: "/profile" } });
     }
   }, [loading, user, navigate]);
 
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen bg-surface text-ink">
-        <div className="mx-auto max-w-5xl px-6 py-16 md:px-8">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="mt-4 h-64 w-full" />
-        </div>
-      </div>
-    );
-  }
+  if (loading || !user) return <AppShellSkeleton width="md" />;
 
   return (
     <ProfileAuthed
@@ -248,194 +238,169 @@ function ProfileAuthed({
   );
 
   return (
-    <div className="min-h-screen bg-surface text-ink">
-      <header className="border-b border-hairline">
-        <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6 md:px-8">
-          <Link to="/" className="flex items-center gap-2">
-            <Logo />
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              to="/dashboard"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 transition-colors hover:text-ink"
-            >
-              <ArrowLeft className="size-4" />
-              <span className="hidden sm:inline">Back to dashboard</span>
-              <span className="sm:hidden">Dashboard</span>
-            </Link>
-            <UserMenu userId={userId} email={email} />
-          </div>
-        </nav>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-6 pb-32 pt-10 md:px-8 md:pt-14">
-        {/* Identity header */}
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-          <span
-            aria-hidden
-            className="flex size-16 shrink-0 items-center justify-center rounded-full bg-brand text-xl font-semibold text-brand-foreground md:size-20 md:text-2xl"
-          >
-            {initials}
-          </span>
-          <div className="min-w-0">
-            {isLoading ? (
-              <Skeleton className="h-9 w-56" />
-            ) : (
-              <h1 className="font-display truncate text-3xl md:text-4xl">
-                {fullName || "Your profile"}
-              </h1>
-            )}
-            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink/55">
-              <span className="truncate">{email}</span>
-              <span aria-hidden>·</span>
-              <span>Member since {formatDate(createdAt)}</span>
-            </p>
-          </div>
-        </div>
-
-        <dl className="mt-8 grid grid-cols-2 overflow-hidden rounded-xl border border-hairline bg-card sm:grid-cols-4">
-          {[
-            { label: "Forms", value: stats?.forms },
-            { label: "Live now", value: stats?.live },
-            { label: "Responses", value: stats?.responses },
-            { label: "Teammates", value: myTeam?.member_count },
-          ].map((s, i) => (
-            <div
-              key={s.label}
-              className={cn(
-                "border-hairline p-4 md:p-5",
-                i % 2 === 1 && "border-l",
-                i >= 2 && "border-t sm:border-t-0",
-                i === 2 && "sm:border-l",
-              )}
-            >
-              <dt className="eyebrow">{s.label}</dt>
-              <dd className="mt-1.5 font-mono text-2xl tabular-nums text-ink">
-                {s.value === undefined ? (
-                  <Skeleton className="h-7 w-10" />
-                ) : (
-                  s.value.toLocaleString()
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-
-        {memberships.length > 0 && (
-          <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink/55">
-            Also a member of
-            {memberships.map((w) => (
-              <Link
-                key={w.owner_id}
-                to="/dashboard"
-                search={{ ws: w.owner_id }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-card py-0.5 pl-2.5 pr-1 text-ink/75 hover:border-ink/25 hover:text-ink"
-              >
-                {w.owner_name || w.owner_email}
-                <RoleBadge role={w.role} className="h-4" />
-              </Link>
-            ))}
+    <AppShell userId={userId} email={email} width="md">
+      {/* Identity header */}
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <span
+          aria-hidden
+          className="flex size-14 shrink-0 items-center justify-center rounded-full bg-brand text-lg font-semibold text-brand-foreground"
+        >
+          {initials}
+        </span>
+        <div className="min-w-0">
+          {isLoading ? (
+            <Skeleton className="h-9 w-56" />
+          ) : (
+            <h1 className="font-display truncate text-[26px] leading-tight md:text-[28px]">
+              {fullName || "Settings"}
+            </h1>
+          )}
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink/55">
+            <span className="truncate">{email}</span>
+            <span aria-hidden>·</span>
+            <span>Member since {formatDate(createdAt)}</span>
           </p>
-        )}
-
-        <div className="mt-12 grid gap-10 md:grid-cols-[11rem_minmax(0,1fr)] md:gap-12">
-          <nav aria-label="Profile sections" className="hidden md:block">
-            <ul className="sticky top-8 space-y-0.5">
-              {NAV.map((n) => (
-                <li key={n.id}>
-                  <a
-                    href={`#${n.id}`}
-                    aria-current={activeSection === n.id ? "true" : undefined}
-                    className={cn(
-                      "block rounded-md border-l-2 px-3 py-1.5 text-sm transition-colors",
-                      activeSection === n.id
-                        ? "border-brand bg-brand/[0.06] font-medium text-ink"
-                        : "border-transparent text-ink/55 hover:text-ink",
-                      n.id === "danger" && activeSection !== n.id && "text-destructive/80",
-                    )}
-                  >
-                    {n.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="min-w-0 space-y-14">
-            <PendingInvitations userId={userId} compact />
-
-            <ProfileSection
-              id="account"
-              title="Account"
-              description="Your name appears to teammates and in the dashboard greeting."
-            >
-              <form onSubmit={onSubmit} className="space-y-5 p-5 md:p-6">
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="first_name">First name</Label>
-                    <Input
-                      id="first_name"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      maxLength={50}
-                      autoComplete="given-name"
-                      placeholder="Jane"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="last_name">Last name</Label>
-                    <Input
-                      id="last_name"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      maxLength={50}
-                      autoComplete="family-name"
-                      placeholder="Doe"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={emailValue}
-                    onChange={(e) => setEmailValue(e.target.value)}
-                    maxLength={255}
-                    autoComplete="email"
-                    required
-                  />
-                  {pendingEmail ? (
-                    <p className="text-xs text-brand">
-                      Waiting for confirmation of{" "}
-                      <span className="font-medium">{pendingEmail}</span> — check that inbox.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-ink/50">
-                      Changing your email requires confirmation from the new address.
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3 border-t border-hairline pt-5">
-                  <button type="submit" disabled={submitting || !dirty} className={btnPrimary}>
-                    {submitting ? "Saving…" : "Save changes"}
-                  </button>
-                  {dirty && !submitting && (
-                    <span className="text-xs text-ink/50">You have unsaved changes</span>
-                  )}
-                </div>
-              </form>
-            </ProfileSection>
-
-            <AppearanceSection userId={userId} />
-            <TeamSection userId={userId} />
-            <SecuritySection lastSignInAt={lastSignInAt} />
-            <DataSection userId={userId} email={email} />
-          </div>
         </div>
-      </main>
-    </div>
+      </div>
+
+      <dl className="mt-6 grid grid-cols-2 overflow-hidden rounded-xl border border-hairline bg-card sm:grid-cols-4">
+        {[
+          { label: "Forms", value: stats?.forms },
+          { label: "Live now", value: stats?.live },
+          { label: "Responses", value: stats?.responses },
+          { label: "Teammates", value: myTeam?.member_count },
+        ].map((s, i) => (
+          <div
+            key={s.label}
+            className={cn(
+              "border-hairline p-4 md:p-5",
+              i % 2 === 1 && "border-l",
+              i >= 2 && "border-t sm:border-t-0",
+              i === 2 && "sm:border-l",
+            )}
+          >
+            <dt className="text-xs text-ink/55">{s.label}</dt>
+            <dd className="mt-0.5 text-2xl font-medium tabular-nums tracking-tight text-ink">
+              {s.value === undefined ? <Skeleton className="h-7 w-10" /> : s.value.toLocaleString()}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {memberships.length > 0 && (
+        <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink/55">
+          Also a member of
+          {memberships.map((w) => (
+            <Link
+              key={w.owner_id}
+              to="/dashboard"
+              search={{ ws: w.owner_id }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-card py-0.5 pl-2.5 pr-1 text-ink/75 hover:border-ink/25 hover:text-ink"
+            >
+              {w.owner_name || w.owner_email}
+              <RoleBadge role={w.role} className="h-4" />
+            </Link>
+          ))}
+        </p>
+      )}
+
+      <div className="mt-10 grid gap-10 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-10">
+        <nav aria-label="Profile sections" className="hidden md:block">
+          <ul className="sticky top-20 space-y-0.5 lg:top-8">
+            {NAV.map((n) => (
+              <li key={n.id}>
+                <a
+                  href={`#${n.id}`}
+                  aria-current={activeSection === n.id ? "true" : undefined}
+                  className={cn(
+                    "block rounded-md border-l-2 px-3 py-1.5 text-sm transition-colors",
+                    activeSection === n.id
+                      ? "border-brand bg-brand/[0.06] font-medium text-ink"
+                      : "border-transparent text-ink/55 hover:text-ink",
+                    n.id === "danger" && activeSection !== n.id && "text-destructive/80",
+                  )}
+                >
+                  {n.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="min-w-0 space-y-14">
+          <PendingInvitations userId={userId} compact />
+
+          <ProfileSection
+            id="account"
+            title="Account"
+            description="Your name appears to teammates and in the dashboard greeting."
+          >
+            <form onSubmit={onSubmit} className="space-y-5 p-5 md:p-6">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="first_name">First name</Label>
+                  <Input
+                    id="first_name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    maxLength={50}
+                    autoComplete="given-name"
+                    placeholder="Jane"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="last_name">Last name</Label>
+                  <Input
+                    id="last_name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    maxLength={50}
+                    autoComplete="family-name"
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={emailValue}
+                  onChange={(e) => setEmailValue(e.target.value)}
+                  maxLength={255}
+                  autoComplete="email"
+                  required
+                />
+                {pendingEmail ? (
+                  <p className="text-xs text-brand">
+                    Waiting for confirmation of <span className="font-medium">{pendingEmail}</span>{" "}
+                    — check that inbox.
+                  </p>
+                ) : (
+                  <p className="text-xs text-ink/50">
+                    Changing your email requires confirmation from the new address.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 border-t border-hairline pt-5">
+                <button type="submit" disabled={submitting || !dirty} className={btnPrimary}>
+                  {submitting ? "Saving…" : "Save changes"}
+                </button>
+                {dirty && !submitting && (
+                  <span className="text-xs text-ink/50">You have unsaved changes</span>
+                )}
+              </div>
+            </form>
+          </ProfileSection>
+
+          <AppearanceSection userId={userId} />
+          <TeamSection userId={userId} />
+          <SecuritySection lastSignInAt={lastSignInAt} />
+          <DataSection userId={userId} email={email} />
+        </div>
+      </div>
+    </AppShell>
   );
 }

@@ -1,7 +1,9 @@
+import { useEffect, useRef, useState } from "react";
 import {
   ListFilter,
   LayoutGrid,
   List,
+  Search,
   SquareKanban,
   Settings2,
   SlidersHorizontal,
@@ -51,6 +53,7 @@ export function FormsToolbar({
   onView,
   onManageCategories,
   canManageCategories,
+  shownLabel,
 }: {
   search: DashboardSearch;
   setSearch: (patch: Partial<DashboardSearch>) => void;
@@ -64,6 +67,8 @@ export function FormsToolbar({
   onView: (v: ViewMode) => void;
   onManageCategories: () => void;
   canManageCategories: boolean;
+  /** "3 of 14 shown" while anything narrows the list. */
+  shownLabel?: string | null;
 }) {
   const status: StatusFilter = search.status ?? "all";
   const activity: ActivityFilter = search.activity ?? "any";
@@ -78,7 +83,7 @@ export function FormsToolbar({
 
   return (
     <div>
-      <div className="flex flex-col gap-3 border-b border-hairline md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-x-4 gap-y-3 border-b border-hairline md:flex-row md:items-end md:justify-between">
         {/* Status tabs */}
         <div
           role="tablist"
@@ -115,7 +120,8 @@ export function FormsToolbar({
           })}
         </div>
 
-        <div className="flex items-center gap-2 pb-2.5">
+        <div className="flex min-w-0 items-center gap-2 pb-2.5">
+          <SearchField value={search.q ?? ""} onChange={(q) => setSearch({ q: q || undefined })} />
           <DropdownMenu>
             <DropdownMenuTrigger className={`${control} ${activeFilters ? engaged : idle}`}>
               <ListFilter className="size-3.5" />
@@ -262,8 +268,9 @@ export function FormsToolbar({
         </div>
       </div>
 
-      {activeFilters > 0 && (
+      {(activeFilters > 0 || shownLabel) && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          {shownLabel && <span className="mr-1 font-mono text-xs text-ink/45">{shownLabel}</span>}
           {cat && catLabel && (
             <Chip onRemove={() => setSearch({ cat: undefined })} label="Category">
               {cat !== UNCATEGORIZED && <CategoryDot color={catColor} />}
@@ -285,6 +292,85 @@ export function FormsToolbar({
             Clear all
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Filters the list as you type; "/" focuses it. The URL is the source of
+ * truth (so Back and reload keep the search), but typing never waits on it:
+ * the field only takes the URL's value when something else changed it, such
+ * as "Clear all".
+ */
+function SearchField({ value, onChange }: { value: string; onChange: (q: string) => void }) {
+  const [text, setText] = useState(value);
+  const pushed = useRef(value);
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (value !== pushed.current) {
+      pushed.current = value;
+      setText(value);
+    }
+  }, [value]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault();
+      ref.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const update = (next: string) => {
+    setText(next);
+    pushed.current = next.trim();
+    onChange(next.trim());
+  };
+
+  return (
+    <div className="relative min-w-0 flex-1 md:w-44 md:flex-none xl:w-56">
+      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink/40" />
+      <input
+        ref={ref}
+        type="search"
+        value={text}
+        onChange={(e) => update(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && text) {
+            e.preventDefault();
+            update("");
+          }
+        }}
+        maxLength={100}
+        placeholder="Search forms"
+        aria-label="Search forms"
+        className="h-8 w-full rounded-md border border-hairline bg-card pl-8 pr-7 text-[13px] text-ink outline-none transition-colors placeholder:text-ink/40 hover:border-ink/25 focus:border-brand/50 focus:ring-2 focus:ring-brand/20 [&::-webkit-search-cancel-button]:hidden"
+      />
+      {text ? (
+        <button
+          type="button"
+          onClick={() => {
+            update("");
+            ref.current?.focus();
+          }}
+          aria-label="Clear search"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-ink/40 hover:bg-ink/5 hover:text-ink"
+        >
+          <X className="size-3.5" />
+        </button>
+      ) : (
+        <kbd
+          aria-hidden
+          className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-hairline px-1 font-mono text-[10px] leading-4 text-ink/40 md:block"
+        >
+          /
+        </kbd>
       )}
     </div>
   );
