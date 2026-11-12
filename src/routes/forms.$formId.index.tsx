@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, CheckCircle2, CircleSlash, Pencil } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, CheckCircle2, CircleSlash, Pencil, Trophy } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,23 @@ import {
   type FormStatus,
 } from "@/lib/form-utils";
 import { getPublicFormMeta } from "@/lib/form-meta";
+import {
+  buildRecallVars,
+  captureTraffic,
+  computeScore,
+  ensureFontLoaded,
+  isSafeUrl,
+  maxScore,
+  parseFormSettings,
+  parsePoints,
+  pickOutcome,
+  recallText,
+  themeStyle,
+  trafficSource,
+  type FormSettings,
+  type ResponseMeta,
+} from "@/lib/form-settings";
+import type { Json } from "@/integrations/supabase/types";
 import { generateFollowUp } from "@/lib/ai-follow-up";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionRender, type Question } from "@/components/question-render";
@@ -62,6 +79,7 @@ type FormRow = {
   display_mode: DisplayMode;
   thank_you_message: string | null;
   version: number;
+  settings: Json;
 };
 
 type TrackKind = "view" | "start" | "reach";
@@ -88,15 +106,19 @@ function PublicFormPage() {
   // Events raised before auth/form state resolves are queued, then flushed
   // (or discarded, for owners) once tracking is armed.
   const pendingEventsRef = useRef<Array<{ kind: TrackKind; questionId?: string }>>([]);
+  // UTM params / referrer / hidden fields, read once from the landing URL.
+  const metaRef = useRef<ResponseMeta | null>(null);
   const sendEvent = (kind: TrackKind, questionId?: string) => {
     const key = questionId ? `${kind}:${questionId}` : kind;
     if (sentEventsRef.current.has(key)) return;
     sentEventsRef.current.add(key);
+    const source = kind === "view" && metaRef.current ? trafficSource(metaRef.current) : undefined;
     supabase
       .rpc("record_form_event", {
         p_form_id: formId,
         p_kind: kind,
         ...(questionId ? { p_question_id: questionId } : {}),
+        ...(source ? { p_source: source } : {}),
       })
       .then(({ error }) => {
         if (error) sentEventsRef.current.delete(key);
@@ -138,7 +160,9 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, description, user_id, status, display_mode, thank_you_message, version")
+        .select(
+          "id, title, description, user_id, status, display_mode, thank_you_message, version, settings",
+        )
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -151,11 +175,13 @@ function PublicFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position, required, logic, ai_follow_up")
+        .select(
+          "id, form_id, type, label, options, position, required, logic, ai_follow_up, recall_key, points",
+        )
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Question[];
+      return (data ?? []).map((q) => ({ ...q, points: parsePoints(q.points) })) as Question[];
     },
   });
 
@@ -213,6 +239,14 @@ function PublicFormPage() {
   // of the analytics. (Auth gate matters: firing before `user` resolves would
   // count the owner as an anonymous visitor.)
   const form = formQ.data;
+  const settings: FormSettings = useMemo(() => parseFormSettings(form?.settings), [form?.settings]);
+  if (form && !metaRef.current && typeof window !== "undefined") {
+    metaRef.current = captureTraffic(settings.hidden_fields);
+  }
+  useEffect(() => {
+    ensureFontLoaded(settings.theme?.font);
+  }, [settings.theme?.font]);
+
   useEffect(() => {
     if (!form || authLoading || trackableRef.current) return;
     const owner = !!user && user.id === form.user_id;
@@ -253,6 +287,10 @@ function PublicFormPage() {
         answers,
         started_at: startedAtRef.current,
         follow_ups: Object.keys(answeredFollowUps).length > 0 ? answeredFollowUps : null,
+        meta:
+          metaRef.current && Object.keys(metaRef.current).length > 0
+            ? (metaRef.current as Json)
+            : null,
       });
       if (error) throw error;
     },
@@ -294,6 +332,20 @@ function PublicFormPage() {
 
   const questions = questionsQ.data ?? [];
   const missingRequired = questions.filter((q) => q.required && !isAnswered(q, answers[q.id]));
+  // Answer recall: "{name}" in a label shows the earlier answer (or a ?name= link value).
+  const recallVars = buildRecallVars(questions, answers, metaRef.current?.hidden);
+  const recall = (text: string) => recallText(text, recallVars);
+  const brand = themeStyle(settings.theme);
+  const cover = settings.theme?.cover_url ? (
+    <img
+      src={settings.theme.cover_url}
+      alt=""
+      className="mb-8 h-36 w-full rounded-lg border border-hairline object-cover md:h-48"
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).style.display = "none";
+      }}
+    />
+  ) : null;
 
   if (formQ.isLoading) {
     return (
@@ -358,7 +410,7 @@ function PublicFormPage() {
 
   if (status === "closed") {
     return (
-      <Shell width="sm">
+      <Shell width="sm" style={brand}>
         {ownerNav}
         <div className="flex flex-col items-center text-center">
           <span className="flex size-14 items-center justify-center rounded-full bg-amber-100 text-amber-600">
@@ -387,17 +439,46 @@ function PublicFormPage() {
   }
 
   if (submitted) {
+    const quizOn = !!settings.quiz?.enabled && questions.some((q) => q.points);
+    const score = quizOn ? computeScore(questions, answers) : 0;
+    const outcome = quizOn ? pickOutcome(settings.quiz, score) : null;
+    const redirectUrl = isSafeUrl(settings.redirect_url) ? settings.redirect_url : null;
     return (
-      <Shell width="sm">
+      <Shell width="sm" style={brand}>
         {ownerNav}
         <div className="flex flex-col items-center text-center">
-          <CheckCircle2 className="size-14 text-brand" />
-          <h1 className="font-display mt-4 text-3xl">{isOwner ? "Test submission" : "Thanks!"}</h1>
+          {quizOn ? (
+            <span className="flex size-14 items-center justify-center rounded-full bg-brand/10 text-brand">
+              <Trophy className="size-7" />
+            </span>
+          ) : (
+            <CheckCircle2 className="size-14 text-brand" />
+          )}
+          {isOwner && (
+            <p className="eyebrow mt-4 text-ink/50">
+              Test submission — nothing was recorded or counted
+            </p>
+          )}
+          {quizOn && settings.quiz?.show_score !== false && (
+            <p className="mt-4 font-mono text-sm text-ink/60">
+              You scored <span className="text-2xl font-semibold text-brand">{score}</span> /{" "}
+              {maxScore(questions)}
+            </p>
+          )}
+          <h1 className="font-display mt-3 text-3xl">
+            {outcome ? recall(outcome.title) : isOwner && !quizOn ? "Test submission" : "Thanks!"}
+          </h1>
+          {outcome?.message && (
+            <p className="mt-3 max-w-md whitespace-pre-line text-ink/75">
+              {recall(outcome.message)}
+            </p>
+          )}
           <p className="mt-2 max-w-md whitespace-pre-line text-ink/60">
-            {isOwner
+            {isOwner && !quizOn
               ? "This was a preview of your own form — nothing was recorded, and it isn't counted in analytics."
-              : formQ.data.thank_you_message?.trim() || "Your response was recorded."}
+              : recall(formQ.data.thank_you_message?.trim() || "Your response was recorded.")}
           </p>
+          {redirectUrl && <RedirectNotice url={redirectUrl} auto={!isOwner} />}
         </div>
       </Shell>
     );
@@ -405,7 +486,7 @@ function PublicFormPage() {
 
   if (alreadySubmitted) {
     return (
-      <Shell width="sm">
+      <Shell width="sm" style={brand}>
         {ownerNav}
         <div className="flex flex-col items-center text-center">
           <CheckCircle2 className="size-14 text-brand" />
@@ -421,20 +502,24 @@ function PublicFormPage() {
 
   if (formQ.data.display_mode === "conversational") {
     return (
-      <Shell width="sm">
+      <Shell width="sm" style={brand}>
         {ownerNav}
+        {cover}
         {/* In conversational mode the question is the hero; the form title
             sits quietly above it like a running head. */}
         <header>
           <h1 className="text-[15px] font-medium tracking-normal text-ink">{formQ.data.title}</h1>
           {formQ.data.description && (
-            <p className="mt-1 text-sm leading-relaxed text-ink/55">{formQ.data.description}</p>
+            <p className="mt-1 text-sm leading-relaxed text-ink/55">
+              {recall(formQ.data.description)}
+            </p>
           )}
         </header>
         <div className="mt-6">
           <ConversationalForm
             questions={questions}
             answers={answers}
+            recallVars={recallVars}
             onAnswer={(qid, v) => {
               recordStart();
               setAnswers((a) => ({ ...a, [qid]: v }));
@@ -476,12 +561,13 @@ function PublicFormPage() {
   }
 
   return (
-    <Shell width="sm">
+    <Shell width="sm" style={brand}>
       {ownerNav}
+      {cover}
       <header>
         <h1 className="font-display text-3xl md:text-4xl">{formQ.data.title}</h1>
         {formQ.data.description && (
-          <p className="mt-3 text-base text-ink/60 md:text-lg">{formQ.data.description}</p>
+          <p className="mt-3 text-base text-ink/60 md:text-lg">{recall(formQ.data.description)}</p>
         )}
       </header>
 
@@ -527,7 +613,7 @@ function PublicFormPage() {
                 {!q.required && <span className="ml-2 text-ink/40">· Optional</span>}
               </p>
               <QuestionRender
-                question={q}
+                question={{ ...q, label: recall(q.label) }}
                 value={answers[q.id]}
                 onChange={(v) => {
                   recordStart();
@@ -562,5 +648,44 @@ function PublicFormPage() {
         )}
       </form>
     </Shell>
+  );
+}
+
+/**
+ * After submitting, respondents continue to the owner's site. Owners testing
+ * their own form see where it would go instead of being sent away.
+ */
+function RedirectNotice({ url, auto }: { url: string; auto: boolean }) {
+  const [seconds, setSeconds] = useState(5);
+  useEffect(() => {
+    if (!auto) return;
+    if (seconds <= 0) {
+      window.location.assign(url);
+      return;
+    }
+    const t = setTimeout(() => setSeconds((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [auto, seconds, url]);
+  let host = url;
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    // Keep the raw URL.
+  }
+  return (
+    <div className="mt-8 flex flex-col items-center gap-2">
+      <a
+        href={url}
+        rel="noopener noreferrer"
+        className="inline-flex h-11 items-center gap-2 rounded-md bg-brand px-6 text-[15px] font-medium text-brand-foreground transition-colors hover:bg-brand/90"
+      >
+        Continue to {host} <ArrowRight className="size-4" />
+      </a>
+      <p className="text-xs text-ink/45">
+        {auto
+          ? `Taking you there in ${seconds}s…`
+          : "Respondents are sent here automatically after 5 seconds."}
+      </p>
+    </div>
   );
 }

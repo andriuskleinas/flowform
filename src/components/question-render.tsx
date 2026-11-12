@@ -27,6 +27,10 @@ export type Question = {
   logic?: QuestionLogic;
   /** Conversational mode asks one AI follow-up on thin text answers. */
   ai_follow_up?: boolean;
+  /** Variable name later labels can recall this answer by: "Thanks, {name}!". */
+  recall_key?: string | null;
+  /** Quiz points per choice ({ "Paris": 1 }). */
+  points?: Record<string, number> | null;
 };
 
 type Props = {

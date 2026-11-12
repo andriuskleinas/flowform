@@ -47,6 +47,7 @@ export type Database = {
           kind: string
           occurred_at: string
           question_id: string | null
+          source: string | null
         }
         Insert: {
           form_id: string
@@ -56,6 +57,7 @@ export type Database = {
           kind: string
           occurred_at?: string
           question_id?: string | null
+          source?: string | null
         }
         Update: {
           form_id?: string
@@ -65,6 +67,7 @@ export type Database = {
           kind?: string
           occurred_at?: string
           question_id?: string | null
+          source?: string | null
         }
         Relationships: [
           {
@@ -92,6 +95,7 @@ export type Database = {
           questions: Json
           retired_at: string
           retired_by: string | null
+          settings: Json | null
           thank_you_message: string | null
           title: string
           version: number
@@ -104,6 +108,7 @@ export type Database = {
           questions: Json
           retired_at?: string
           retired_by?: string | null
+          settings?: Json | null
           thank_you_message?: string | null
           title: string
           version: number
@@ -116,6 +121,7 @@ export type Database = {
           questions?: Json
           retired_at?: string
           retired_by?: string | null
+          settings?: Json | null
           thank_you_message?: string | null
           title?: string
           version?: number
@@ -138,6 +144,7 @@ export type Database = {
           description: string | null
           display_mode: string
           id: string
+          settings: Json
           status: string
           thank_you_message: string | null
           title: string
@@ -152,6 +159,7 @@ export type Database = {
           description?: string | null
           display_mode?: string
           id?: string
+          settings?: Json
           status?: string
           thank_you_message?: string | null
           title: string
@@ -166,6 +174,7 @@ export type Database = {
           description?: string | null
           display_mode?: string
           id?: string
+          settings?: Json
           status?: string
           thank_you_message?: string | null
           title?: string
@@ -222,7 +231,9 @@ export type Database = {
           label: string
           logic: Json | null
           options: Json | null
+          points: Json | null
           position: number
+          recall_key: string | null
           required: boolean
           type: string
         }
@@ -234,7 +245,9 @@ export type Database = {
           label: string
           logic?: Json | null
           options?: Json | null
+          points?: Json | null
           position: number
+          recall_key?: string | null
           required?: boolean
           type: string
         }
@@ -246,7 +259,9 @@ export type Database = {
           label?: string
           logic?: Json | null
           options?: Json | null
+          points?: Json | null
           position?: number
+          recall_key?: string | null
           required?: boolean
           type?: string
         }
@@ -296,6 +311,9 @@ export type Database = {
           form_id: string
           form_version: number
           id: string
+          meta: Json | null
+          outcome: string | null
+          score: number | null
           started_at: string | null
           submitted_at: string
         }
@@ -305,6 +323,9 @@ export type Database = {
           form_id: string
           form_version?: number
           id?: string
+          meta?: Json | null
+          outcome?: string | null
+          score?: number | null
           started_at?: string | null
           submitted_at?: string
         }
@@ -314,6 +335,9 @@ export type Database = {
           form_id?: string
           form_version?: number
           id?: string
+          meta?: Json | null
+          outcome?: string | null
+          score?: number | null
           started_at?: string | null
           submitted_at?: string
         }
@@ -455,6 +479,10 @@ export type Database = {
         Returns: Json
       }
       get_form_versions: { Args: { p_form_id: string }; Returns: Json }
+      get_form_insights: {
+        Args: { p_days?: number; p_form_id: string; p_version?: number }
+        Returns: Json
+      }
       get_form_analytics: {
         Args: { p_days?: number; p_form_id: string; p_version?: number }
         Returns: Json
@@ -464,7 +492,7 @@ export type Database = {
         Returns: string
       }
       record_form_event: {
-        Args: { p_form_id: string; p_kind: string; p_question_id?: string }
+        Args: { p_form_id: string; p_kind: string; p_question_id?: string; p_source?: string }
         Returns: undefined
       }
       resolve_short_form_link: { Args: { p_code: string }; Returns: string }

@@ -7,12 +7,15 @@ const widthClass = {
 export function Shell({
   children,
   width = "lg",
+  style,
 }: {
   children: React.ReactNode;
   width?: keyof typeof widthClass;
+  /** Per-form branding (CSS variables for brand colour and font). */
+  style?: React.CSSProperties;
 }) {
   return (
-    <div className="min-h-screen bg-surface text-ink">
+    <div className="min-h-screen bg-surface text-ink" style={style}>
       <main className={`mx-auto ${widthClass[width]}`}>{children}</main>
     </div>
   );

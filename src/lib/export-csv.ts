@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Question } from "@/components/question-render";
 import { parseFollowUps, type Answers } from "@/lib/form-utils";
+import { parseFormSettings } from "@/lib/form-settings";
 
 export type ExportRow = {
   submitted_at: string;
@@ -8,6 +9,16 @@ export type ExportRow = {
   answers: Answers;
   follow_ups: unknown;
   form_version: number;
+  meta?: unknown;
+  score?: number | null;
+  outcome?: string | null;
+};
+
+type Meta = {
+  source?: string;
+  referrer?: string;
+  campaign?: string;
+  hidden?: Record<string, string>;
 };
 
 function csvEscape(value: string): string {
@@ -32,7 +43,7 @@ export async function fetchAllResponses(formId: string, version: number | null =
   for (let from = 0; ; from += pageSize) {
     let query = supabase
       .from("responses")
-      .select("submitted_at, started_at, answers, follow_ups, form_version")
+      .select("submitted_at, started_at, answers, follow_ups, form_version, meta, score, outcome")
       .eq("form_id", formId);
     if (version != null) query = query.eq("form_version", version);
     const { data, error } = await query
@@ -84,10 +95,27 @@ export async function exportResponsesCsv(
   const withFollowUps = new Set(questions.filter((q) => q.ai_follow_up).map((q) => q.id));
   for (const f of parsed) for (const qid of Object.keys(f)) withFollowUps.add(qid);
 
+  // Source / quiz / hidden-field columns appear only when some row has them.
+  const metas = rows.map((r) => (r.meta ?? {}) as Meta);
+  const hasSource = metas.some((m) => m.source || m.referrer);
+  const hasCampaign = metas.some((m) => m.campaign);
+  const hasScore = rows.some((r) => r.score != null);
+  const hiddenKeys = [...new Set(metas.flatMap((m) => Object.keys(m.hidden ?? {})))];
+  const outcomeTitles = new Map<string, string>();
+  if (hasScore) {
+    const { data } = await supabase.from("forms").select("settings").eq("id", formId).maybeSingle();
+    for (const o of parseFormSettings(data?.settings).quiz?.outcomes ?? [])
+      outcomeTitles.set(o.id, o.title);
+  }
+
   const header = [
     "Submitted at",
     "Version",
     "Fill time (s)",
+    ...(hasSource ? ["Source"] : []),
+    ...(hasCampaign ? ["Campaign"] : []),
+    ...(hasScore ? ["Score", "Outcome"] : []),
+    ...hiddenKeys,
     ...questions.flatMap((q) =>
       withFollowUps.has(q.id)
         ? [q.label, `${q.label} — AI follow-up`, `${q.label} — follow-up answer`]
@@ -105,6 +133,15 @@ export async function exportResponsesCsv(
       new Date(r.submitted_at).toISOString(),
       `v${r.form_version}`,
       fillSeconds != null && fillSeconds >= 0 ? String(fillSeconds) : "",
+      ...(hasSource ? [metas[i].source ?? metas[i].referrer ?? "direct"] : []),
+      ...(hasCampaign ? [metas[i].campaign ?? ""] : []),
+      ...(hasScore
+        ? [
+            r.score != null ? String(r.score) : "",
+            r.outcome ? (outcomeTitles.get(r.outcome) ?? r.outcome) : "",
+          ]
+        : []),
+      ...hiddenKeys.map((k) => metas[i].hidden?.[k] ?? ""),
       ...questions.flatMap((q) => {
         const answer = formatAnswer(r.answers?.[q.id]);
         if (!withFollowUps.has(q.id)) return [answer];

@@ -15,6 +15,7 @@ import {
   type FollowUp,
   type FollowUps,
 } from "@/lib/form-utils";
+import { recallText } from "@/lib/form-settings";
 
 /**
  * One-question-at-a-time respondent experience: progress bar, Enter to
@@ -40,6 +41,7 @@ export function ConversationalForm({
   requestFollowUp,
   submitting = false,
   preview = false,
+  recallVars,
 }: {
   questions: Question[];
   answers: Answers;
@@ -56,7 +58,10 @@ export function ConversationalForm({
   submitting?: boolean;
   /** Preview mode disables the final submit. */
   preview?: boolean;
+  /** Values for `{key}` placeholders in labels (answer recall + hidden fields). */
+  recallVars?: Record<string, string>;
 }) {
+  const recall = (text: string) => (recallVars ? recallText(text, recallVars) : text);
   // index === questions.length → the submit card.
   const [index, setIndex] = useState(0);
   const [history, setHistory] = useState<number[]>([]);
@@ -272,7 +277,7 @@ export function ConversationalForm({
           </p>
 
           <p className="mt-4 line-clamp-2 border-l-2 border-hairline pl-3 text-sm text-ink/50">
-            {followUpQuestion.label}
+            {recall(followUpQuestion.label)}
             <span className="mt-0.5 block text-ink/70">
               “{String(answers[followUpQuestion.id] ?? "")}”
             </span>
@@ -338,7 +343,7 @@ export function ConversationalForm({
           <div className="mt-4">
             <QuestionRender
               variant="conversational"
-              question={current}
+              question={recallVars ? { ...current, label: recall(current.label) } : current}
               value={answers[current.id]}
               onChange={handleAnswer}
             />

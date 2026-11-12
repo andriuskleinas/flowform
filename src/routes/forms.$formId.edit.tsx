@@ -75,6 +75,24 @@ import {
   questionOptionsEqual,
 } from "@/lib/form-utils";
 import { ConversationalForm } from "@/components/conversational-form";
+import { FormSettingsPanel } from "@/components/form-settings-panel";
+import {
+  SCORABLE_TYPES,
+  buildRecallVars,
+  ensureFontLoaded,
+  isValidKey,
+  maxScore,
+  parseFormSettings,
+  parsePoints,
+  placeholderKeys,
+  recallText,
+  scoringChoices,
+  serializeFormSettings,
+  settingsEqual,
+  themeStyle,
+  toKey,
+  type FormSettings,
+} from "@/lib/form-settings";
 import { Switch } from "@/components/ui/switch";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -118,12 +136,24 @@ type DraftFormState = {
   description: string | null;
   display_mode: DisplayMode;
   thank_you_message: string | null;
+  settings: FormSettings;
 };
 
 function snapshotKey(
   form: DraftFormState,
   questions: Array<
-    Pick<Question, "id" | "type" | "label" | "options" | "required" | "logic" | "ai_follow_up">
+    Pick<
+      Question,
+      | "id"
+      | "type"
+      | "label"
+      | "options"
+      | "required"
+      | "logic"
+      | "ai_follow_up"
+      | "recall_key"
+      | "points"
+    >
   >,
 ) {
   return JSON.stringify({
@@ -131,7 +161,10 @@ function snapshotKey(
     description: (form.description ?? "").trim(),
     display_mode: form.display_mode,
     thank_you_message: (form.thank_you_message ?? "").trim(),
+    settings: serializeFormSettings(form.settings),
     questions: questions.map((q) => ({
+      recall_key: q.recall_key || null,
+      points: q.points ?? null,
       id: q.id,
       type: q.type,
       label: q.label.trim(),
@@ -149,6 +182,7 @@ function toSnapshot(
     description: string | null;
     display_mode: string;
     thank_you_message: string | null;
+    settings?: unknown;
   },
   questions: Question[],
 ): { form: DraftFormState; questions: Question[] } {
@@ -158,6 +192,7 @@ function toSnapshot(
       description: sf.description ?? null,
       display_mode: sf.display_mode as DisplayMode,
       thank_you_message: sf.thank_you_message ?? null,
+      settings: parseFormSettings(sf.settings),
     },
     questions,
   };
@@ -176,7 +211,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       const { data, error } = await supabase
         .from("forms")
         .select(
-          "id, title, description, user_id, status, display_mode, thank_you_message, category_id, version, copied_from",
+          "id, title, description, user_id, status, display_mode, thank_you_message, category_id, version, copied_from, settings",
         )
         .eq("id", formId)
         .maybeSingle();
@@ -197,11 +232,13 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position, required, logic, ai_follow_up")
+        .select(
+          "id, form_id, type, label, options, position, required, logic, ai_follow_up, recall_key, points",
+        )
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Question[];
+      return (data ?? []).map((q) => ({ ...q, points: parsePoints(q.points) })) as Question[];
     },
   });
 
@@ -215,6 +252,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     description: null,
     display_mode: "conversational",
     thank_you_message: null,
+    settings: {},
   });
   const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -279,6 +317,16 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
   }, [formQ.data, questionsQ.data, ready, snapshot === null]);
 
   const visibleDraftQuestions = draftQuestions.filter((q) => !q.isDeleted);
+  // Preview fills {placeholders} from preview answers; hidden fields show as
+  // their own name so the owner can see where link values will appear.
+  const previewRecallVars = buildRecallVars(
+    visibleDraftQuestions,
+    previewAnswers,
+    Object.fromEntries((draftForm.settings.hidden_fields ?? []).map((f) => [f, `[${f}]`])),
+  );
+  useEffect(() => {
+    ensureFontLoaded(draftForm.settings.theme?.font);
+  }, [draftForm.settings.theme?.font]);
 
   // Compensate the scroll shift after a question is added (see scrollAnchorRef).
   useLayoutEffect(() => {
@@ -307,6 +355,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     if (draftForm.display_mode !== snapshot.form.display_mode) return true;
     if ((draftForm.thank_you_message ?? null) !== (snapshot.form.thank_you_message ?? null))
       return true;
+    if (!settingsEqual(draftForm.settings, snapshot.form.settings)) return true;
     if (visibleDraftQuestions.length !== snapshot.questions.length) return true;
     for (let i = 0; i < visibleDraftQuestions.length; i++) {
       const v = visibleDraftQuestions[i];
@@ -317,6 +366,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
       if (v.label !== s.label) return true;
       if (v.required !== s.required) return true;
       if (!!v.ai_follow_up !== !!s.ai_follow_up) return true;
+      if ((v.recall_key || null) !== (s.recall_key || null)) return true;
+      if (JSON.stringify(v.points ?? null) !== JSON.stringify(s.points ?? null)) return true;
       if (!questionOptionsEqual(v.options ?? null, s.options ?? null)) return true;
       if (!logicEqual(v.logic, s.logic)) return true;
     }
@@ -348,6 +399,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               type,
               options: defaultOptionsForType(type),
               logic: null,
+              points: null,
               // Follow-ups only exist for open-text questions.
               ai_follow_up: (type === "text" || type === "long_text") && !!q.ai_follow_up,
             }
@@ -358,6 +410,11 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
     setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, required } : q)));
   const setDraftAiFollowUp = (id: string, ai_follow_up: boolean) =>
     setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, ai_follow_up } : q)));
+  const setDraftRecallKey = (id: string, recall_key: string | null) =>
+    setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, recall_key } : q)));
+  const setDraftPoints = (id: string, points: Record<string, number> | null) =>
+    setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, points } : q)));
+  const setDraftSettings = (settings: FormSettings) => setDraftForm((f) => ({ ...f, settings }));
   const setDraftLogic = (id: string, logic: QuestionLogic) =>
     setDraftQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, logic } : q)));
   const addDraftQuestion = (type: QuestionType) =>
@@ -419,6 +476,8 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         ...src,
         id: `tmp-${Math.random().toString(36).slice(2, 10)}`,
         logic: src.logic ? JSON.parse(JSON.stringify(src.logic)) : null,
+        recall_key: null,
+        points: src.points ? { ...src.points } : null,
         options: src.options ? JSON.parse(JSON.stringify(src.options)) : null,
         isNew: true,
         isDeleted: false,
@@ -470,6 +529,18 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         return Object.keys(clean).length > 0 ? { jumps: clean } : null;
       };
 
+      // Points only for choices that still exist on scorable questions.
+      const sanitizePoints = (q: DraftQuestion) => {
+        if (!q.points || !SCORABLE_TYPES.includes(q.type)) return null;
+        const choices = new Set(scoringChoices(q));
+        const clean = Object.fromEntries(
+          Object.entries(q.points).filter(
+            ([c, v]) => choices.has(c) && Number.isFinite(v) && v !== 0,
+          ),
+        );
+        return Object.keys(clean).length > 0 ? clean : null;
+      };
+
       // One transactional RPC replaces the old N+1 (update-per-question +
       // batch insert + trailing delete). Array order sets position; existing
       // ids are preserved (responses.answers is keyed by question id). The RPC
@@ -483,6 +554,14 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         required: q.required,
         logic: sanitizeLogic(q, i),
         ai_follow_up: !!q.ai_follow_up,
+        // First question wins a duplicated variable name.
+        recall_key:
+          q.recall_key &&
+          isValidKey(q.recall_key) &&
+          visible.findIndex((v) => v.recall_key === q.recall_key) === i
+            ? q.recall_key
+            : null,
+        points: sanitizePoints(q),
       }));
 
       const { error } = await supabase.rpc("save_form_editor", {
@@ -492,6 +571,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
           description: draftForm.description,
           display_mode: draftForm.display_mode,
           thank_you_message: draftForm.thank_you_message,
+          settings: serializeFormSettings(draftForm.settings),
         } as unknown as Json,
         p_questions: p_questions as unknown as Json,
       });
@@ -1051,6 +1131,18 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
         </div>
       </header>
 
+      <FormSettingsPanel
+        value={draftForm.settings}
+        onChange={setDraftSettings}
+        formId={formId}
+        formTitle={draftForm.title}
+        maxQuizScore={maxScore(visibleDraftQuestions)}
+        scoredQuestionCount={
+          visibleDraftQuestions.filter((q) => q.points && SCORABLE_TYPES.includes(q.type)).length
+        }
+        disabled={isLocked}
+      />
+
       <div className="mt-8">
         <section>
           <h2 className="text-lg font-semibold">Questions</h2>
@@ -1103,6 +1195,25 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                       conversational={draftForm.display_mode === "conversational"}
                       onChangeAiFollowUp={(on) => setDraftAiFollowUp(q.id, on)}
                       onChangeLogic={(logic) => setDraftLogic(q.id, logic)}
+                      recallVars={[
+                        ...visibleDraftQuestions
+                          .slice(0, i)
+                          .filter((t) => t.recall_key)
+                          .map((t) => ({
+                            key: t.recall_key as string,
+                            hint: `Answer to “${t.label.slice(0, 40)}”`,
+                          })),
+                        ...(draftForm.settings.hidden_fields ?? []).map((f) => ({
+                          key: f,
+                          hint: "Hidden field from the link",
+                        })),
+                      ]}
+                      takenKeys={visibleDraftQuestions
+                        .filter((t) => t.id !== q.id && t.recall_key)
+                        .map((t) => t.recall_key as string)}
+                      onChangeRecallKey={(k) => setDraftRecallKey(q.id, k)}
+                      quizEnabled={!!draftForm.settings.quiz?.enabled}
+                      onChangePoints={(pts) => setDraftPoints(q.id, pts)}
                       onDuplicate={() => duplicateDraftQuestion(q.id)}
                       onDelete={() => removeDraftQuestion(q.id)}
                       onMoveUp={() => moveBy(q.id, -1)}
@@ -1280,7 +1391,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
             </p>
           </DialogHeader>
 
-          <div className="mt-4 space-y-6">
+          <div className="mt-4 space-y-6" style={themeStyle(draftForm.settings.theme)}>
             {visibleDraftQuestions.length === 0 ? (
               <p className="rounded-xl border border-dashed border-ink/15 p-6 text-center text-sm text-ink/50">
                 No questions yet — add one to see a preview.
@@ -1289,6 +1400,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
               <ConversationalForm
                 questions={visibleDraftQuestions}
                 answers={previewAnswers}
+                recallVars={previewRecallVars}
                 onAnswer={(qid, v) => setPreviewAnswers((a) => ({ ...a, [qid]: v }))}
                 onSubmit={() => {}}
                 preview
@@ -1303,7 +1415,7 @@ function EditFormAuthed({ formId, userId }: { formId: string; userId: string }) 
                     )}
                   </p>
                   <QuestionRender
-                    question={q}
+                    question={{ ...q, label: recallText(q.label, previewRecallVars) }}
                     value={previewAnswers[q.id]}
                     onChange={(v) => setPreviewAnswers((a) => ({ ...a, [q.id]: v }))}
                   />
@@ -1396,6 +1508,11 @@ function SortableQuestionCard({
   onChangeLogic,
   conversational,
   onChangeAiFollowUp,
+  recallVars,
+  takenKeys,
+  onChangeRecallKey,
+  quizEnabled,
+  onChangePoints,
   onDuplicate,
   onDelete,
   onMoveUp,
@@ -1412,6 +1529,11 @@ function SortableQuestionCard({
   conversational: boolean;
   onChangeAiFollowUp: (on: boolean) => void;
   onChangeLogic: (logic: QuestionLogic) => void;
+  recallVars: { key: string; hint: string }[];
+  takenKeys: string[];
+  onChangeRecallKey: (key: string | null) => void;
+  quizEnabled: boolean;
+  onChangePoints: (points: Record<string, number> | null) => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onMoveUp: () => void;
@@ -1466,6 +1588,38 @@ function SortableQuestionCard({
             onChange={onChangeLabel}
             placeholder="Type your question…"
           />
+          {recallVars.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1 pt-0.5">
+              <span className="text-[11px] text-ink/45">Insert answer:</span>
+              {recallVars.map((v) => (
+                <button
+                  key={v.key}
+                  type="button"
+                  title={v.hint}
+                  onClick={() => {
+                    const base = question.label.replace(/\s+$/, "");
+                    onChangeLabel(`${base}${base ? " " : ""}{${v.key}}`);
+                  }}
+                  className="rounded border border-brand/25 bg-brand/5 px-1.5 py-0.5 font-mono text-[11px] text-brand hover:bg-brand/10"
+                >
+                  {`{${v.key}}`}
+                </button>
+              ))}
+            </div>
+          )}
+          {(() => {
+            const known = new Set(recallVars.map((v) => v.key));
+            const unknown = [...new Set(placeholderKeys(question.label))].filter(
+              (k) => !known.has(k),
+            );
+            if (unknown.length === 0) return null;
+            return (
+              <p className="text-[11px] text-amber-700">
+                {unknown.map((k) => `{${k}}`).join(", ")} doesn't match an earlier answer or hidden
+                field, so it will be left out.
+              </p>
+            );
+          })()}
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Type</Label>
@@ -1588,6 +1742,14 @@ function SortableQuestionCard({
         );
       })()}
 
+      {quizEnabled && SCORABLE_TYPES.includes(question.type) && (
+        <PointsEditor
+          choices={scoringChoices(question)}
+          points={question.points ?? null}
+          onChange={onChangePoints}
+        />
+      )}
+
       <div className="mt-4 flex items-center gap-2 border-t border-hairline pt-3">
         <Switch
           id={`q-${question.id}-required`}
@@ -1614,6 +1776,12 @@ function SortableQuestionCard({
             </Label>
           </>
         )}
+        <RecallKeyField
+          questionId={question.id}
+          value={question.recall_key ?? null}
+          taken={takenKeys}
+          onChange={onChangeRecallKey}
+        />
       </div>
       {!!question.ai_follow_up && (
         <p className="mt-2 text-xs text-ink/50">
@@ -1623,6 +1791,111 @@ function SortableQuestionCard({
         </p>
       )}
     </li>
+  );
+}
+
+/* ------------------------- Recall key / quiz points ------------------------ */
+
+/**
+ * Names this question's answer so later labels can say "Thanks, {name}!".
+ * Committed on blur so a half-typed name never collides mid-edit.
+ */
+function RecallKeyField({
+  questionId,
+  value,
+  taken,
+  onChange,
+}: {
+  questionId: string;
+  value: string | null;
+  taken: string[];
+  onChange: (key: string | null) => void;
+}) {
+  const [local, setLocal] = useState(value ?? "");
+  useEffect(() => setLocal(value ?? ""), [value]);
+  const key = toKey(local);
+  const clash = !!key && taken.includes(key);
+  const commit = () => {
+    if (!local.trim()) return onChange(null);
+    if (!isValidKey(key) || clash) {
+      setLocal(value ?? "");
+      if (clash) toast.error(`{${key}} is already used by another question.`);
+      return;
+    }
+    setLocal(key);
+    onChange(key);
+  };
+  return (
+    <div className="ml-auto flex items-center gap-1.5">
+      <Label htmlFor={`q-${questionId}-recall`} className="text-xs font-normal text-ink/55">
+        Recall as
+      </Label>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 font-mono text-xs text-ink/35">
+          {"{"}
+        </span>
+        <input
+          id={`q-${questionId}-recall`}
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+          placeholder="name"
+          autoComplete="off"
+          title="Name this answer to reuse it in later questions, e.g. {name}"
+          className={
+            "h-7 w-28 rounded-md border bg-card pl-4 pr-4 font-mono text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring " +
+            (clash ? "border-destructive" : "border-input")
+          }
+        />
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 font-mono text-xs text-ink/35">
+          {"}"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function PointsEditor({
+  choices,
+  points,
+  onChange,
+}: {
+  choices: string[];
+  points: Record<string, number> | null;
+  onChange: (next: Record<string, number> | null) => void;
+}) {
+  if (choices.length === 0) return null;
+  const set = (choice: string, raw: string) => {
+    const n = Math.round(Number(raw));
+    const next = { ...(points ?? {}) };
+    if (!raw.trim() || !Number.isFinite(n) || n === 0) delete next[choice];
+    else next[choice] = Math.max(-100, Math.min(100, n));
+    onChange(Object.keys(next).length > 0 ? next : null);
+  };
+  return (
+    <div className="mt-4 rounded-xl bg-brand/5 p-3">
+      <p className="text-xs font-semibold text-ink/70">
+        Points <span className="font-normal text-ink/45">— quiz score for each answer</span>
+      </p>
+      <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+        {choices.map((c) => (
+          <label key={c} className="flex items-center gap-2 text-sm">
+            <span className="min-w-0 flex-1 truncate text-ink/70">{c}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={points?.[c] ?? ""}
+              placeholder="0"
+              onChange={(e) => set(c, e.target.value)}
+              className="h-8 w-20 rounded-md border border-input bg-card px-2 text-right font-mono text-sm shadow-sm"
+            />
+          </label>
+        ))}
+      </div>
+    </div>
   );
 }
 

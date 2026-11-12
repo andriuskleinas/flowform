@@ -9,6 +9,7 @@ import {
   Presentation,
   RefreshCw,
   Sparkles,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -47,6 +48,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StarRating, type Question } from "@/components/question-render";
 import { VersionComparison } from "@/components/version-comparison";
+import { AskResponsesCard } from "@/components/ask-responses-card";
+import { ResponseInsights, type FormInsights } from "@/components/response-insights";
+import {
+  maxScore,
+  parseFormSettings,
+  parsePoints,
+  sourceLabel,
+  type QuizOutcome,
+} from "@/lib/form-settings";
 import { parseVersions, questionsForView } from "@/lib/form-versions";
 
 export const Route = createFileRoute("/forms/$formId/responses")({
@@ -60,6 +70,14 @@ type ResponseRow = {
   answers: Answers;
   follow_ups: FollowUps;
   form_version: number;
+  meta: {
+    source?: string;
+    referrer?: string;
+    campaign?: string;
+    hidden?: Record<string, string>;
+  } | null;
+  score: number | null;
+  outcome: string | null;
 };
 
 /** Shape returned by the `get_form_analytics` Postgres RPC (jsonb). */
@@ -88,6 +106,15 @@ function ResponsesPage() {
   const [days, setDays] = useState<RangeDays>(30);
   // null = every version together; a number scopes the whole page to it.
   const [version, setVersion] = useState<number | null>(null);
+  const [tab, setTab] = useState("overview");
+  // "Ask your responses" → "Show these responses": the individual tab lists
+  // exactly the responses Claude's filter matched.
+  const [askFilter, setAskFilter] = useState<{
+    ids: string[];
+    description: string;
+    count: number;
+  } | null>(null);
+  useEffect(() => setAskFilter(null), [version]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -104,7 +131,7 @@ function ResponsesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("forms")
-        .select("id, title, user_id")
+        .select("id, title, user_id, settings")
         .eq("id", formId)
         .maybeSingle();
       if (error) throw error;
@@ -118,23 +145,26 @@ function ResponsesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, form_id, type, label, options, position, required, ai_follow_up")
+        .select("id, form_id, type, label, options, position, required, ai_follow_up, points")
         .eq("form_id", formId)
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Question[];
+      return (data ?? []).map((q) => ({ ...q, points: parsePoints(q.points) })) as Question[];
     },
   });
 
   const responsesQ = useQuery({
     enabled: !!user,
-    queryKey: ["responses", formId, responseLimit, version],
+    queryKey: ["responses", formId, responseLimit, version, askFilter?.ids ?? null],
     queryFn: async () => {
       let q = supabase
         .from("responses")
-        .select("id, submitted_at, started_at, answers, follow_ups, form_version")
+        .select(
+          "id, submitted_at, started_at, answers, follow_ups, form_version, meta, score, outcome",
+        )
         .eq("form_id", formId);
       if (version != null) q = q.eq("form_version", version);
+      if (askFilter) q = q.in("id", askFilter.ids);
       const { data, error } = await q
         .order("submitted_at", { ascending: false })
         .limit(responseLimit + 1); // fetch one extra to detect if more exist
@@ -146,6 +176,9 @@ function ResponsesPage() {
         answers: (r.answers ?? {}) as Answers,
         follow_ups: parseFollowUps(r.follow_ups),
         form_version: r.form_version,
+        meta: (r.meta ?? null) as ResponseRow["meta"],
+        score: r.score,
+        outcome: r.outcome,
       })) as ResponseRow[];
     },
   });
@@ -163,6 +196,20 @@ function ResponsesPage() {
       });
       if (error) throw error;
       return data as unknown as FormAnalytics;
+    },
+  });
+
+  const insightsQ = useQuery({
+    enabled: !!user,
+    queryKey: ["form-insights", formId, days, version],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_form_insights", {
+        p_form_id: formId,
+        p_days: days,
+        ...(version != null ? { p_version: version } : {}),
+      });
+      if (error) throw error;
+      return data as unknown as FormInsights;
     },
   });
 
@@ -210,6 +257,23 @@ function ResponsesPage() {
       new Set((v.is_current ? (questionsQ.data ?? []) : v.questions).map((q) => q.id)),
     ]),
   );
+  const settings = parseFormSettings(formQ.data.settings);
+  const outcomes: QuizOutcome[] = settings.quiz?.outcomes ?? [];
+  const askExamples = (() => {
+    const ex: string[] = [];
+    const qs = questionsQ.data ?? [];
+    const nps = qs.find((q) => q.type === "nps");
+    const rating = qs.find((q) => q.type === "rating");
+    const text = qs.find((q) => q.type === "text" || q.type === "long_text");
+    if (nps) ex.push("What do detractors complain about?");
+    else if (rating) ex.push(`What do people who rated “${rating.label.slice(0, 30)}” low say?`);
+    if ((insightsQ.data?.sources ?? []).some((x) => x.source !== "direct"))
+      ex.push("Which traffic source brings the happiest respondents?");
+    if (settings.quiz?.enabled) ex.push("Which question do low scorers get wrong most?");
+    if (text) ex.push("What are the top 3 requests?");
+    ex.push("How did answers change in the last 7 days?");
+    return ex.slice(0, 4);
+  })();
   const rawResponses = responsesQ.data ?? [];
   const hasMore = rawResponses.length > responseLimit;
   const responses = hasMore ? rawResponses.slice(0, responseLimit) : rawResponses;
@@ -293,13 +357,31 @@ function ResponsesPage() {
         </div>
       )}
 
-      <Tabs defaultValue="overview" className="mt-8">
+      <Tabs value={tab} onValueChange={setTab} className="mt-8">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="individual">Individual responses</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
+          {(analyticsQ.data?.totals.responses ?? 0) > 0 && (
+            <div className="mb-6">
+              <AskResponsesCard
+                key={version ?? "all"}
+                formId={formId}
+                version={version}
+                examples={askExamples}
+                onShowMatches={(r) => {
+                  setAskFilter({
+                    ids: r.matchedIds,
+                    description: r.filter.description,
+                    count: r.matchedCount,
+                  });
+                  setTab("individual");
+                }}
+              />
+            </div>
+          )}
           <Overview
             formId={formId}
             questions={questions}
@@ -312,10 +394,33 @@ function ResponsesPage() {
             version={version}
             onVersionChange={setVersion}
           />
+          <ResponseInsights
+            insights={insightsQ.data ?? null}
+            outcomes={outcomes}
+            maxScore={maxScore(questionsQ.data ?? [])}
+          />
         </TabsContent>
 
         <TabsContent value="individual" className="mt-6">
+          {askFilter && (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-brand/25 bg-brand/5 px-4 py-2.5 text-sm">
+              <p className="text-ink/75">
+                <span className="font-semibold text-ink">{askFilter.description}</span> ·{" "}
+                {askFilter.count > askFilter.ids.length
+                  ? `newest ${askFilter.ids.length} of ${askFilter.count}`
+                  : `${askFilter.count} ${askFilter.count === 1 ? "response" : "responses"}`}
+              </p>
+              <button
+                type="button"
+                onClick={() => setAskFilter(null)}
+                className="inline-flex shrink-0 items-center gap-1 rounded px-2 py-1 text-xs font-medium text-ink/60 hover:bg-ink/5 hover:text-ink"
+              >
+                <X className="size-3.5" /> Show all
+              </button>
+            </div>
+          )}
           <IndividualList
+            outcomes={outcomes}
             showVersion={multiVersion}
             askedByVersion={askedByVersion}
             questions={questions}
@@ -955,6 +1060,7 @@ function QuestionAnalytics({
 }
 
 function IndividualList({
+  outcomes,
   showVersion,
   askedByVersion,
   questions,
@@ -962,6 +1068,7 @@ function IndividualList({
   hasMore,
   onLoadMore,
 }: {
+  outcomes: QuizOutcome[];
   showVersion: boolean;
   askedByVersion: Map<number, Set<string>>;
   questions: Question[];
@@ -1000,6 +1107,7 @@ function IndividualList({
                     </span>
                   )}
                 </p>
+                <ResponseBadges row={r} outcomes={outcomes} />
               </div>
               <dl className="mt-4 space-y-4">
                 {questions
@@ -1031,6 +1139,40 @@ function IndividualList({
         </div>
       )}
     </>
+  );
+}
+
+function ResponseBadges({ row, outcomes }: { row: ResponseRow; outcomes: QuizOutcome[] }) {
+  const source = row.meta?.source ?? row.meta?.referrer;
+  const hidden = Object.entries(row.meta?.hidden ?? {});
+  const outcome = row.outcome ? outcomes.find((o) => o.id === row.outcome) : null;
+  if (!source && hidden.length === 0 && row.score == null && !row.meta?.campaign) return null;
+  return (
+    <div className="flex flex-wrap justify-end gap-1.5 text-[11px]">
+      {row.score != null && (
+        <span className="rounded-full bg-brand/10 px-2 py-0.5 font-medium text-brand">
+          {row.score} pts{outcome ? ` · ${outcome.title}` : ""}
+        </span>
+      )}
+      {source && (
+        <span className="rounded-full border border-hairline px-2 py-0.5 text-ink/65">
+          via {sourceLabel(source)}
+        </span>
+      )}
+      {row.meta?.campaign && (
+        <span className="rounded-full border border-hairline px-2 py-0.5 text-ink/65">
+          {row.meta.campaign}
+        </span>
+      )}
+      {hidden.map(([k, v]) => (
+        <span
+          key={k}
+          className="max-w-[12rem] truncate rounded-full border border-hairline px-2 py-0.5 font-mono text-ink/65"
+        >
+          {k}={v}
+        </span>
+      ))}
+    </div>
   );
 }
 

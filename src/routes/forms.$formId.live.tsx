@@ -23,6 +23,7 @@ import { getChoiceConfig, getRatingMax, type Answers } from "@/lib/form-utils";
 import type { Question } from "@/components/question-render";
 import { LogoMark } from "@/components/logo";
 import { Skeleton } from "@/components/ui/skeleton";
+import { recallText } from "@/lib/form-settings";
 
 export const Route = createFileRoute("/forms/$formId/live")({
   component: LivePage,
@@ -339,7 +340,9 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
               </p>
             )}
             <h2 className="mt-2 max-w-4xl font-display text-3xl leading-tight md:text-5xl">
-              {current?.label ?? "This survey has no questions yet"}
+              {current
+                ? recallText(current.label, {}) // no respondent here: drop {placeholders}
+                : "This survey has no questions yet"}
             </h2>
           </div>
           {showCount && <ResponseCounter count={responses} pulse={pulse} />}
