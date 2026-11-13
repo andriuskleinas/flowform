@@ -3,16 +3,29 @@ import { useEffect, useRef } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { isThemePref, readThemePref, setThemePref, useThemeEffects } from "@/lib/theme";
+import {
+  isThemePref,
+  readThemePref,
+  setThemeActive,
+  setThemePref,
+  useThemeEffects,
+} from "@/lib/theme";
 
 /**
  * Applies the theme everywhere and, once per sign-in, adopts the theme saved
- * on the account so the preference follows the user across devices.
+ * on the account so the preference follows the user across devices. Logged
+ * out, the preference is switched off and every page is light.
  */
 export function ThemeSync() {
   useThemeEffects();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const uid = user?.id;
+
+  // Wait for auth to resolve: during the loading window there is no session
+  // yet, and switching to light then would flash a dark-mode user's page.
+  useEffect(() => {
+    if (!loading) setThemeActive(!!uid);
+  }, [loading, uid]);
 
   const { data } = useQuery({
     queryKey: ["profile-theme", uid],

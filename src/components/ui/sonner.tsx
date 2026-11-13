@@ -1,12 +1,13 @@
 import { Toaster as Sonner } from "sonner";
 
-import { useThemePref } from "@/lib/theme";
+import { useActiveThemePref } from "@/lib/theme";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  // Follows the app theme (light / dark / system), not just the OS.
-  const theme = useThemePref();
+  // Follows the app theme (light / dark / system), not just the OS; light
+  // for anyone logged out.
+  const theme = useActiveThemePref();
   return (
     <Sonner
       theme={theme}
