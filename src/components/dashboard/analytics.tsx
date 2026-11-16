@@ -123,7 +123,7 @@ export function DashboardAnalytics({ ownerId }: { ownerId: string }) {
       aria-labelledby="overview-heading"
       className="flex min-w-0 flex-col rounded-xl border border-hairline bg-card"
     >
-      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 py-3">
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-5">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2.5">
           <h2 id="overview-heading" className="text-[15px] font-medium tracking-normal">
             Overview
@@ -216,7 +216,7 @@ function Segmented({
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "rounded px-2 py-0.5 text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
+            "rounded px-2.5 py-1.5 text-xs font-medium outline-none sm:px-2 sm:py-0.5 sm:text-[11px] transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
             mono && "min-w-9 font-mono",
             value === o.value ? "bg-card text-ink shadow-sm" : "text-ink/50 hover:text-ink",
           )}
@@ -342,7 +342,13 @@ function ResponsesChart({
           </>
         ) : (
           <span className="text-ink/45">
-            {total > 0 ? `peak ${fmt.format(peak)} · hover for detail` : ""}
+            {total > 0 && (
+              <>
+                peak {fmt.format(peak)}
+                <span className="pointer-coarse:hidden"> · hover for detail</span>
+                <span className="hidden pointer-coarse:inline"> · tap a bar for detail</span>
+              </>
+            )}
           </span>
         )}
       </div>

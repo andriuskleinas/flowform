@@ -344,3 +344,13 @@
 [style*="--form-font"] .font-display {
   font-family: var(--form-font);
 }
+
+/* Phones: iOS zooms into any field under 16px when it gets focus, and the page
+   stays zoomed. Fields keep 16px there; larger screens use the design sizes. */
+@media (max-width: 767px) and (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+}

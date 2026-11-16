@@ -56,11 +56,13 @@ export function AskResponsesCard({
   };
 
   return (
-    <section className="rounded-lg border border-hairline bg-card p-5">
-      <div className="flex items-center gap-2">
+    <section className="rounded-lg border border-hairline bg-card p-4 sm:p-5">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         <MessageSquareText className="size-4 text-brand" aria-hidden />
         <h3 className="text-sm font-semibold text-ink">Ask your responses</h3>
-        <span className="text-xs text-ink/45">— in plain English, answered by Claude</span>
+        <span className="w-full pl-6 text-xs text-ink/45 sm:w-auto sm:pl-0">
+          <span className="max-sm:hidden">— </span>in plain English, answered by Claude
+        </span>
       </div>
 
       <form

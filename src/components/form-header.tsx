@@ -60,8 +60,8 @@ export function FormHeader({
     );
 
   return (
-    <div className="sticky top-14 z-20 border-b border-hairline bg-surface/90 backdrop-blur lg:top-0">
-      <div className={cn("mx-auto w-full px-5 md:px-8", SHELL_WIDTH[width])}>
+    <div className="sticky top-0 z-20 border-b border-hairline bg-surface/90 backdrop-blur">
+      <div className={cn("mx-auto w-full px-4 sm:px-5 md:px-8", SHELL_WIDTH[width])}>
         <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-2.5">
           <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[13px]">
             <Link
@@ -90,7 +90,10 @@ export function FormHeader({
             )}
           </nav>
           {actions && (
-            <div className="flex flex-wrap items-center justify-end gap-1.5">{actions}</div>
+            // Phones: one row that scrolls sideways instead of stacking rows.
+            <div className="-mx-4 flex w-[calc(100%+2rem)] items-center gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0">
+              {actions}
+            </div>
           )}
         </div>
 

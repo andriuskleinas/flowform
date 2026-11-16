@@ -12,6 +12,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme}
       className="toaster group"
+      // Clear the mobile tab bar.
+      mobileOffset={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}
       toastOptions={{
         classNames: {
           toast:

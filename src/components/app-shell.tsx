@@ -152,46 +152,25 @@ export function AppShell({
         {sidebar}
       </aside>
 
-      {/* Mobile: slim top bar; the same sidebar slides in as a drawer. */}
-      <div className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-hairline bg-surface/90 px-3 backdrop-blur lg:hidden">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-label="Open menu"
-            className="inline-flex size-9 items-center justify-center rounded-md text-ink/70 outline-none hover:bg-ink/5 hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40"
-          >
-            <Menu className="size-5" />
-          </button>
+      {/* Mobile: a slim top bar on top-level pages (form pages bring their own
+          header), a tab bar at the bottom, and the sidebar as a drawer. */}
+      {!header && (
+        <div className="sticky top-0 z-30 flex h-14 items-center border-b border-hairline bg-surface/90 px-4 backdrop-blur lg:hidden">
           <Link
             to="/dashboard"
             search={owner === userId ? {} : { ws: owner }}
-            className="rounded-md px-1 outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
             <Logo />
           </Link>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setPaletteOpen(true)}
-            aria-label="Search"
-            className="inline-flex size-9 items-center justify-center rounded-md text-ink/70 outline-none hover:bg-ink/5 hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40"
-          >
-            <Search className="size-[18px]" />
-          </button>
-          {can.canEdit && (
-            <Link
-              to="/forms/new"
-              search={owner === userId ? {} : { ws: owner }}
-              aria-label="New form"
-              className="inline-flex size-9 items-center justify-center rounded-md bg-ink text-paper outline-none hover:bg-ink/85 focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
-            >
-              <Plus className="size-[18px]" />
-            </Link>
-          )}
-        </div>
-      </div>
+      )}
+      <MobileTabBar
+        ws={owner === userId ? {} : { ws: owner }}
+        canEdit={can.canEdit}
+        onSearch={() => setPaletteOpen(true)}
+        onMenu={() => setMenuOpen(true)}
+      />
 
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="left" className="flex w-72 flex-col gap-0 bg-paper p-0 sm:max-w-72">
@@ -207,7 +186,10 @@ export function AppShell({
 
       <main
         id="main"
-        className={cn("mx-auto w-full px-5 pb-24 pt-7 md:px-8 md:pt-9", SHELL_WIDTH[width])}
+        className={cn(
+          "mx-auto w-full px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 sm:px-5 md:px-8 md:pt-9 lg:pb-24",
+          SHELL_WIDTH[width],
+        )}
       >
         {children}
       </main>
@@ -246,7 +228,7 @@ export function AppShellSkeleton({ width = "lg" }: { width?: ShellWidth }) {
       <div className="flex h-14 items-center border-b border-hairline px-4 lg:hidden">
         <Logo />
       </div>
-      <main className={cn("mx-auto w-full px-5 pt-7 md:px-8 md:pt-9", SHELL_WIDTH[width])}>
+      <main className={cn("mx-auto w-full px-4 pt-6 sm:px-5 md:px-8 md:pt-9", SHELL_WIDTH[width])}>
         <Skeleton className="h-8 w-56" />
         <Skeleton className="mt-3 h-4 w-80 max-w-full" />
         <Skeleton className="mt-8 h-48 w-full" />
@@ -278,10 +260,87 @@ export function PageHeader({
   );
 }
 
+/* ------------------------------ Mobile tab bar ----------------------------- */
+
+const tabItem =
+  "flex h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] outline-none transition-colors focus-visible:bg-ink/5";
+
+/** Thumb-reach navigation on phones: the four places you go most, plus the drawer. */
+function MobileTabBar({
+  ws,
+  canEdit,
+  onSearch,
+  onMenu,
+}: {
+  ws: { ws?: string };
+  canEdit: boolean;
+  onSearch: () => void;
+  onMenu: () => void;
+}) {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const onForms = path === "/dashboard" || (path.startsWith("/forms") && path !== "/forms/new");
+  const onNew = path === "/forms/new";
+  const onGuide = path === "/guide";
+  const tone = (active: boolean) => (active ? "font-medium text-ink" : "text-ink/55");
+
+  return (
+    <nav
+      aria-label="Quick navigation"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+    >
+      <div className="mx-auto flex max-w-md items-stretch px-2">
+        <Link
+          to="/dashboard"
+          search={ws}
+          aria-current={onForms ? "page" : undefined}
+          className={cn(tabItem, tone(onForms))}
+        >
+          <LayoutList className="size-5" strokeWidth={1.75} />
+          Forms
+        </Link>
+        <button type="button" onClick={onSearch} className={cn(tabItem, tone(false))}>
+          <Search className="size-5" strokeWidth={1.75} />
+          Search
+        </button>
+        {canEdit && (
+          <Link
+            to="/forms/new"
+            search={ws}
+            aria-current={onNew ? "page" : undefined}
+            aria-label="New form"
+            className={cn(tabItem, tone(onNew))}
+          >
+            <span className="flex size-9 items-center justify-center rounded-full bg-ink text-paper">
+              <Plus className="size-5" />
+            </span>
+          </Link>
+        )}
+        <Link
+          to="/guide"
+          aria-current={onGuide ? "page" : undefined}
+          className={cn(tabItem, tone(onGuide))}
+        >
+          <BookOpen className="size-5" strokeWidth={1.75} />
+          Guide
+        </Link>
+        <button
+          type="button"
+          onClick={onMenu}
+          aria-label="Open menu"
+          className={cn(tabItem, tone(false))}
+        >
+          <Menu className="size-5" strokeWidth={1.75} />
+          Menu
+        </button>
+      </div>
+    </nav>
+  );
+}
+
 /* -------------------------------- Sidebar -------------------------------- */
 
 const navItem =
-  "group flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40";
+  "group flex h-10 items-center gap-2.5 rounded-md px-2.5 text-sm lg:h-8 lg:text-[13px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40";
 const navIdle = "text-ink/65 hover:bg-ink/[0.045] hover:text-ink";
 const navActive = "bg-ink/[0.07] font-medium text-ink";
 
@@ -357,7 +416,11 @@ function SidebarBody({
         >
           <Search className="size-3.5" />
           <span className="flex-1 text-left">Search</span>
-          {shortcut && <kbd className="font-mono text-[10px] text-ink/40">{shortcut}</kbd>}
+          {shortcut && (
+            <kbd className="hidden font-mono text-[10px] text-ink/40 pointer-fine:inline">
+              {shortcut}
+            </kbd>
+          )}
         </button>
       </div>
 
@@ -422,7 +485,7 @@ function SidebarBody({
                 <button
                   type="button"
                   onClick={onManageCategories}
-                  className="rounded px-1.5 py-0.5 text-[11px] text-ink/45 outline-none hover:bg-ink/5 hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40"
+                  className="rounded px-2 py-1.5 text-xs text-ink/45 outline-none hover:bg-ink/5 lg:px-1.5 lg:py-0.5 lg:text-[11px] hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
                   Manage
                 </button>

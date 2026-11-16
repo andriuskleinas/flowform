@@ -10,6 +10,7 @@ import {
   GripVertical,
   Loader2,
   Lock,
+  MoreHorizontal,
   Plus,
   Share2,
   Trash2,
@@ -938,7 +939,7 @@ function EditFormAuthed({
             onClick={() => setStatus.mutate("closed")}
             disabled={setStatus.isPending}
             title="Stop taking responses. The link stays up and shows a closed notice."
-            className={actionSecondary}
+            className={cn(actionSecondary, "max-sm:hidden")}
           >
             Close form
           </button>
@@ -947,10 +948,28 @@ function EditFormAuthed({
             onClick={() => setStatus.mutate("draft")}
             disabled={setStatus.isPending}
             title="Take the form offline. The link shows an unpublished notice."
-            className={actionSecondary}
+            className={cn(actionSecondary, "max-sm:hidden")}
           >
             Unpublish
           </button>
+          {/* Phones: the rarely used status changes live behind one button. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="More actions"
+              disabled={setStatus.isPending}
+              className={cn(actionSecondary, "px-2.5 sm:hidden")}
+            >
+              <MoreHorizontal className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setStatus.mutate("closed")}>
+                Close form
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatus.mutate("draft")}>
+                Unpublish
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </>
       )}
       {form.status === "closed" && (
@@ -1002,11 +1021,11 @@ function EditFormAuthed({
               <span className="text-ink/70">
                 {versionFrozen
                   ? "Editing now would mix answers to different questions. Edit a copy, or update this form under the same link."
-                  : "Close or unpublish it (top right) to make changes, or edit a copy instead."}
+                  : "Close or unpublish it to make changes, or edit a copy instead."}
               </span>
             </p>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 pl-7">
+          <div className="mt-3 flex flex-wrap items-center gap-2 sm:pl-7">
             <button
               type="button"
               onClick={() => copyForm.mutate()}
@@ -1031,7 +1050,7 @@ function EditFormAuthed({
             )}
           </div>
           {versionFrozen && (
-            <ul className="mt-2.5 space-y-0.5 pl-7 text-xs text-ink/55">
+            <ul className="mt-2.5 hidden space-y-0.5 pl-7 text-xs text-ink/55 sm:block">
               <li>
                 <span className="font-medium text-ink/75">Edit a copy:</span> a new form with its
                 own link and results. Best for a new event, round or audience.
@@ -1068,7 +1087,7 @@ function EditFormAuthed({
             aria-pressed={pane === view}
             onClick={() => setPane(view)}
             className={cn(
-              "inline-flex h-7 items-center gap-1.5 rounded px-3 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
+              "inline-flex h-9 items-center sm:h-7 gap-1.5 rounded px-3 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
               pane === view ? "bg-ink text-paper" : "text-ink/55 hover:text-ink",
             )}
           >
@@ -1161,7 +1180,7 @@ function EditFormAuthed({
                         aria-pressed={draftForm.display_mode === mode}
                         onClick={() => setDraftForm((f) => ({ ...f, display_mode: mode }))}
                         className={cn(
-                          "inline-flex h-7 items-center rounded px-2.5 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
+                          "inline-flex h-9 items-center sm:h-7 rounded px-2.5 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
                           draftForm.display_mode === mode
                             ? "bg-accent text-accent-foreground"
                             : "text-ink/55 hover:text-ink",
@@ -1679,7 +1698,7 @@ function SortableQuestionCard({
             type="button"
             aria-label="Drag to reorder"
             title="Drag to reorder"
-            className="cursor-grab touch-none rounded p-1 text-ink/40 hover:bg-ink/5 hover:text-ink active:cursor-grabbing"
+            className="cursor-grab touch-none rounded p-2 text-ink/40 hover:bg-ink/5 sm:p-1 hover:text-ink active:cursor-grabbing"
             {...attributes}
             {...listeners}
           >
@@ -1687,7 +1706,7 @@ function SortableQuestionCard({
           </button>
           <span className="eyebrow">Q{index + 1}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="-mr-2 flex items-center sm:mr-0 sm:gap-1">
           <IconBtn label="Move up" onClick={onMoveUp} disabled={index === 0}>
             <ArrowUp className="size-4" />
           </IconBtn>
@@ -2036,7 +2055,7 @@ function SettingToggle({
       aria-controls={controls}
       onClick={onClick}
       className={cn(
-        "inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border px-2.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
+        "inline-flex h-9 max-w-full sm:h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40",
         open
           ? "border-brand bg-accent font-medium text-accent-foreground"
           : status
@@ -2126,7 +2145,7 @@ function RecallKeyField({
           autoComplete="off"
           title="Name this answer to reuse it in later questions, e.g. {name}"
           className={
-            "h-7 w-28 rounded-md border bg-card pl-4 pr-4 font-mono text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring " +
+            "h-9 w-28 sm:h-7 rounded-md border bg-card pl-4 pr-4 font-mono text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring " +
             (clash ? "border-destructive" : "border-input")
           }
         />
@@ -2339,7 +2358,7 @@ function IconBtn({
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className="rounded p-1.5 text-ink/60 hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
+      className="rounded p-2.5 text-ink/60 hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-30 sm:p-1.5"
     >
       {children}
     </button>

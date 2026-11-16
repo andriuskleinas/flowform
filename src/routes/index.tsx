@@ -57,7 +57,7 @@ function PrimaryCTA({
 }) {
   const { session } = useAuth();
   const to = session ? "/dashboard" : "/signup";
-  const sizing = size === "sm" ? "h-9 px-3.5 text-sm" : "h-12 px-6 text-[15px]";
+  const sizing = size === "sm" ? "h-9 px-3 text-sm sm:px-3.5" : "h-12 px-6 text-[15px]";
   const toneClass =
     tone === "ink" ? "bg-ink text-paper hover:bg-ink/85" : "bg-paper text-ink hover:bg-card";
   return (
@@ -67,7 +67,9 @@ function PrimaryCTA({
       className={`group inline-flex items-center gap-2 rounded-md font-medium whitespace-nowrap transition-colors ${sizing} ${toneClass}`}
     >
       {children}
-      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+      <ArrowRight
+        className={`size-4 transition-transform group-hover:translate-x-0.5 ${size === "sm" ? "max-[359px]:hidden" : ""}`}
+      />
     </Link>
   );
 }
@@ -1331,7 +1333,7 @@ function SiteHeader() {
               <Link
                 to="/login"
                 search={{ redirect: "/dashboard" }}
-                className="rounded-md px-3 py-2 text-sm whitespace-nowrap text-ink/70 transition-colors hover:text-ink"
+                className="rounded-md px-2 py-2 text-sm whitespace-nowrap text-ink/70 sm:px-3 transition-colors hover:text-ink"
               >
                 Log in
               </Link>

@@ -109,7 +109,7 @@ const STAGES: Stage[] = [
       },
       {
         name: "Publish, close, reopen",
-        how: "A live form is locked so answers stay comparable. Close it to stop responses; the link then shows a closed notice.",
+        how: "A live form is locked so answers stay comparable. Close it to stop responses; the link then shows a closed notice. On a phone, close and unpublish sit under ⋯.",
         where: ["Build", "top right"],
       },
       {
@@ -197,7 +197,7 @@ const STAGES: Stage[] = [
     features: [
       {
         name: "Search",
-        how: "Jump to any form or page, or change the theme, from the keyboard.",
+        how: "Jump to any form or page, or change the theme, from the keyboard. On a phone, tap Search in the bottom bar.",
         where: ["Sidebar", "Search (⌘K)"],
       },
       {
@@ -207,7 +207,7 @@ const STAGES: Stage[] = [
       },
       {
         name: "List, cards or board",
-        how: "Three layouts for the forms list. On the board, drag a form between Draft, Live and Closed.",
+        how: "Three layouts for the forms list on larger screens; phones keep the list. On the board, drag a form between Draft, Live and Closed.",
         where: ["Forms", "layout switch"],
       },
       {

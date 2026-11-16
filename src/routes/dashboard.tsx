@@ -41,6 +41,7 @@ import type { FormStatus } from "@/lib/form-utils";
 import { PendingInvitations, RoleBadge } from "@/components/profile/team-section";
 import { useProfile } from "@/lib/profile";
 import { isSigningOut } from "@/lib/sign-out";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { permissions, useWorkspaces, workspaceName, type WorkspaceRole } from "@/lib/workspace";
 
@@ -186,18 +187,17 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
     return m;
   }, [forms, search]);
 
+  // Phones always get the list: cards and the board need room to breathe.
+  const isMobile = useIsMobile();
+  const view = isMobile ? "list" : prefs.view;
+
   const visibleForms = useMemo(
     () => sortForms(filterForms(forms, search), sort),
     [forms, search, sort],
   );
 
   const groups = useMemo(() => {
-    if (
-      !prefs.grouped ||
-      prefs.view === "board" ||
-      categoryFilter !== null ||
-      categories.length === 0
-    )
+    if (!prefs.grouped || view === "board" || categoryFilter !== null || categories.length === 0)
       return null;
     const out = categories.map((c) => ({
       key: c.id,
@@ -212,7 +212,7 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
       forms: visibleForms.filter((f) => !f.category_id),
     });
     return out.filter((g) => g.forms.length > 0);
-  }, [prefs.grouped, prefs.view, categoryFilter, categories, visibleForms]);
+  }, [prefs.grouped, view, categoryFilter, categories, visibleForms]);
 
   const { data: profile } = useProfile(userId);
   const firstName =
@@ -389,143 +389,150 @@ function DashboardAuthed({ userId, email }: { userId: string; email: string }) {
         }
       />
 
-      {!isError && (forms.length > 0 || isLoading) && (
-        <div
-          className={cn(
-            "mt-6 grid gap-3",
-            insights.length > 0 && "xl:grid-cols-[minmax(0,1fr)_20rem]",
-          )}
-        >
-          <DashboardAnalytics ownerId={ownerId} />
-          <DashboardInsights
-            insights={insights}
-            onFilter={(patch) => {
-              setSearch({ ...patch, cat: undefined, q: undefined });
-              document
-                .getElementById("forms-list")
-                ?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }}
-          />
-        </div>
-      )}
-
-      <section id="forms-list" aria-labelledby="forms-list-heading" className="mt-8 scroll-mt-20">
-        <h2 id="forms-list-heading" className="sr-only">
-          {isOwnWorkspace ? "Your forms" : "Forms in this workspace"}
-        </h2>
-
-        {!isLoading && !isError && forms.length > 0 && (
-          <FormsToolbar
-            search={search}
-            setSearch={setSearch}
-            statusCounts={statusCounts}
-            categories={categories}
-            categoryCounts={categoryCounts}
-            uncategorizedCount={uncategorizedCount}
-            grouped={prefs.grouped}
-            onGrouped={(grouped) => updatePrefs({ grouped })}
-            view={prefs.view}
-            onView={(view) => updatePrefs({ view })}
-            onManageCategories={() => setManageOpen(true)}
-            canManageCategories={can.canEdit}
-            shownLabel={filtering ? `${visibleForms.length} of ${forms.length} shown` : null}
-          />
+      {/* Phones lead with the forms themselves; the overview follows them. */}
+      <div className="flex flex-col">
+        {!isError && (forms.length > 0 || isLoading) && (
+          <div
+            className={cn(
+              "mt-6 grid gap-3 max-lg:order-2 max-lg:mt-10",
+              insights.length > 0 && "xl:grid-cols-[minmax(0,1fr)_20rem]",
+            )}
+          >
+            <DashboardAnalytics ownerId={ownerId} />
+            <DashboardInsights
+              insights={insights}
+              onFilter={(patch) => {
+                setSearch({ ...patch, cat: undefined, q: undefined });
+                document
+                  .getElementById("forms-list")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            />
+          </div>
         )}
 
-        <div className="mt-4">
-          {isLoading && (
-            <div className="overflow-hidden rounded-xl border border-hairline bg-card">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between gap-4 border-b border-hairline px-4 py-4 last:border-0"
-                >
-                  <div className="flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="mt-2 h-3 w-1/4" />
-                  </div>
-                  <Skeleton className="h-7 w-20" />
-                </div>
-              ))}
-            </div>
-          )}
+        <section
+          id="forms-list"
+          aria-labelledby="forms-list-heading"
+          className="mt-8 scroll-mt-20 max-lg:order-1 max-lg:mt-6"
+        >
+          <h2 id="forms-list-heading" className="sr-only">
+            {isOwnWorkspace ? "Your forms" : "Forms in this workspace"}
+          </h2>
 
-          {!isLoading && isError && (
-            <div className="flex flex-col items-center rounded-xl border border-dashed border-destructive/30 bg-card px-6 py-14 text-center">
-              <FileText className="size-6 text-destructive" strokeWidth={1.5} />
-              <h3 className="mt-4 text-lg font-medium">Couldn’t load your forms</h3>
-              <p className="mt-2 max-w-sm text-sm text-ink/60">
-                Your forms are safe. This is only a loading problem.
-              </p>
-              <button
-                type="button"
-                onClick={() => refetchDashboardForms()}
-                className="mt-6 inline-flex h-9 items-center justify-center rounded-md bg-ink px-4 text-sm font-medium text-paper transition-colors hover:bg-ink/85"
-              >
-                Try again
-              </button>
-            </div>
-          )}
-
-          {!isLoading && !isError && forms.length === 0 && (
-            <EmptyWorkspace canCreate={can.canEdit} ownerId={isOwnWorkspace ? null : ownerId} />
-          )}
-
-          {!isLoading && !isError && forms.length > 0 && visibleForms.length === 0 && (
-            <div className="flex flex-col items-center rounded-xl border border-dashed border-ink/20 px-6 py-12 text-center">
-              <p className="text-sm font-medium">No forms match</p>
-              <p className="mt-1 text-sm text-ink/55">
-                Try a different search, or widen the filters.
-              </p>
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="mt-4 text-sm font-medium text-brand hover:underline"
-              >
-                Clear filters
-              </button>
-            </div>
-          )}
-
-          {!isLoading && !isError && visibleForms.length > 0 && groups && (
-            <div className="space-y-8">
-              {groups.map((g) => (
-                <div key={g.key}>
-                  <div className="mb-2.5 flex items-center gap-2">
-                    {g.key !== UNCATEGORIZED && <CategoryDot color={g.color} />}
-                    <h3
-                      className={
-                        "text-sm font-medium tracking-normal " +
-                        (g.key === UNCATEGORIZED ? "text-ink/50" : "")
-                      }
-                    >
-                      {g.label}
-                    </h3>
-                    <span className="font-mono text-[11px] text-ink/40">{g.forms.length}</span>
-                  </div>
-                  <FormsView
-                    forms={g.forms}
-                    view={prefs.view}
-                    actions={formActions}
-                    sort={sort}
-                    onSort={onSort}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!isLoading && !isError && visibleForms.length > 0 && !groups && (
-            <FormsView
-              forms={visibleForms}
+          {!isLoading && !isError && forms.length > 0 && (
+            <FormsToolbar
+              search={search}
+              setSearch={setSearch}
+              statusCounts={statusCounts}
+              categories={categories}
+              categoryCounts={categoryCounts}
+              uncategorizedCount={uncategorizedCount}
+              grouped={prefs.grouped}
+              onGrouped={(grouped) => updatePrefs({ grouped })}
               view={prefs.view}
-              actions={formActions}
-              sort={sort}
-              onSort={onSort}
+              onView={(view) => updatePrefs({ view })}
+              onManageCategories={() => setManageOpen(true)}
+              canManageCategories={can.canEdit}
+              shownLabel={filtering ? `${visibleForms.length} of ${forms.length} shown` : null}
             />
           )}
-        </div>
-      </section>
+
+          <div className="mt-4">
+            {isLoading && (
+              <div className="overflow-hidden rounded-xl border border-hairline bg-card">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-4 border-b border-hairline px-4 py-4 last:border-0"
+                  >
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="mt-2 h-3 w-1/4" />
+                    </div>
+                    <Skeleton className="h-7 w-20" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!isLoading && isError && (
+              <div className="flex flex-col items-center rounded-xl border border-dashed border-destructive/30 bg-card px-6 py-14 text-center">
+                <FileText className="size-6 text-destructive" strokeWidth={1.5} />
+                <h3 className="mt-4 text-lg font-medium">Couldn’t load your forms</h3>
+                <p className="mt-2 max-w-sm text-sm text-ink/60">
+                  Your forms are safe. This is only a loading problem.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => refetchDashboardForms()}
+                  className="mt-6 inline-flex h-9 items-center justify-center rounded-md bg-ink px-4 text-sm font-medium text-paper transition-colors hover:bg-ink/85"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {!isLoading && !isError && forms.length === 0 && (
+              <EmptyWorkspace canCreate={can.canEdit} ownerId={isOwnWorkspace ? null : ownerId} />
+            )}
+
+            {!isLoading && !isError && forms.length > 0 && visibleForms.length === 0 && (
+              <div className="flex flex-col items-center rounded-xl border border-dashed border-ink/20 px-6 py-12 text-center">
+                <p className="text-sm font-medium">No forms match</p>
+                <p className="mt-1 text-sm text-ink/55">
+                  Try a different search, or widen the filters.
+                </p>
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="mt-4 text-sm font-medium text-brand hover:underline"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+
+            {!isLoading && !isError && visibleForms.length > 0 && groups && (
+              <div className="space-y-8">
+                {groups.map((g) => (
+                  <div key={g.key}>
+                    <div className="mb-2.5 flex items-center gap-2">
+                      {g.key !== UNCATEGORIZED && <CategoryDot color={g.color} />}
+                      <h3
+                        className={
+                          "text-sm font-medium tracking-normal " +
+                          (g.key === UNCATEGORIZED ? "text-ink/50" : "")
+                        }
+                      >
+                        {g.label}
+                      </h3>
+                      <span className="font-mono text-[11px] text-ink/40">{g.forms.length}</span>
+                    </div>
+                    <FormsView
+                      forms={g.forms}
+                      view={view}
+                      actions={formActions}
+                      sort={sort}
+                      onSort={onSort}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!isLoading && !isError && visibleForms.length > 0 && !groups && (
+              <FormsView
+                forms={visibleForms}
+                view={view}
+                actions={formActions}
+                sort={sort}
+                onSort={onSort}
+              />
+            )}
+          </div>
+        </section>
+      </div>
 
       <DeleteFormDialog
         open={pendingDelete !== null}

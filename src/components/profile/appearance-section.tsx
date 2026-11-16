@@ -68,7 +68,11 @@ export function AppearanceSection({ userId }: { userId: string }) {
       title="Appearance"
       description="Saved to your account, so it follows you to other devices."
     >
-      <div role="radiogroup" aria-label="Theme" className="grid gap-3 p-5 sm:grid-cols-3 md:p-6">
+      <div
+        role="radiogroup"
+        aria-label="Theme"
+        className="grid grid-cols-3 gap-2 p-4 sm:gap-3 sm:p-5 md:p-6"
+      >
         {OPTIONS.map(({ value, label, Icon }) => {
           const active = pref === value;
           return (
@@ -88,7 +92,7 @@ export function AppearanceSection({ userId }: { userId: string }) {
                 active ? "border-brand ring-1 ring-brand" : "border-hairline hover:border-ink/25",
               )}
             >
-              <div className="flex h-20 border-b border-hairline">
+              <div className="flex h-14 border-b border-hairline sm:h-20">
                 {value === "system" ? (
                   <>
                     {(["light", "dark"] as const).map((scheme) => (
@@ -101,14 +105,14 @@ export function AppearanceSection({ userId }: { userId: string }) {
                   <Preview scheme={value} />
                 )}
               </div>
-              <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2 px-2.5 py-2 sm:px-3 sm:py-2.5">
                 <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-ink">
                   <Icon className="size-3.5 shrink-0 text-ink/60" />
                   {label}
                 </p>
                 <span
                   className={cn(
-                    "flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+                    "hidden size-4 shrink-0 items-center justify-center rounded-full border transition-colors sm:flex",
                     active ? "border-brand bg-brand text-brand-foreground" : "border-ink/20",
                   )}
                 >

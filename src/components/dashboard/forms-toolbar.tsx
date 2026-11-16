@@ -36,7 +36,7 @@ import {
 } from "@/lib/dashboard-filters";
 
 const control =
-  "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40";
+  "inline-flex h-10 items-center gap-1.5 rounded-md border px-3 text-xs sm:h-8 sm:px-2.5 font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40";
 const idle = "border-hairline bg-card text-ink/65 hover:border-ink/25 hover:text-ink";
 const engaged = "border-brand/30 bg-brand/[0.07] text-brand";
 
@@ -239,7 +239,7 @@ export function FormsToolbar({
           <div
             role="radiogroup"
             aria-label="Layout"
-            className="inline-flex shrink-0 rounded-md border border-hairline bg-card p-0.5"
+            className="hidden shrink-0 rounded-md border border-hairline bg-card p-0.5 md:inline-flex"
           >
             {(
               [
@@ -350,7 +350,7 @@ function SearchField({ value, onChange }: { value: string; onChange: (q: string)
         maxLength={100}
         placeholder="Search forms"
         aria-label="Search forms"
-        className="h-8 w-full rounded-md border border-hairline bg-card pl-8 pr-7 text-[13px] text-ink outline-none transition-colors placeholder:text-ink/40 hover:border-ink/25 focus:border-brand/50 focus:ring-2 focus:ring-brand/20 [&::-webkit-search-cancel-button]:hidden"
+        className="h-10 w-full rounded-md border border-hairline bg-card pl-8 pr-7 text-[13px] sm:h-8 text-ink outline-none transition-colors placeholder:text-ink/40 hover:border-ink/25 focus:border-brand/50 focus:ring-2 focus:ring-brand/20 [&::-webkit-search-cancel-button]:hidden"
       />
       {text ? (
         <button

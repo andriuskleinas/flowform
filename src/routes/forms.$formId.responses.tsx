@@ -692,7 +692,7 @@ function Overview({
                 aria-pressed={version === v}
                 onClick={() => onVersionChange(v)}
                 className={
-                  "rounded-sm px-2.5 py-1 font-mono text-xs transition-colors " +
+                  "rounded-sm px-3 py-2 font-mono text-xs transition-colors sm:px-2.5 sm:py-1 " +
                   (version === v ? "bg-ink text-paper" : "text-ink/55 hover:text-ink")
                 }
               >
@@ -713,7 +713,7 @@ function Overview({
               aria-pressed={days === d}
               onClick={() => onDaysChange(d)}
               className={
-                "rounded-sm px-2.5 py-1 font-mono text-xs transition-colors " +
+                "rounded-sm px-3 py-2 font-mono text-xs transition-colors sm:px-2.5 sm:py-1 " +
                 (days === d ? "bg-ink text-paper" : "text-ink/55 hover:text-ink")
               }
             >
@@ -891,13 +891,16 @@ function Overview({
         <div className="h-56 w-full">
           <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
             <ResponsiveContainer>
-              <LineChart data={trend} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+              <LineChart data={trend} margin={{ top: 8, right: 20, left: -16, bottom: 0 }}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="2 4" vertical={false} />
                 <XAxis
                   dataKey="label"
                   stroke="currentColor"
                   className="text-ink/50"
                   tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
+                  // Dates shouldn't collide on a phone.
+                  interval="preserveStartEnd"
+                  minTickGap={28}
                 />
                 <YAxis
                   allowDecimals={false}
@@ -995,7 +998,10 @@ function DropoffCard({
                     style={{ width: `${(reached / top) * 100}%` }}
                   />
                 </div>
-                <span className="w-24 shrink-0 truncate text-xs text-ink/50" title={q.label}>
+                <span
+                  className="hidden w-24 shrink-0 truncate text-xs text-ink/50 sm:block"
+                  title={q.label}
+                >
                   {q.label}
                 </span>
                 <span
@@ -1042,7 +1048,10 @@ function DropoffCard({
                     style={{ width: `${(n / maxReach) * 100}%` }}
                   />
                 </div>
-                <span className="w-24 shrink-0 truncate text-xs text-ink/50" title={q.label}>
+                <span
+                  className="hidden w-24 shrink-0 truncate text-xs text-ink/50 sm:block"
+                  title={q.label}
+                >
                   {q.label}
                 </span>
                 <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-ink">
@@ -1451,7 +1460,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-hairline bg-card p-5">
+    <div className="rounded-lg border border-hairline bg-card p-4 sm:p-5">
       <div className="mb-5">
         <h3 className="text-sm font-medium text-ink">{title}</h3>
         {subtitle && <p className="mt-0.5 text-xs text-ink/55">{subtitle}</p>}
