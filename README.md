@@ -148,6 +148,19 @@ Every feature, what it does, and where to find it.
 > Dashboard, editor, live and guide screenshots use demo data, rendered from the real app with a
 > mocked backend; the AI and results screenshots come from the signed-in production app.
 
+## How it evolved
+
+From a purple Lovable prototype in May 2026 to today, in seven eras. Each one is a git tag you can
+check out and run.
+
+<a href="docs/EVOLUTION.md"><img src="docs/evolution/evolution.gif" alt="Flowform's landing page from May to November 2026" width="720"></a>
+
+| May 2026 | Jul 2026 | Nov 2026 |
+| --- | --- | --- |
+| ![Dashboard, May 2026](docs/evolution/2026-05-17-dashboard.png) | ![Dashboard, July 2026](docs/evolution/2026-07-20-dashboard.png) | ![Dashboard, November 2026](docs/evolution/2026-11-16-dashboard.png) |
+
+The full timeline, with what changed and why: [docs/EVOLUTION.md](docs/EVOLUTION.md).
+
 ## Design
 
 The interface follows an editorial system rather than a SaaS template: near-black ink on warm
