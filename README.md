@@ -45,28 +45,76 @@ No account needed for the [interactive demo](https://flowformapp.vercel.app/demo
 
 ## Features
 
-| | Feature | What it does |
-|---|---|---|
-| `01` | **Drag-and-drop builder** | 7 question types: short & long text, single/multi choice, dropdown, yes/no, NPS and rating scales. Start from a template or a blank form, with a live preview of what respondents see. |
-| `02` | **AI question drafting** | Give the form a title and goal and Claude (Sonnet 5.5) drafts five to eight questions, each with the right type and answer options. Add the ones you want with one click and edit anything. |
-| `03` | **Conditional logic** | Forward-only jump rules ("if they answer X, skip to…") in both conversational and one-page forms, with path-aware validation so a required question a respondent never sees can't block them. |
-| `04` | **Conversational mode** | One question at a time with a progress bar, keyboard shortcuts (Enter to confirm, A–Z or Y/N to pick, 0–9 to score) and back-navigation. Or a **classic** all-on-one-page mode. |
-| `05` | **Partial responses** | Answers are saved as they're given, before submit, so a respondent can come back and finish, and the owner sees exactly which question unfinished respondents left on. |
-| `06` | **Analytics dashboard** | A real funnel (opened → started → completed), completion rate, average time-to-fill, per-question drop-off from real sessions, a response trend over 7/30/90 days, and a spreadsheet-style table of individual responses. |
-| `07` | **AI response summaries** | Claude reads every open-text answer and returns the main themes (with how common each was), the overall sentiment and verbatim quotes, and says so when there's too little data to be confident. |
-| `08` | **Sharing & export** | Shareable link, QR code, embed snippet, native share and CSV export. |
+**Build**
+
+| Feature | What it does |
+|---|---|
+| **Question builder** | 7 question types: short and long text, single or multi choice, dropdown, Yes / No, NPS and rating scales. Drag to reorder, start from a template or a blank form, and preview exactly what respondents see. |
+| **Drafted by Claude** | Give the form a title and goal and Claude (Sonnet 5.5) drafts five to eight questions, each with the right type and options. Add the ones you want with one click. |
+| **Logic jumps** | Forward-only rules ("if they answer X, skip to…") in both one-at-a-time and one-page forms. A required question someone never sees can't block them. |
+| **Answer recall** | Name an answer and reuse it later: "Thanks, {name}. What should we fix first?" Hidden fields from the link work the same way. |
+| **Follow-up questions by Claude** | When a written answer is short or vague, Claude asks one optional follow-up before moving on. Rate-limited server-side. |
+| **Quiz mode** | Points per choice, a score at the end, and outcomes matched to score ranges. |
+| **Branding** | Per-form accent colour, font and cover image; a custom thank-you message or a redirect after submit. |
+
+**Share**
+
+| Feature | What it does |
+|---|---|
+| **Conversational or classic** | One question at a time with a progress bar and keyboard shortcuts (Enter, A–Z, Y/N, 0–9), or every question on one page. |
+| **Link, QR, embed** | Short link, QR code, embed snippet, native share. Hidden fields and UTM tags show which link brought each response. |
+| **Safe editing** | A live form is locked so answers stay comparable. Once it has responses, update it as a new version under the same link; earlier answers are kept and can be compared side by side. |
+| **One response each** | One response per form per network (hashed IP), enforced in the database. |
+
+**Learn**
+
+| Feature | What it does |
+|---|---|
+| **Results** | Funnel (opened → started → completed), completion rate, time to fill, a trend over 7/30/90 days and a chart for every question, computed in Postgres over every response. |
+| **Real drop-off** | Answers are saved as they're given, so you see the exact question unfinished respondents left on, and they can come back and finish. |
+| **Summaries by Claude** | Claude reads every open answer and returns themes (with how common each is), sentiment and quotes, and says when there's too little data. |
+| **Ask your results** | Ask a question in plain English ("What do detractors complain about?"); Claude answers from the data and links to the responses behind it. |
+| **Live results** | A full-screen presenter view that updates in real time (Supabase Realtime), with a QR code so the room can join. |
+| **Export** | CSV of every response, a printable PDF report, and a spreadsheet-style table view. |
+
+**Workspace**
+
+| Feature | What it does |
+|---|---|
+| **One app shell** | A sidebar on every signed-in page: workspace switcher, New form, search (⌘K), Forms / Team / Settings / Guide and your categories. Every form page has Build / Results / Present tabs. |
+| **Dashboard** | Overview numbers and trend for the workspace, suggested next steps, and the forms list as a list, cards or a drag-and-drop board, with search, filters and categories kept in the URL. |
+| **Teams and roles** | Invite people as admin, editor or viewer. Every permission is enforced by row-level security, not just hidden in the UI. |
+| **Guide** | An in-app page listing every feature and the exact click path to it. |
+| **Dark mode** | Light, dark or system, saved to the account and applied before first paint. Logged-out pages are always light. |
 
 ### The landing page
 
-The hero card is a working three-question form with a real jump rule; further down, the Build and
-Learn sections have hands-on demos of the two AI features.
+The page is the demo. On the left, a working three-question form with a real jump rule; on the
+right, the results the form's owner sees. Example answers keep arriving, and when you finish,
+your own response lands in the results.
 
 ![Flowform landing page](docs/screenshots/landing.png)
 
-### Drafting questions with Claude
+![The landing demo after answering](docs/screenshots/landing-demo.png)
 
-Real output in the editor for a form titled "Customer feedback survey": eight questions, each with
-its type picked. Nothing is added until you click Add.
+### The dashboard
+
+Every signed-in page shares one sidebar. The dashboard leads with the workspace's numbers and
+what to do next, then the forms themselves.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+![Dashboard in dark mode](docs/screenshots/dashboard-dark.png)
+
+### Building a form
+
+Questions are the main column; settings for the whole form sit beside them, and each question
+ends in one row of its own options. This form has responses, so its questions are locked.
+
+![The form editor](docs/screenshots/editor.png)
+
+Claude's question drafts, real output for a form titled "Customer feedback survey". Nothing is
+added until you click Add.
 
 ![Claude question suggestions in the editor](docs/screenshots/ai-suggestions.png)
 
@@ -78,11 +126,27 @@ One question at a time, set as a headline, with lettered options you can pick by
 
 ### Reading the results
 
-The responses dashboard for a real form: headline metrics, then Claude's summary of the open
-answers with themes, sentiment and quotes. It even flags the placeholder test answers rather than
-reading meaning into them. Funnel, trend, drop-off and per-question charts follow below.
+Headline metrics, "Ask your results", and Claude's summary of the open answers with themes,
+sentiment and quotes. It even flags placeholder test answers rather than reading meaning into
+them.
 
 ![Analytics with the Claude summary](docs/screenshots/analytics.png)
+
+### Presenting live
+
+The presenter view for talks and workshops: results update as answers arrive, and the room
+joins with the QR code.
+
+![Live results view](docs/screenshots/live.png)
+
+### The guide
+
+Every feature, what it does, and where to find it.
+
+![In-app guide](docs/screenshots/guide.png)
+
+> Dashboard, editor, live and guide screenshots use demo data, rendered from the real app with a
+> mocked backend; the AI and results screenshots come from the signed-in production app.
 
 ## Design
 
@@ -94,7 +158,9 @@ work.
 |---|---|
 | **Type** | [Figtree](https://fonts.google.com/specimen/Figtree) throughout, an open, rounded sans chosen for readability: semibold for headlines and questions, regular for interface text, with [DM Mono](https://fonts.google.com/specimen/DM+Mono) for labels, counters and numbers |
 | **Colour** | Ink `#14161A` on paper `#FBFAF7`, with one Klein-style blue (`#1244D0`) reserved for actions, selection, focus and live data. The landing page adds soft sky, sun, coral and mint tints behind its product demos |
-| **Marks** | The logo is an ink tile with two "answer bars"; the Build / Branch / Learn icons are drawn from the same shapes rather than a stock icon set |
+| **Marks** | The logo is an ink tile with two "answer bars"; the Build / Branch / Learn / Present icons are drawn from the same shapes rather than a stock icon set |
+| **Themes** | Every colour token has a dark value; the theme is applied before first paint, so there's no flash |
+| **Voice** | One tone across every page: short, plain and exact, with at most one dry joke per screen and none on errors, legal pages or anything respondents see. Rules in [docs/voice.md](docs/voice.md) |
 | **Shape** | Tight 6–8 px radii, 1 px hairline borders, one soft shadow for floating "product sheets" only |
 | **Motion** | A single step transition between questions; respects `prefers-reduced-motion` |
 | **Tokens** | All colours are `oklch` custom properties in [src/styles.css](src/styles.css), mapped to Tailwind utilities |
@@ -114,8 +180,8 @@ flowchart LR
 |---|---|
 | **Frontend** | [TanStack Start](https://tanstack.com/start) (file-based routing, SSR), React 19, Tailwind CSS 4 with `oklch` design tokens, shadcn/ui on Radix primitives, dnd-kit for drag-and-drop, Recharts for analytics |
 | **Backend** | TanStack Start server functions running as Vercel serverless functions via Nitro; Zod validation on AI input and output |
-| **Database** | Supabase Postgres with row-level security on every table, 24 versioned SQL migrations, transactional RPCs for editor saves and analytics, `CHECK` constraints on JSON shapes |
-| **AI** | Anthropic Claude Sonnet 5.5 for question suggestions and open-text summaries, called only from server functions, with refusal fallback and Zod-validated output |
+| **Database** | Supabase Postgres with row-level security on every table, 42 versioned SQL migrations, Realtime for the live view, transactional RPCs for editor saves and analytics, `CHECK` constraints on JSON shapes |
+| **AI** | Anthropic Claude Sonnet 5.5 for question drafts, follow-up questions, open-text summaries and "Ask your results", called only from server functions, with refusal fallback and Zod-validated output; the public follow-up endpoint needs a single-use, rate-limited ticket |
 | **Auth** | Supabase Auth: email verification with branded emails, password reset, email change, 10-minute idle auto-logout |
 | **Automation** | Postgres trigger + `pg_net` posts a Slack alert on each confirmed signup (webhook URL kept in Vault); GitHub Actions runs CI; a keep-alive write runs from both GitHub Actions and Vercel Cron, and the workflow restores the project through the Management API if it was paused anyway |
 | **Hosting** | Vercel, deployed from `main`; Bun for installs and scripts |
@@ -126,8 +192,9 @@ flowchart LR
   scoped by workspace role (owner, admin, editor, viewer), public form filling is scoped by policy,
   and a pgTAP suite in CI checks each role's access. There is deliberately **no service-role key** in the app. The publishable key
   plus RLS does all the work, so a leaked client bundle grants nothing.
-- **The Claude API key never reaches the client.** Question suggestions and response summaries run
-  in server functions and read the key from server-side env only.
+- **The Claude API key never reaches the client.** All four Claude features run in server
+  functions and read the key from server-side env only. The public follow-up endpoint is guarded
+  by a single-use, rate-limited ticket from the database, so it can't be used as a free Claude proxy.
 - **Atomic editor saves.** Saving the builder is one transactional `save_form_editor` RPC that
   applies reorders, edits, inserts and deletes in a single round-trip, replacing an N+1 write path
   that could leave a form half-saved. Existing question IDs are preserved, so answers collected
@@ -181,10 +248,10 @@ the pgTAP suite and the Playwright suite run against it.
 ## Project layout
 
 ```
-src/routes/                 file-based routes: landing, demo, auth, dashboard, builder, fill, responses
-src/components/             conversational form, question renderer, share dialog, logo, app shell
+src/routes/                 file-based routes: landing, demo, auth, dashboard, guide, builder, fill, results, live
+src/components/             app shell, form header, conversational form, question renderer, share dialog
 src/components/ui/          shadcn/ui primitives
-src/lib/                    server functions (AI suggestions, summaries), form logic, CSV export
+src/lib/                    server functions (Claude features), form logic, theme, CSV/PDF export
 src/styles.css              design tokens (colour, type, radius) and base styles
 src/integrations/supabase/  typed Supabase client
 supabase/migrations/        schema, RLS policies, RPCs, constraints, triggers
@@ -192,6 +259,7 @@ supabase/tests/database/    pgTAP row-level-security tests
 e2e/                        Playwright end-to-end tests
 .github/workflows/          CI and Supabase keep-alive
 docs/screenshots/           README screenshots
+docs/voice.md               tone of voice
 ```
 
 ## License
