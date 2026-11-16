@@ -1,20 +1,20 @@
 # How Flowform evolved
 
 From a purple Lovable prototype to an editorial, Claude-assisted form builder in about six
-months. The page runs oldest first. Each era links to a git tag, so you can check out the code
-exactly as it was.
+months. The page runs oldest first. Each era has a release with notes and a git tag, so you can
+check out the code exactly as it was.
 
 ![Flowform's landing page, May to November 2026](evolution/evolution.gif)
 
-| Era | Date | What changed | Tag |
+| Era | Date | What changed | Release |
 | --- | --- | --- | --- |
-| [Prototype](#1-prototype) | 12 May 2026 | First published version, built in Lovable | [`era-01-prototype`](https://github.com/andriuskleinas/flowform/tree/era-01-prototype) |
-| [A working app](#2-a-working-app) | 17–22 May 2026 | Dashboard, editor, sharing, analytics, AI question suggestions | [`era-02-lovable-mvp`](https://github.com/andriuskleinas/flowform/tree/era-02-lovable-mvp) |
-| [Portfolio launch](#3-portfolio-launch) | 3–20 Jul 2026 | Moved to Vercel; conversational mode, logic jumps, Claude summaries | [`era-03-portfolio-launch`](https://github.com/andriuskleinas/flowform/tree/era-03-portfolio-launch) |
-| [Editorial Ink](#4-editorial-ink) | 6 Nov 2026 | New design language: ink on paper, one blue, a live hero form | [`era-04-editorial-ink`](https://github.com/andriuskleinas/flowform/tree/era-04-editorial-ink) |
-| [Claude up front](#5-claude-up-front) | 9 Nov 2026 | Claude features lead the page; dashboard gets an analytics overview | [`era-05-claude-up-front`](https://github.com/andriuskleinas/flowform/tree/era-05-claude-up-front) |
-| [One app shell](#6-one-app-shell) | 13 Nov 2026 | Figtree + DM Mono; a sidebar shell for every signed-in page | [`era-06-app-shell`](https://github.com/andriuskleinas/flowform/tree/era-06-app-shell) |
-| [The page is the demo](#7-the-page-is-the-demo) | 16 Nov 2026 | Landing hero you can answer; a phone-first pass on the app | [`era-07-landing-demo`](https://github.com/andriuskleinas/flowform/tree/era-07-landing-demo) |
+| [Prototype](#1-prototype) | 12 May 2026 | First published version, built in Lovable | [`era-01-prototype`](https://github.com/andriuskleinas/flowform/releases/tag/era-01-prototype) |
+| [A working app](#2-a-working-app) | 17–22 May 2026 | Dashboard, editor, sharing, analytics, AI question suggestions | [`era-02-lovable-mvp`](https://github.com/andriuskleinas/flowform/releases/tag/era-02-lovable-mvp) |
+| [Portfolio launch](#3-portfolio-launch) | 3–20 Jul 2026 | Moved to Vercel; conversational mode, logic jumps, Claude summaries | [`era-03-portfolio-launch`](https://github.com/andriuskleinas/flowform/releases/tag/era-03-portfolio-launch) |
+| [Editorial Ink](#4-editorial-ink) | 6 Nov 2026 | New design language: ink on paper, one blue, a live hero form | [`era-04-editorial-ink`](https://github.com/andriuskleinas/flowform/releases/tag/era-04-editorial-ink) |
+| [Claude up front](#5-claude-up-front) | 9 Nov 2026 | Roboto; Claude features lead the landing page | [`era-05-claude-up-front`](https://github.com/andriuskleinas/flowform/releases/tag/era-05-claude-up-front) |
+| [One app shell](#6-one-app-shell) | 13 Nov 2026 | Figtree + DM Mono; a sidebar shell for every signed-in page | [`era-06-app-shell`](https://github.com/andriuskleinas/flowform/releases/tag/era-06-app-shell) |
+| [The page is the demo](#7-the-page-is-the-demo) | 16 Nov 2026 | Landing hero you can answer; a phone-first pass on the app | [`era-07-landing-demo`](https://github.com/andriuskleinas/flowform/releases/tag/era-07-landing-demo) |
 
 To run any era locally: `git checkout era-03-portfolio-launch && bun install && bun run dev`.
 
@@ -80,9 +80,8 @@ you can answer, with letter shortcuts.
 **9 Nov 2026 · [`3b7c12e`](https://github.com/andriuskleinas/flowform/commit/3b7c12e)**
 
 The serif was dropped for Roboto across the product, and the Claude features moved to the top of
-the landing page. A strip of facts sat under the buttons. Inside the app, the results page
-gained “Ask your responses” and the dashboard an analytics overview with list, card and table
-views.
+the landing page. A strip of facts sat under the buttons, and the dark section became a Features
+grid written for users rather than engineers.
 
 ![Landing page, 9 Nov 2026](evolution/2026-11-09-landing.png)
 
@@ -99,8 +98,9 @@ views.
 
 Figtree and DM Mono replaced Roboto: rounder, easier to read, still exact for numbers. Every
 signed-in page moved into one sidebar shell with a workspace switcher, ⌘K search and form-level
-Build / Results / Present tabs. Teams, categories, live presenting, quizzes and partial responses
-arrived in the days around it.
+Build / Results / Present tabs. The four days before it added a dashboard analytics overview,
+categories, “Ask your responses”, teams and roles, dark mode, live presenting, quizzes and partial
+responses.
 
 ![Landing page, 13 Nov 2026](evolution/2026-11-13-landing.png)
 
