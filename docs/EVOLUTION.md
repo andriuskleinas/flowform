@@ -120,6 +120,25 @@ on the dashboard, and larger tap targets.
 | --- | --- |
 | <img src="evolution/2026-05-12-mobile.png" alt="Landing page on a phone, May 2026" width="300"> | <img src="evolution/2026-11-16-mobile.png" alt="Landing page on a phone, November 2026" width="300"> |
 
+The social preview was retaken to match: the form and its live results, side by side.
+
+![Social preview, 16 Nov 2026](evolution/og-2026-11-16.png)
+
+---
+
+## The social preview
+
+The card that appears when a Flowform link is shared, and on the GitHub repo. It has followed
+each redesign since the first branded version in July.
+
+| | |
+| --- | --- |
+| **7 Jul 2026**<br>Dark, with a purple glow. The only dark version, made for the portfolio launch. | ![Social preview, 7 Jul 2026](evolution/og-2026-07-07.png) |
+| **6 Nov 2026**<br>Editorial Ink: serif headline, a form card with a logic jump. | ![Social preview, 6 Nov 2026](evolution/og-2026-11-06.png) |
+| **9 Nov 2026**<br>Roboto replaces the serif; the logic hint goes. | ![Social preview, 9 Nov 2026](evolution/og-2026-11-09.png) |
+| **13 Nov 2026**<br>Figtree and DM Mono. | ![Social preview, 13 Nov 2026](evolution/og-2026-11-13.png) |
+| **16 Nov 2026**<br>The form and its live results, as on the landing page. | ![Social preview, 16 Nov 2026](evolution/og-2026-11-16.png) |
+
 ---
 
 ### How these were made
@@ -128,7 +147,7 @@ Landing pages, dashboards and phone shots were rendered fresh from each tagged c
 temporary git worktree, the dependencies locked at that commit, and the dev server, captured with
 Playwright at 1440 × 900 (phones at 390 × 844). Signed-in pages use a mocked backend with demo data,
 so no real account appears. July’s respondent and results shots and the 9 Nov results shot are the
-originals from the README at the time, taken from git history.
+originals from the README at the time, taken from git history, as are all five social previews.
 
 May’s dashboard is shown from 17 May. From 19 May until a fix on 3 July, that page never finished
 loading, because of a Supabase client method called after it was detached from its client. History
