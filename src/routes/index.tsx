@@ -1119,7 +1119,7 @@ function WallVignette() {
 
 const HERO_FACTS: Array<{ icon: LucideIcon; title: string; href?: string }> = [
   { icon: Gift, title: "Free to use" },
-  { icon: UserRoundX, title: "No sign-up" },
+  { icon: UserRoundX, title: "No login to answer" },
   { icon: Code2, title: "Open source", href: REPO_URL },
 ];
 
