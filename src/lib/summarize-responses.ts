@@ -7,6 +7,7 @@ import { z } from "zod";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import type { Database } from "@/integrations/supabase/types";
 import { parseFollowUps } from "@/lib/form-utils";
+import { friendlyDbError } from "@/lib/server-errors";
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ async function loadTextQuestions(
     .select("version, questions")
     .eq("form_id", formId)
     .order("version", { ascending: false });
-  if (vErr) throw vErr;
+  if (vErr) throw friendlyDbError(vErr);
   const fromSnapshot = (qs: unknown): TextQuestion[] =>
     (Array.isArray(qs) ? (qs as { id: string; label: string; type: string }[]) : [])
       .filter((q) => isText(q.type))
@@ -96,7 +97,7 @@ async function loadTextQuestions(
     .eq("form_id", formId)
     .in("type", ["text", "long_text"])
     .order("position", { ascending: true });
-  if (qErr) throw qErr;
+  if (qErr) throw friendlyDbError(qErr);
   const current = (live ?? []).map((q) => ({ id: q.id, label: q.label }));
   if (version != null) return current;
 
@@ -130,7 +131,7 @@ export const summarizeResponses = createServerFn({ method: "POST" })
       .select("id, title, version")
       .eq("id", data.formId)
       .maybeSingle();
-    if (formErr) throw formErr;
+    if (formErr) throw friendlyDbError(formErr);
     if (!form) throw new Error("Form not found.");
 
     const questions = await loadTextQuestions(supabase, data.formId, form.version, data.version);

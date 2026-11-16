@@ -882,9 +882,12 @@ function EditFormAuthed({
   const headerActions = (
     <>
       {isDirty && !isLocked && (
-        <span className="mr-1 inline-flex items-center gap-1.5 text-xs text-ink/55">
+        <span
+          title="Unsaved changes"
+          className="mr-1 inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-ink/55"
+        >
           <span aria-hidden className="size-1.5 rounded-full bg-sun" />
-          Unsaved changes
+          <span className="max-sm:sr-only">Unsaved changes</span>
         </span>
       )}
       {form.status === "published" && (
@@ -892,8 +895,13 @@ function EditFormAuthed({
           <Share2 className="size-3.5" /> Share
         </button>
       )}
-      <button type="button" onClick={() => setPreviewOpen(true)} className={actionSecondary}>
-        <Eye className="size-3.5" /> Preview
+      <button
+        type="button"
+        onClick={() => setPreviewOpen(true)}
+        aria-label="Preview"
+        className={cn(actionSecondary, "max-sm:px-2.5")}
+      >
+        <Eye className="size-3.5" /> <span className="max-sm:sr-only">Preview</span>
       </button>
       {isDirty && !isLocked && (
         <button

@@ -396,6 +396,37 @@ export function trafficSource(meta: ResponseMeta): string | undefined {
   return meta.source?.toLowerCase() ?? meta.referrer;
 }
 
+/** Readable names for sources people commonly tag or arrive from. */
+const SOURCE_NAMES: Record<string, string> = {
+  direct: "Direct / unknown",
+  qr: "QR code",
+  email: "Email",
+  newsletter: "Newsletter",
+  linkedin: "LinkedIn",
+  "linkedin.com": "LinkedIn",
+  "lnkd.in": "LinkedIn",
+  twitter: "X (Twitter)",
+  x: "X (Twitter)",
+  "x.com": "X (Twitter)",
+  "t.co": "X (Twitter)",
+  facebook: "Facebook",
+  "facebook.com": "Facebook",
+  "m.facebook.com": "Facebook",
+  instagram: "Instagram",
+  "instagram.com": "Instagram",
+  google: "Google",
+  "google.com": "Google",
+  slack: "Slack",
+  "slack.com": "Slack",
+  reddit: "Reddit",
+  "reddit.com": "Reddit",
+  "news.ycombinator.com": "Hacker News",
+};
+
 export function sourceLabel(source: string): string {
-  return source === "direct" ? "Direct / unknown" : source;
+  const key = source.trim().toLowerCase();
+  if (SOURCE_NAMES[key]) return SOURCE_NAMES[key];
+  // Hostnames stay as they are; tagged names get a capital letter.
+  if (key.includes(".")) return key;
+  return key.charAt(0).toUpperCase() + key.slice(1).replace(/[-_]+/g, " ");
 }

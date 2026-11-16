@@ -53,9 +53,15 @@ export function ResponseInsights({
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-ink/45">
                 <th className="pb-2 font-medium">Source</th>
-                <th className="pb-2 text-right font-medium">Views</th>
-                <th className="pb-2 text-right font-medium">Responses</th>
-                <th className="w-32 pb-2 pl-3 font-medium">Conversion</th>
+                <th className="pb-2 pl-3 text-right font-medium">Views</th>
+                <th className="pb-2 pl-3 text-right font-medium">
+                  <span className="sm:hidden">Resp.</span>
+                  <span className="max-sm:hidden">Responses</span>
+                </th>
+                <th className="pb-2 pl-3 font-medium sm:w-32">
+                  <span className="sm:hidden">Conv.</span>
+                  <span className="max-sm:hidden">Conversion</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -68,14 +74,14 @@ export function ResponseInsights({
                     <td className="max-w-[10rem] truncate py-2 font-medium text-ink">
                       {sourceLabel(s.source)}
                     </td>
-                    <td className="py-2 text-right font-mono text-ink/70">{views}</td>
-                    <td className="py-2 text-right font-mono text-ink/70">{s.submits}</td>
+                    <td className="py-2 pl-3 text-right font-mono text-ink/70">{views}</td>
+                    <td className="py-2 pl-3 text-right font-mono text-ink/70">{s.submits}</td>
                     <td className="py-2 pl-3">
                       {rate == null ? (
                         <span className="text-ink/35">—</span>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-hairline">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-hairline max-sm:hidden">
                             <div className="h-full bg-brand" style={{ width: `${rate}%` }} />
                           </div>
                           <span className="w-9 text-right font-mono text-xs text-ink/70">
@@ -123,7 +129,7 @@ export function ResponseInsights({
               range {quiz.min ?? "—"}–{quiz.max ?? "—"}
             </p>
           </div>
-          <ScoreHistogram distribution={quiz.distribution} />
+          <ScoreHistogram distribution={quiz.distribution} maxScore={maxScore} />
           {outcomes.length > 0 && (
             <ul className="mt-4 space-y-1.5 border-t border-hairline pt-3">
               {[...outcomes]
@@ -140,7 +146,7 @@ export function ResponseInsights({
                       <div className="h-1.5 w-24 overflow-hidden rounded-full bg-hairline">
                         <div className="h-full bg-brand" style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="w-14 text-right font-mono text-xs text-ink/60">
+                      <span className="min-w-16 shrink-0 whitespace-nowrap text-right font-mono text-xs text-ink/60">
                         {n} · {pct}%
                       </span>
                     </li>
@@ -178,16 +184,36 @@ export function ResponseInsights({
   );
 }
 
-function ScoreHistogram({ distribution }: { distribution: { score: number; count: number }[] }) {
+function ScoreHistogram({
+  distribution,
+  maxScore,
+}: {
+  distribution: { score: number; count: number }[];
+  maxScore: number;
+}) {
   if (distribution.length === 0) return null;
-  const peak = Math.max(...distribution.map((d) => d.count));
+  // Show every score from the lowest to the best possible, so a score nobody
+  // got reads as an empty bar instead of disappearing from the axis.
+  const counts = new Map(distribution.map((d) => [d.score, d.count]));
+  const lo = Math.min(0, ...distribution.map((d) => d.score));
+  const hi = Math.max(maxScore, ...distribution.map((d) => d.score));
+  const bars =
+    hi - lo <= 30
+      ? Array.from({ length: hi - lo + 1 }, (_, i) => ({
+          score: lo + i,
+          count: counts.get(lo + i) ?? 0,
+        }))
+      : distribution;
+  const peak = Math.max(1, ...bars.map((d) => d.count));
   return (
     <div className="mt-4 flex h-20 items-end gap-1" aria-label="Score distribution">
-      {distribution.map((d) => (
+      {bars.map((d) => (
         <div key={d.score} className="flex flex-1 flex-col items-center gap-1">
           <div
-            className="w-full min-w-1 rounded-t-sm bg-brand/80"
-            style={{ height: `${Math.max(6, (d.count / peak) * 64)}px` }}
+            className={
+              "w-full min-w-1 rounded-t-sm " + (d.count > 0 ? "bg-brand/80" : "bg-hairline")
+            }
+            style={{ height: d.count > 0 ? `${Math.max(6, (d.count / peak) * 64)}px` : "2px" }}
             title={`${d.count} scored ${d.score}`}
           />
           <span className="font-mono text-[10px] text-ink/45">{d.score}</span>
@@ -209,9 +235,9 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-hairline bg-card p-5">
-      <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
+    <section className="min-w-0 rounded-lg border border-hairline bg-card p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <h3 className="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-ink">
           <Icon className="size-4 text-brand" /> {title}
         </h3>
         {hint && <span className="text-xs text-ink/45">{hint}</span>}

@@ -600,7 +600,7 @@ function QuizTab({
                         { id: "low", title: "Keep practising", message: "", min_score: 0 },
                         {
                           id: "high",
-                          title: "Nailed it!",
+                          title: "Nailed it",
                           message: "",
                           min_score: Math.max(1, Math.ceil(maxScore * 0.7)),
                         },

@@ -8,6 +8,7 @@ import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import type { Database } from "@/integrations/supabase/types";
 import type { QuestionOptions } from "@/lib/form-utils";
 import { parseFormSettings } from "@/lib/form-settings";
+import { friendlyDbError } from "@/lib/server-errors";
 import {
   MAX_RESPONSES,
   runAsk,
@@ -59,7 +60,7 @@ export const askResponses = createServerFn({ method: "POST" })
       .select("id, title, version, settings")
       .eq("id", data.formId)
       .maybeSingle();
-    if (formErr) throw formErr;
+    if (formErr) throw friendlyDbError(formErr);
     if (!form) throw new Error("Form not found.");
     const settings = parseFormSettings(form.settings);
 
@@ -76,8 +77,8 @@ export const askResponses = createServerFn({ method: "POST" })
         .eq("form_id", data.formId)
         .order("version", { ascending: false }),
     ]);
-    if (qErr) throw qErr;
-    if (vErr) throw vErr;
+    if (qErr) throw friendlyDbError(qErr);
+    if (vErr) throw friendlyDbError(vErr);
     const questions: AskQuestion[] = (live ?? []).map((q) => ({
       id: q.id,
       label: q.label,
@@ -102,7 +103,7 @@ export const askResponses = createServerFn({ method: "POST" })
     const { data: rawRows, error: rErr } = await rq
       .order("submitted_at", { ascending: false })
       .limit(MAX_RESPONSES + 1);
-    if (rErr) throw rErr;
+    if (rErr) throw friendlyDbError(rErr);
     const capped = (rawRows?.length ?? 0) > MAX_RESPONSES;
     const rows = ((rawRows ?? []).slice(0, MAX_RESPONSES) as unknown as AskRow[]).map((r) => ({
       ...r,
