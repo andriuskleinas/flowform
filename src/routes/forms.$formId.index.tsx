@@ -41,6 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionRender, type Question } from "@/components/question-render";
 import { ConversationalForm } from "@/components/conversational-form";
 import { Shell } from "@/components/shell";
+import { isDemo } from "@/lib/demo/mode";
 
 export const Route = createFileRoute("/forms/$formId/")({
   // Loader exists solely to feed head(): per-form OG/meta tags rendered
@@ -155,6 +156,7 @@ function PublicFormPage() {
         p_question_id: question.id,
       });
       if (error || !ticket) return null;
+      if (isDemo()) return (await import("@/lib/demo/ai")).demoFollowUp(answer);
       const { followUp } = await generateFollowUp({
         data: { ticket, answer: answer.slice(0, 2000) },
       });

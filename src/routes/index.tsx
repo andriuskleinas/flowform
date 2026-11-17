@@ -1311,7 +1311,7 @@ function SiteHeader() {
               </a>
             ))}
             <Link
-              to="/demo"
+              to="/explore"
               className="rounded-md px-3 py-2 text-sm text-ink/60 transition-colors hover:text-ink"
             >
               Demo
@@ -1373,10 +1373,11 @@ function Index() {
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <PrimaryCTA>{session ? "Open dashboard" : "Start free"}</PrimaryCTA>
                 <Link
-                  to="/demo"
+                  to="/explore"
+                  title="A workspace with example forms and results. No sign-up."
                   className="inline-flex h-12 items-center gap-2 rounded-md border border-ink/15 bg-card px-5 text-[15px] font-medium text-ink transition-colors hover:border-ink/35"
                 >
-                  Try the demo
+                  Explore the app
                 </Link>
               </div>
               <ul className="mt-7 flex flex-wrap justify-center gap-x-8 gap-y-3">
@@ -1467,10 +1468,10 @@ function Index() {
                 </p>
                 <div className="mt-8">
                   <Link
-                    to="/demo"
+                    to="/explore"
                     className="inline-flex h-11 items-center gap-2 rounded-md bg-paper px-4 text-sm font-medium text-ink transition-colors hover:bg-card"
                   >
-                    Try the demo
+                    Explore the app
                     <ArrowRight className="size-4" />
                   </Link>
                 </div>
@@ -1555,7 +1556,7 @@ function Index() {
                     <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                   <Link
-                    to="/demo"
+                    to="/explore"
                     className="flex items-center gap-3 rounded-md border border-hairline bg-card px-3 py-2.5 text-[15px] text-ink/75 transition-colors hover:border-ink/30 hover:text-ink"
                   >
                     <span className="grid size-6 shrink-0 place-items-center rounded-sm border border-ink/15 font-mono text-[11px] text-ink/50">
@@ -1580,8 +1581,13 @@ function Index() {
           </div>
           <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink/55">
             <li>
+              <Link to="/explore" className="transition-colors hover:text-ink">
+                Demo workspace
+              </Link>
+            </li>
+            <li>
               <Link to="/demo" className="transition-colors hover:text-ink">
-                Demo
+                Sample form
               </Link>
             </li>
             <li>

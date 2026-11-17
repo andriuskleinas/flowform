@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { exitDemo, isDemo } from "@/lib/demo/mode";
 
 /**
  * True from the moment "Log out" is clicked until the landing page loads.
@@ -18,6 +19,8 @@ export function useSignOut() {
   const queryClient = useQueryClient();
 
   return async () => {
+    // Leaving the demo workspace is its "log out".
+    if (isDemo()) return exitDemo();
     signingOut = true;
     try {
       const { error } = await supabase.auth.signOut();

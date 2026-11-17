@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConfirmedRouteImport } from './routes/confirmed'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
+import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as LoginRouteImport } from './routes/login'
@@ -47,6 +48,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const DemoRoute = DemoRouteImport.update({
   id: '/demo',
   path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/confirmed': typeof ConfirmedRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/explore': typeof ExploreRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/guide': typeof GuideRoute
   '/login': typeof LoginRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/confirmed': typeof ConfirmedRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/explore': typeof ExploreRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/guide': typeof GuideRoute
   '/login': typeof LoginRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/confirmed': typeof ConfirmedRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/explore': typeof ExploreRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/guide': typeof GuideRoute
   '/login': typeof LoginRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/confirmed'
     | '/dashboard'
     | '/demo'
+    | '/explore'
     | '/forgot-password'
     | '/guide'
     | '/login'
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/confirmed'
     | '/dashboard'
     | '/demo'
+    | '/explore'
     | '/forgot-password'
     | '/guide'
     | '/login'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/confirmed'
     | '/dashboard'
     | '/demo'
+    | '/explore'
     | '/forgot-password'
     | '/guide'
     | '/login'
@@ -260,6 +272,7 @@ export interface RootRouteChildren {
   ConfirmedRoute: typeof ConfirmedRoute
   DashboardRoute: typeof DashboardRoute
   DemoRoute: typeof DemoRoute
+  ExploreRoute: typeof ExploreRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GuideRoute: typeof GuideRoute
   LoginRoute: typeof LoginRoute
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/demo'
       fullPath: '/demo'
       preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -420,6 +440,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfirmedRoute: ConfirmedRoute,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
+  ExploreRoute: ExploreRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   GuideRoute: GuideRoute,
   LoginRoute: LoginRoute,

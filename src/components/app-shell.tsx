@@ -34,6 +34,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CategoryDot, ManageCategoriesDialog } from "@/components/dashboard/category-dialog";
+import { DemoBanner } from "@/components/demo-banner";
 import { Logo } from "@/components/logo";
 import { RoleBadge } from "@/components/profile/team-section";
 import { STATUS_STYLE } from "@/components/status-pill";
@@ -182,6 +183,7 @@ export function AppShell({
         </SheetContent>
       </Sheet>
 
+      <DemoBanner />
       {header}
 
       <main

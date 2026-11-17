@@ -50,6 +50,8 @@ export function useCategories(userId: string) {
       const { data, error } = await supabase
         .from("form_categories")
         .select("id, name, color")
+        // RLS lets members read every workspace they belong to; show this one's.
+        .eq("user_id", userId)
         .order("name", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((c) => ({ ...c, color: c.color as CategoryColor }));
@@ -90,7 +92,9 @@ export function useCreateCategory(userId: string) {
       const clean = normalizeCategoryName(name);
       const { data, error } = await supabase
         .from("form_categories")
-        .insert({ name: clean, color })
+        // The workspace owner's id, not the default auth.uid(): an editor's
+        // category belongs to the workspace they're working in.
+        .insert({ name: clean, color, user_id: userId })
         .select("id, name, color")
         .single();
       if (error)

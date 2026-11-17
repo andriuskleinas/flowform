@@ -24,6 +24,7 @@ import type { Question } from "@/components/question-render";
 import { LogoMark } from "@/components/logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { recallText } from "@/lib/form-settings";
+import { isDemo } from "@/lib/demo/mode";
 
 export const Route = createFileRoute("/forms/$formId/live")({
   component: LivePage,
@@ -150,19 +151,34 @@ function LiveAuthed({ formId, userId }: { formId: string; userId: string }) {
   useEffect(() => {
     if (!role) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const onInsert = () => {
+      setPulse((p) => p + 1);
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["live-analytics", formId] });
+        qc.invalidateQueries({ queryKey: ["live-recent", formId] });
+      }, 400);
+    };
+    // The demo workspace has no Realtime; it simulates arrivals instead.
+    if (isDemo()) {
+      let stop = () => {};
+      let cancelled = false;
+      setConnected(true);
+      void import("@/lib/demo/server").then((m) => {
+        if (!cancelled) stop = m.simulateResponses(formId, onInsert);
+      });
+      return () => {
+        cancelled = true;
+        stop();
+        clearTimeout(timer);
+      };
+    }
     const channel = supabase
       .channel(`live-responses:${formId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "responses", filter: `form_id=eq.${formId}` },
-        () => {
-          setPulse((p) => p + 1);
-          clearTimeout(timer);
-          timer = setTimeout(() => {
-            qc.invalidateQueries({ queryKey: ["live-analytics", formId] });
-            qc.invalidateQueries({ queryKey: ["live-recent", formId] });
-          }, 400);
-        },
+        onInsert,
       )
       .subscribe((status) => setConnected(status === "SUBSCRIBED"));
     return () => {

@@ -65,6 +65,7 @@ import {
   type QuizOutcome,
 } from "@/lib/form-settings";
 import { parseVersions, questionsForView } from "@/lib/form-versions";
+import { isDemo } from "@/lib/demo/mode";
 
 export const Route = createFileRoute("/forms/$formId/responses")({
   component: ResponsesPage,
@@ -595,7 +596,9 @@ function Overview({
   versionRef.current = version;
   const summarize = useMutation({
     mutationFn: async (scope: number | null) =>
-      summarizeResponses({ data: { formId, ...(scope != null ? { version: scope } : {}) } }),
+      isDemo()
+        ? (await import("@/lib/demo/ai")).demoSummary(formId)
+        : summarizeResponses({ data: { formId, ...(scope != null ? { version: scope } : {}) } }),
     onSuccess: (result, scope) => {
       if (scope === versionRef.current) setSummary(result);
     },

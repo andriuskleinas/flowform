@@ -103,6 +103,7 @@ import { FormHeader, actionPrimary, actionSecondary } from "@/components/form-he
 import { isSigningOut } from "@/lib/sign-out";
 import { CategoryField } from "@/components/dashboard/category-dialog";
 import { cn } from "@/lib/utils";
+import { isDemo } from "@/lib/demo/mode";
 
 export const Route = createFileRoute("/forms/$formId/edit")({
   component: EditFormPage,
@@ -442,9 +443,11 @@ function EditFormAuthed({
     setSuggestError(null);
     startSuggesting(async () => {
       try {
-        const results = await suggestQuestions({
-          data: { title: draftForm.title, description: draftForm.description ?? "" },
-        });
+        const results = isDemo()
+          ? await (await import("@/lib/demo/ai")).demoSuggest(draftForm.title)
+          : await suggestQuestions({
+              data: { title: draftForm.title, description: draftForm.description ?? "" },
+            });
         setSuggestions(results);
         setAddedSuggestionIds(new Set());
       } catch (err: unknown) {

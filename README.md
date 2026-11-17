@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://flowformapp.vercel.app"><b>Live app →</b></a>
   ·
-  <a href="https://flowformapp.vercel.app/demo">Try the demo</a>
+  <a href="https://flowformapp.vercel.app/explore">Explore the app (no sign-up)</a>
   ·
   <a href="#features">Features</a>
   ·
@@ -38,7 +38,10 @@ exactly where people drop off.
 It's a deployed product, built end to end: product design, database security, AI integration,
 analytics and auth.
 
-No account needed for the [interactive demo](https://flowformapp.vercel.app/demo).
+No account needed: [open the demo workspace](https://flowformapp.vercel.app/explore) to click
+through the signed-in app (dashboard, editor, results, live view) with example data, or
+[answer a sample form](https://flowformapp.vercel.app/demo). The demo workspace runs entirely in
+your browser, so nothing you change reaches the database.
 
 > Portfolio project. The product works end to end; the example numbers in the landing page's
 > product mock-ups are labelled as illustrative.
@@ -221,6 +224,11 @@ flowchart LR
   de-duplicated and garbage-collected, all in SQL, so the rules hold no matter what hits the API.
 - **Clean metrics.** The form owner's own test traffic is excluded from analytics, so the numbers
   reflect real respondents.
+- **A demo workspace with no backend.** [`/explore`](https://flowformapp.vercel.app/explore) swaps
+  the Supabase client's `fetch` for an in-browser stand-in ([src/lib/demo](src/lib/demo)) that
+  speaks enough PostgREST and the app's RPCs to run the real signed-in UI on generated data. Edits
+  persist in `sessionStorage` for the tab, Claude answers are pre-written, the live view simulates
+  arrivals, and the stand-in is a lazy 11 KB (gzipped) chunk that only loads in the demo.
 - **Security headers.** CSP `frame-ancestors`, HSTS, `nosniff`, a strict referrer policy and a
   locked-down permissions policy are set through Nitro route rules in [vite.config.ts](vite.config.ts).
 

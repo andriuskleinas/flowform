@@ -4,6 +4,7 @@ import { ArrowRight, Filter, Loader2, MessageSquareText, X } from "lucide-react"
 import { toast } from "sonner";
 
 import { askResponses, type AskResult } from "@/lib/ask-responses";
+import { isDemo } from "@/lib/demo/mode";
 
 const OP_LABELS: Record<string, string> = {
   equals: "is",
@@ -39,9 +40,11 @@ export function AskResponsesCard({
   const ask = useMutation({
     mutationFn: async (q: string) => ({
       question: q,
-      ...(await askResponses({
-        data: { formId, question: q, ...(version != null ? { version } : {}) },
-      })),
+      ...(isDemo()
+        ? await (await import("@/lib/demo/ai")).demoAsk(formId, q)
+        : await askResponses({
+            data: { formId, question: q, ...(version != null ? { version } : {}) },
+          })),
     }),
     onSuccess: setResult,
     onError: (e: Error) =>

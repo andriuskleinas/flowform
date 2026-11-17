@@ -245,6 +245,15 @@ function SignupPage() {
               Log in
             </Link>
           </p>
+          <p className="mt-3 text-center text-sm text-ink/50">
+            Just looking?{" "}
+            <Link
+              to="/explore"
+              className="font-medium text-ink/75 underline-offset-2 hover:underline"
+            >
+              Open the demo workspace
+            </Link>
+          </p>
         </>
       )}
     </AuthShell>
