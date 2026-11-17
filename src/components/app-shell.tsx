@@ -35,6 +35,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 import { Skeleton } from "@/components/ui/skeleton";
 import { CategoryDot, ManageCategoriesDialog } from "@/components/dashboard/category-dialog";
 import { DemoBanner } from "@/components/demo-banner";
+import { exitDemo, isDemo } from "@/lib/demo/mode";
 import { Logo } from "@/components/logo";
 import { RoleBadge } from "@/components/profile/team-section";
 import { STATUS_STYLE } from "@/components/status-pill";
@@ -62,6 +63,13 @@ import {
  * Pages render inside it and never build their own header or back link, so
  * navigation looks and works the same everywhere.
  */
+
+/** In the demo workspace the logo leaves the demo, back to the landing page. */
+function leaveDemoOnLogo(e: React.MouseEvent) {
+  if (!isDemo()) return;
+  e.preventDefault();
+  exitDemo("/");
+}
 
 /** Content widths. Form header and page body share them so edges line up. */
 export const SHELL_WIDTH = {
@@ -160,6 +168,7 @@ export function AppShell({
           <Link
             to="/dashboard"
             search={owner === userId ? {} : { ws: owner }}
+            onClick={leaveDemoOnLogo}
             className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
             <Logo />
@@ -390,6 +399,7 @@ function SidebarBody({
         <Link
           to="/dashboard"
           search={ws}
+          onClick={leaveDemoOnLogo}
           className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           <Logo />
